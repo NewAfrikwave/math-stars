@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId, toProgressMap } from "@/lib/student";
+import { getStudentForRequest, toProgressMap } from "@/lib/student";
 import { ALL_LESSONS, CURRICULUM, isLessonAvailable } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS, psIsLessonAvailable } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS, isLessonAvailable as isG1LessonAvailable } from "@/lib/grade1";
@@ -12,8 +12,7 @@ import type { LessonProgressState, LessonStatus, Level } from "@/lib/types";
 // On first run this creates the default student and seeds availability
 // for the first lesson so the learner can begin immediately.
 export async function GET(req: Request) {
-  const profileId = getProfileId(req);
-  const student = await getStudent(profileId);
+  const student = await getStudentForRequest(req);
 
   const rows = await db.lessonProgress.findMany({
     where: { studentId: student.id },

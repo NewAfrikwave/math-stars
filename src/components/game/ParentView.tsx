@@ -51,8 +51,17 @@ export function ParentView() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [siteOwner, setSiteOwner] = useState(false);
+  const [familyAccount, setFamilyAccount] = useState(false);
 
   // First, check whether a PIN is set (via the summary endpoint).
+  useEffect(() => {
+    fetch("/api/auth/me").then((response) => response.json()).then((data) => {
+      setSiteOwner(data.accountType === "legacy");
+      setFamilyAccount(data.accountType === "family");
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/parent?summary=1")
@@ -402,19 +411,31 @@ export function ParentView() {
             });
             if (response.ok) window.location.reload(); else setError("Family data was not deleted.");
           }}>Delete all family data</Button>
+          {familyAccount && <Button variant="destructive" onClick={async () => {
+            const confirmation = prompt('Type "DELETE MY FAMILY ACCOUNT" to remove the parent account, learner profiles, progress, tutor history, and device records.');
+            if (confirmation !== "DELETE MY FAMILY ACCOUNT") return;
+            const password = prompt("Enter your family account password to confirm:");
+            if (!password) return;
+            const response = await fetch("/api/account", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ confirmation, password }),
+            });
+            if (response.ok) window.location.reload(); else setError("The family account was not deleted. Check the password and try again.");
+          }}>Delete family account</Button>}
           <a href="/privacy" className="inline-flex h-10 items-center px-3 text-sm font-semibold text-primary underline">Privacy details</a>
         </div>
       </Card>
 
       {/* Admin access (for the site owner) */}
-      <div className="mt-4 text-center">
+      {siteOwner && <div className="mt-4 text-center">
         <button
           onClick={() => setView({ name: "admin" })}
           className="text-xs font-semibold text-muted-foreground/60 underline hover:text-muted-foreground"
         >
           🛡️ Admin Panel
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

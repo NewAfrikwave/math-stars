@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { sessionFromRequest, type AppSession } from "@/lib/auth";
 import type { LessonProgressState, LessonStatus } from "@/lib/types";
 
 // Read the active profile id from the x-profile-id header (or query param).
@@ -13,9 +14,30 @@ export function getProfileId(req: Request): string {
 }
 
 // Get-or-create a student (profile) by its id.
-export async function getStudent(profileId: string) {
-  let student = await db.student.findUnique({ where: { id: profileId } });
-  if (!student && profileId === "default-student") {
+export function requireSession(req: Request): AppSession {
+  const session = sessionFromRequest(req);
+  if (!session) throw new Error("authentication required");
+  return session;
+}
+
+export function familyScope(session: AppSession) {
+  return session.kind === "account" ? { familyId: session.familyId } : { familyId: null };
+}
+
+export async function requireActiveSession(req: Request) {
+  const session = requireSession(req);
+  if (session.kind === "account") {
+    const active = await db.familyAccount.count({ where: { id: session.familyId, status: "active" } });
+    if (!active) throw new Error("account unavailable");
+  }
+  return session;
+}
+
+export async function getStudentForRequest(req: Request) {
+  const profileId = getProfileId(req);
+  const session = await requireActiveSession(req);
+  let student = await db.student.findFirst({ where: { id: profileId, ...familyScope(session) } });
+  if (!student && profileId === "default-student" && session.kind === "legacy") {
     student = await db.student.create({
       data: {
         id: profileId,
@@ -34,13 +56,15 @@ export async function getStudent(profileId: string) {
 
 // Back-compat alias.
 export async function getOrCreateStudent(req?: Request) {
-  const profileId = req ? getProfileId(req) : "default-student";
-  return getStudent(profileId);
+  if (!req) throw new Error("request required");
+  return getStudentForRequest(req);
 }
 
 // List all learner profiles.
-export async function listStudents() {
+export async function listStudents(req: Request) {
+  const session = await requireActiveSession(req);
   return db.student.findMany({
+    where: familyScope(session),
     orderBy: { createdAt: "asc" },
     select: {
       id: true,

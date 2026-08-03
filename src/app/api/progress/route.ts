@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId } from "@/lib/student";
+import { getStudentForRequest } from "@/lib/student";
 import { ALL_LESSONS, CURRICULUM, findLesson, isLessonAvailable } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS, psIsLessonAvailable, findPsLesson } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS, isLessonAvailable as isG1LessonAvailable, findG1Lesson } from "@/lib/grade1";
@@ -27,8 +27,8 @@ export async function POST(req: Request) {
   const difficulty =
     body.difficulty === "easy" || body.difficulty === "challenge" ? body.difficulty : null;
 
-  const profileId = getProfileId(req);
-  const student = await getStudent(profileId);
+  const student = await getStudentForRequest(req);
+  const profileId = student.id;
   const foundLesson = findLessonAny(lessonId);
   if (!foundLesson) return NextResponse.json({ error: "unknown lesson" }, { status: 400 });
   const allowedLevel = foundLesson.level === student.level;

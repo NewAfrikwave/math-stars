@@ -1,21 +1,18 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSiteSettings } from "@/lib/settings";
-import { pinFrom, verifyPin } from "@/lib/pin";
+import { isAdminRequest } from "@/lib/auth";
 
 // GET /api/admin/system?pin=XXXX — DB stats + recent error log.
 export async function GET(req: Request) {
-  const pin = pinFrom(req);
-  const settings = await getSiteSettings();
-  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
-    return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
-  }
+  if (!isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required" }, { status: 401 });
 
   // Row counts per table
   const [
-    students, lessonProgress, dailyChallenges, achievements,
+    families, devices, students, lessonProgress, dailyChallenges, achievements,
     tutorMessages, activityEvents, errorLogs,
   ] = await Promise.all([
+    db.familyAccount.count(),
+    db.accountDevice.count(),
     db.student.count(),
     db.lessonProgress.count(),
     db.dailyChallenge.count(),
@@ -43,6 +40,8 @@ export async function GET(req: Request) {
   return NextResponse.json({
     dbStats: {
       students,
+      families,
+      devices,
       lessonProgress,
       dailyChallenges,
       achievements,

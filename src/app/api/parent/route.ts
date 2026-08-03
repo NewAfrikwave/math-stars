@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId, listStudents } from "@/lib/student";
+import { familyScope, getStudentForRequest, listStudents, requireSession } from "@/lib/student";
 import { ALL_LESSONS, CURRICULUM } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM } from "@/lib/preschool";
 import { GRADE1_CURRICULUM } from "@/lib/grade1";
@@ -13,7 +13,7 @@ const ALL_DOMAINS = [...CURRICULUM, ...PRESCHOOL_CURRICULUM, ...GRADE1_CURRICULU
 
 // GET /api/parent?pin=XXXX
 // Returns the full parent dashboard data if the PIN matches (or no PIN is set).
-// Pass ?summary=1 to get a lightweight summary of ALL profiles (for the
+// Pass ?summary=1 to get a lightweight summary of this family's profiles (for the
 // multi-child parent dashboard).
 export async function GET(req: Request) {
   const attempt = rateLimit(clientKey(req, "parent-dashboard"), 60, 15 * 60 * 1000);
@@ -21,16 +21,16 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const pin = pinFrom(req);
   const wantSummary = url.searchParams.get("summary") === "1";
-  const profileId = getProfileId(req);
-  const student = await getStudent(profileId);
+  const student = await getStudentForRequest(req);
+  const scope = familyScope(requireSession(req));
 
   // Multi-profile summary for the parent dashboard.
-  // Uses a global PIN check: if ANY profile has a PIN, it must match.
+  // Uses one shared parent PIN across this family's profiles.
   if (wantSummary) {
-    const all = await listStudents();
+    const all = await listStudents(req);
     // Find any profile that has a PIN set.
     const withPin = await db.student.findFirst({
-      where: { NOT: { parentPin: null } },
+      where: { ...scope, NOT: { parentPin: null } },
       select: { id: true, parentPin: true },
     });
     if (withPin && withPin.parentPin && !verifyPin(pin, withPin.parentPin)) {
@@ -163,34 +163,34 @@ export async function POST(req: Request) {
   if (!body || typeof body.action !== "string") {
     return NextResponse.json({ error: "action required" }, { status: 400 });
   }
-  const profileId = getProfileId(req);
-  const student = await getStudent(profileId);
+  await getStudentForRequest(req);
+  const scope = familyScope(requireSession(req));
 
   if (body.action === "set-pin") {
     const pin = String(body.pin ?? "").trim();
     if (!/^\d{4}$/.test(pin)) {
       return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
     }
-    // Set the PIN on ALL profiles so the global parent check works.
-    const existing = await db.student.findFirst({ where: { NOT: { parentPin: null } }, select: { parentPin: true } });
+    // Set the PIN on every profile owned by this family.
+    const existing = await db.student.findFirst({ where: { ...scope, NOT: { parentPin: null } }, select: { parentPin: true } });
     if (existing?.parentPin && !verifyPin(pinFrom(req), existing.parentPin)) {
       return NextResponse.json({ error: "wrong-pin", hasPin: true }, { status: 401 });
     }
-    await db.student.updateMany({ where: {}, data: { parentPin: hashPin(pin) } });
+    await db.student.updateMany({ where: scope, data: { parentPin: hashPin(pin) } });
     return NextResponse.json({ ok: true, hasPin: true });
   }
   if (body.action === "clear-pin") {
-    const existing = await db.student.findFirst({ where: { NOT: { parentPin: null } }, select: { parentPin: true } });
+    const existing = await db.student.findFirst({ where: { ...scope, NOT: { parentPin: null } }, select: { parentPin: true } });
     if (existing?.parentPin && !verifyPin(pinFrom(req), existing.parentPin)) {
       return NextResponse.json({ error: "wrong-pin", hasPin: true }, { status: 401 });
     }
-    await db.student.updateMany({ where: {}, data: { parentPin: null } });
+    await db.student.updateMany({ where: scope, data: { parentPin: null } });
     return NextResponse.json({ ok: true, hasPin: false });
   }
   if (body.action === "verify-pin") {
     const pin = String(body.pin ?? "").trim();
     const withPin = await db.student.findFirst({
-      where: { NOT: { parentPin: null } },
+      where: { ...scope, NOT: { parentPin: null } },
       select: { parentPin: true },
     });
     if (!withPin || !withPin.parentPin) return NextResponse.json({ ok: true, hasPin: false });

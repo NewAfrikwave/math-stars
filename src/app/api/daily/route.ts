@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId } from "@/lib/student";
+import { getStudentForRequest } from "@/lib/student";
 
 // POST /api/daily
 // Body: { correct, total }
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const correct = Math.min(total, Math.max(0, correctRaw));
   const score = Math.round((correct / total) * 100);
 
-  const student = await getStudent(getProfileId(req));
+  const student = await getStudentForRequest(req);
   const today = new Date().toISOString().slice(0, 10);
 
   // upsert the daily row
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
 // GET /api/daily — returns recent daily challenge history
 export async function GET(req: Request) {
-  const student = await getStudent(getProfileId(req));
+  const student = await getStudentForRequest(req);
   const rows = await db.dailyChallenge.findMany({
     where: { studentId: student.id },
     orderBy: { dateKey: "desc" },

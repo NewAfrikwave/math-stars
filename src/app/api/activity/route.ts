@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId } from "@/lib/student";
+import { getStudentForRequest } from "@/lib/student";
 
 // GET /api/activity?limit=20
 // Returns recent activity events for the active profile (newest first).
@@ -8,8 +8,7 @@ import { getStudent, getProfileId } from "@/lib/student";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") ?? 20)));
-  const profileId = getProfileId(req);
-  const student = await getStudent(profileId);
+  const student = await getStudentForRequest(req);
 
   const events = await db.activityEvent.findMany({
     where: { studentId: student.id },

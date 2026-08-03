@@ -97,7 +97,7 @@ export default async function RootLayout({
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:p-3 focus:text-black">Skip to main content</a>
         <AccessGate authenticated={authenticated}>{children}</AccessGate>
         <Toaster />
-        <ServiceWorkerRegister />
+        <ServiceWorkerRegister authenticated={authenticated} />
       </body>
     </html>
   );

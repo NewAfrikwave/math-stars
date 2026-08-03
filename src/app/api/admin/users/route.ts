@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSiteSettings } from "@/lib/settings";
 import { ALL_LESSONS, CURRICULUM, isLessonAvailable } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS, psIsLessonAvailable } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS, isLessonAvailable as isG1LessonAvailable } from "@/lib/grade1";
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS, isLessonAvailable as isG2LessonAvailable } from "@/lib/grade2";
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS, isLessonAvailable as isG4LessonAvailable } from "@/lib/grade4";
-import { pinFrom, verifyPin } from "@/lib/pin";
+import { isAdminRequest } from "@/lib/auth";
 
 // GET /api/admin/users?pin=XXXX — list all profiles with full details.
 export async function GET(req: Request) {
-  const pin = pinFrom(req);
-  const settings = await getSiteSettings();
-  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
-    return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
-  }
+  if (!isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required" }, { status: 401 });
 
   const students = await db.student.findMany({
     orderBy: { createdAt: "asc" },
@@ -55,11 +50,7 @@ export async function GET(req: Request) {
 // POST /api/admin/users?pin=XXXX — manage a profile.
 // Body: { action: "reset"|"delete"|"change-level"|"rename", profileId, level?, name? }
 export async function POST(req: Request) {
-  const pin = pinFrom(req);
-  const settings = await getSiteSettings();
-  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
-    return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
-  }
+  if (!isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body.profileId !== "string") {

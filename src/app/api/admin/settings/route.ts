@@ -3,10 +3,31 @@ import { db } from "@/lib/db";
 import { getSiteSettings } from "@/lib/settings";
 import { hashPin, pinFrom, verifyPin } from "@/lib/pin";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import {
+  ADMIN_SESSION_COOKIE,
+  adminSessionCookieOptions,
+  createAdminSessionValue,
+  isAdminRequest,
+  sessionFromRequest,
+} from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   const settings = await getSiteSettings();
-  return NextResponse.json({ hasAdminPin: !!settings.adminPin });
+  if (!isAdminRequest(req)) return NextResponse.json({ hasAdminPin: !!settings.adminPin, authenticated: false });
+  return NextResponse.json({
+    hasAdminPin: !!settings.adminPin,
+    authenticated: true,
+    dailyChallengeEnabled: settings.dailyChallengeEnabled,
+    aiTutorEnabled: settings.aiTutorEnabled,
+    voiceAnswersEnabled: settings.voiceAnswersEnabled,
+    worksheetsEnabled: settings.worksheetsEnabled,
+    manipulativesEnabled: settings.manipulativesEnabled,
+    soundEffectsEnabled: settings.soundEffectsEnabled,
+    cashappHandle: settings.cashappHandle,
+    zelleInfo: settings.zelleInfo,
+    broadcastMessage: settings.broadcastMessage,
+    broadcastActive: settings.broadcastActive,
+  });
 }
 
 // POST /api/admin/settings — update site-wide settings.
@@ -27,31 +48,36 @@ export async function POST(req: Request) {
     if (!/^\d{4}$/.test(newPin)) {
       return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
     }
-    if (settings.adminPin && !verifyPin(pin, settings.adminPin)) {
-      return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
+    if (settings.adminPin && !isAdminRequest(req)) {
+      return NextResponse.json({ error: "admin-session-required", hasAdminPin: true }, { status: 401 });
+    }
+    if (!settings.adminPin && sessionFromRequest(req)?.kind !== "legacy") {
+      return NextResponse.json({ error: "Only the site owner can initialize admin access." }, { status: 403 });
     }
     await db.siteSettings.update({ where: { id: "site" }, data: { adminPin: hashPin(newPin) } });
-    return NextResponse.json({ ok: true, hasAdminPin: true });
+    const response = NextResponse.json({ ok: true, hasAdminPin: true });
+    response.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionValue(), adminSessionCookieOptions);
+    return response;
   }
   if (body.action === "verify-pin") {
     if (!settings.adminPin) return NextResponse.json({ ok: true, hasAdminPin: false });
     if (!verifyPin(pin, settings.adminPin)) {
       return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
     }
-    return NextResponse.json({ ok: true, hasAdminPin: true });
+    const response = NextResponse.json({ ok: true, hasAdminPin: true });
+    response.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionValue(), adminSessionCookieOptions);
+    return response;
   }
   if (body.action === "clear-pin") {
-    if (settings.adminPin && !verifyPin(pin, settings.adminPin)) {
-      return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
-    }
+    if (settings.adminPin && !isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required" }, { status: 401 });
     await db.siteSettings.update({ where: { id: "site" }, data: { adminPin: null } });
-    return NextResponse.json({ ok: true, hasAdminPin: false });
+    const response = NextResponse.json({ ok: true, hasAdminPin: false });
+    response.cookies.set(ADMIN_SESSION_COOKIE, "", { ...adminSessionCookieOptions, maxAge: 0 });
+    return response;
   }
 
   // For all other updates, require admin PIN.
-  if (settings.adminPin && !verifyPin(pin, settings.adminPin)) {
-    return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
-  }
+  if (!isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required", hasAdminPin: !!settings.adminPin }, { status: 401 });
 
   // Update feature flags + donation handles + broadcast
   const data: Record<string, unknown> = {};
