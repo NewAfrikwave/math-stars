@@ -32,11 +32,15 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/brand/favicon.ico" },
       {
         url: "/brand/math-stars-favicon-64.png",
         type: "image/png",
         sizes: "64x64",
+      },
+      {
+        url: "/brand/math-stars-icon-512.png",
+        type: "image/png",
+        sizes: "512x512",
       },
     ],
     apple: [
