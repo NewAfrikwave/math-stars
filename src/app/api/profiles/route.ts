@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { listStudents } from "@/lib/student";
+import { familyScope, listStudents, requireActiveSession } from "@/lib/student";
 import type { Level } from "@/lib/types";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { pinFrom, verifyPin } from "@/lib/pin";
 
-// GET /api/profiles — list all learner profiles.
-export async function GET() {
-  const profiles = await listStudents();
+// GET /api/profiles — list learner profiles owned by the signed-in family.
+export async function GET(req: Request) {
+  const profiles = await listStudents(req);
   return NextResponse.json({ profiles });
 }
 
@@ -21,22 +21,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
   const name = String(body.name).trim().slice(0, 30);
+  const session = await requireActiveSession(req);
+  const scope = familyScope(session);
   const level: Level =
     body.level === "preschool" ? "preschool" :
     body.level === "grade1" ? "grade1" :
     body.level === "grade2" ? "grade2" :
     body.level === "grade4" ? "grade4" :
     "grade3";
-  if (await db.student.count() >= 12) return NextResponse.json({ error: "profile limit reached" }, { status: 409 });
+  if (await db.student.count({ where: scope }) >= 12) return NextResponse.json({ error: "profile limit reached" }, { status: 409 });
   const allowedAvatars = ["fox", "owl"];
   const avatar = allowedAvatars.includes(body.avatar) ? body.avatar : "fox";
   const protectedProfile = await db.student.findFirst({
-    where: { NOT: { parentPin: null } },
+    where: { ...scope, NOT: { parentPin: null } },
     select: { parentPin: true },
   });
   const id = `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const student = await db.student.create({
-    data: { id, name, level, avatar, parentPin: protectedProfile?.parentPin ?? null, totalStars: 0, streak: 0, soundOn: true },
+    data: { id, familyId: session.familyId, name, level, avatar, parentPin: protectedProfile?.parentPin ?? null, totalStars: 0, streak: 0, soundOn: true },
   });
   return NextResponse.json({
     id: student.id,
@@ -53,8 +55,9 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const scope = familyScope(await requireActiveSession(req));
   const protectedProfile = await db.student.findFirst({
-    where: { NOT: { parentPin: null } },
+    where: { ...scope, NOT: { parentPin: null } },
     select: { parentPin: true },
   });
   if (!protectedProfile?.parentPin) {
@@ -64,7 +67,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "wrong-pin" }, { status: 401 });
   }
   try {
-    await db.student.delete({ where: { id } });
+    const target = await db.student.findFirst({ where: { id, ...scope }, select: { id: true } });
+    if (!target) return NextResponse.json({ error: "not found" }, { status: 404 });
+    await db.student.delete({ where: { id: target.id } });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "not found" }, { status: 404 });

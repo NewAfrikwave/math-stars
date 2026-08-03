@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId } from "@/lib/student";
+import { getStudentForRequest } from "@/lib/student";
 import { CURRICULUM, isLessonAvailable } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, psIsLessonAvailable, findPsDomain } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, isLessonAvailable as isG1LessonAvailable, findG1Domain } from "@/lib/grade1";
@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   const score = Math.round((correct / total) * 100);
   const passed = score >= 67;
 
-  const profileId = getProfileId(req);
-  const student = await getStudent(profileId);
+  const student = await getStudentForRequest(req);
+  const profileId = student.id;
 
   // Find the domain across all curricula.
   const domain =

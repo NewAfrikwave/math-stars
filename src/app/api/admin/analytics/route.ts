@@ -1,27 +1,70 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSiteSettings } from "@/lib/settings";
-import { pinFrom, verifyPin } from "@/lib/pin";
+import { isAdminRequest } from "@/lib/auth";
 import { ALL_LESSONS, CURRICULUM } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS } from "@/lib/grade1";
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS } from "@/lib/grade2";
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS } from "@/lib/grade4";
 
-// GET /api/admin/analytics?pin=XXXX — aggregated usage stats across ALL profiles.
+// GET /api/admin/analytics — site-wide account, device, and learning metrics.
 export async function GET(req: Request) {
-  const pin = pinFrom(req);
-  const settings = await getSiteSettings();
-  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
-    return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
-  }
+  if (!isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required" }, { status: 401 });
 
-  const allStudents = await db.student.findMany({ select: { id: true, createdAt: true, lastPlayedAt: true } });
+  const [allStudents, accounts, devices] = await Promise.all([
+    db.student.findMany({ select: { id: true, familyId: true, createdAt: true, lastPlayedAt: true } }),
+    db.familyAccount.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, email: true, displayName: true, status: true,
+        createdAt: true, lastLoginAt: true, lastActiveAt: true,
+        _count: { select: { students: true, devices: true } },
+      },
+    }),
+    db.accountDevice.findMany({
+      orderBy: { lastSeenAt: "desc" },
+      include: { family: { select: { displayName: true, email: true } } },
+    }),
+  ]);
   const totalLearners = allStudents.length;
 
+  const now = Date.now();
+  const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
+  const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const legacyExists = allStudents.some((student) => student.familyId === null);
+  const totalFamilies = accounts.length + (legacyExists ? 1 : 0);
+  const activeNow = new Set(
+    devices.filter((device) => device.lastSeenAt >= fiveMinutesAgo).map((device) => device.scopeKey)
+  ).size;
+  const active24h = new Set(
+    devices.filter((device) => device.lastSeenAt >= oneDayAgo).map((device) => device.scopeKey)
+  ).size;
+  const activeFamilies7 = new Set(
+    devices.filter((device) => device.lastSeenAt >= sevenDaysAgo).map((device) => device.scopeKey)
+  ).size;
+  const newFamilies7 = accounts.filter((account) => account.createdAt >= sevenDaysAgo).length;
+  const installedDevices = devices.filter((device) => device.installed).length;
+
+  const deviceMix = Object.entries(devices.reduce<Record<string, number>>((result, device) => {
+    result[device.deviceType] = (result[device.deviceType] ?? 0) + 1;
+    return result;
+  }, {})).map(([name, count]) => ({ name, count }));
+  const platformMix = Object.entries(devices.reduce<Record<string, number>>((result, device) => {
+    result[device.platform] = (result[device.platform] ?? 0) + 1;
+    return result;
+  }, {})).map(([name, count]) => ({ name, count }));
+  const signupDays: Record<string, number> = {};
+  for (let index = 13; index >= 0; index -= 1) {
+    const date = new Date(now - index * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    signupDays[date] = 0;
+  }
+  for (const account of accounts) {
+    const date = account.createdAt.toISOString().slice(0, 10);
+    if (signupDays[date] !== undefined) signupDays[date] += 1;
+  }
+
   // Active learners (played in last 7 days)
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const activeLearners = allStudents.filter(
     (s) => s.lastPlayedAt && s.lastPlayedAt >= sevenDaysAgo
   ).length;
@@ -112,6 +155,40 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     totalLearners,
+    totalFamilies,
+    activeNow,
+    active24h,
+    activeFamilies7,
+    newFamilies7,
+    totalDevices: devices.length,
+    installedDevices,
+    deviceMix,
+    platformMix,
+    signupByDay: Object.entries(signupDays).map(([date, count]) => ({ date, count })),
+    recentFamilies: accounts.slice(0, 12).map((account) => ({
+      id: account.id,
+      displayName: account.displayName,
+      email: account.email,
+      status: account.status,
+      learners: account._count.students,
+      devices: account._count.devices,
+      createdAt: account.createdAt.toISOString(),
+      lastLoginAt: account.lastLoginAt?.toISOString() ?? null,
+      lastActiveAt: account.lastActiveAt?.toISOString() ?? null,
+    })),
+    recentDevices: devices.slice(0, 20).map((device) => ({
+      id: device.id,
+      familyName: device.family?.displayName ?? "Legacy family access",
+      familyEmail: device.family?.email ?? null,
+      deviceType: device.deviceType,
+      platform: device.platform,
+      browser: device.browser,
+      launchMode: device.launchMode,
+      installed: device.installed,
+      firstSeenAt: device.firstSeenAt.toISOString(),
+      lastSeenAt: device.lastSeenAt.toISOString(),
+      visitCount: device.visitCount,
+    })),
     activeLearners,
     totalEvents,
     events7,

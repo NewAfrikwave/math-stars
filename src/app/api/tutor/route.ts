@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId } from "@/lib/student";
+import { getStudentForRequest } from "@/lib/student";
 import { logError } from "@/lib/settings";
 import { findLesson } from "@/lib/curriculum";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   }
   const lessonId = typeof body.lessonId === "string" ? body.lessonId : undefined;
 
-  const student = await getStudent(getProfileId(req));
+  const student = await getStudentForRequest(req);
 
   // Build a context-aware system prompt.
   let lessonContext = "";
@@ -106,7 +106,7 @@ Rules:
 
 // GET /api/tutor — load the saved conversation history.
 export async function GET(req: Request) {
-  const student = await getStudent(getProfileId(req));
+  const student = await getStudentForRequest(req);
   const rows = await db.tutorMessage.findMany({
     where: { studentId: student.id },
     orderBy: { createdAt: "asc" },
@@ -122,7 +122,7 @@ export async function GET(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const student = await getStudent(getProfileId(req));
+  const student = await getStudentForRequest(req);
   await db.tutorMessage.deleteMany({ where: { studentId: student.id } });
   return NextResponse.json({ ok: true });
 }

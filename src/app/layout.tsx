@@ -5,7 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { AccessGate } from "@/components/AccessGate";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, verifySessionValue } from "@/lib/auth";
+import { readSessionValue, SESSION_COOKIE } from "@/lib/auth";
+import { activeSessionFromValue } from "@/lib/session-access";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -88,16 +89,19 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const authenticated = verifySessionValue(cookieStore.get(SESSION_COOKIE)?.value);
+  const sessionValue = cookieStore.get(SESSION_COOKIE)?.value;
+  const signedSession = readSessionValue(sessionValue);
+  const authenticated = !!(await activeSessionFromValue(sessionValue));
+  const staleSession = !!signedSession && !authenticated;
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className="antialiased bg-background text-foreground"
       >
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:p-3 focus:text-black">Skip to main content</a>
-        <AccessGate authenticated={authenticated}>{children}</AccessGate>
+        <AccessGate authenticated={authenticated} staleSession={staleSession}>{children}</AccessGate>
         <Toaster />
-        <ServiceWorkerRegister />
+        <ServiceWorkerRegister authenticated={authenticated} />
       </body>
     </html>
   );

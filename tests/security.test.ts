@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { createSessionValue, verifyAccessCode, verifySessionValue } from "../src/lib/auth";
+import {
+  createAdminSessionValue,
+  createSessionValue,
+  readSessionValue,
+  verifyAccessCode,
+  verifyAdminSessionValue,
+  verifySessionValue,
+} from "../src/lib/auth";
+import { sessionHasAccountAccess } from "../src/lib/session-access";
+import { hashPassword, normalizeEmail, passwordError, verifyPassword } from "../src/lib/password";
 import { hashPin, verifyPin } from "../src/lib/pin";
 import { rateLimit } from "../src/lib/rate-limit";
 
@@ -18,6 +27,47 @@ describe("security helpers", () => {
     const session = createSessionValue();
     expect(verifySessionValue(session)).toBe(true);
     expect(verifySessionValue(`${session}x`)).toBe(false);
+  });
+
+  test("scopes signed sessions to one family account", () => {
+    const session = createSessionValue("family-123");
+    expect(readSessionValue(session)).toMatchObject({ kind: "account", familyId: "family-123" });
+    expect(readSessionValue(session.replace("family-123", "family-456"))).toBeNull();
+  });
+
+  test("keeps legacy access separate from family accounts", () => {
+    const session = createSessionValue(null);
+    expect(readSessionValue(session)).toMatchObject({ kind: "legacy", familyId: null });
+  });
+
+  test("creates a separate short-lived admin session", () => {
+    const session = createAdminSessionValue();
+    expect(verifyAdminSessionValue(session)).toBe(true);
+    expect(verifyAdminSessionValue(`${session}x`)).toBe(false);
+  });
+
+  test("does not let the public access code sign account or admin sessions", () => {
+    delete process.env.SESSION_SECRET;
+    const legacySession = createSessionValue(null);
+    expect(readSessionValue(legacySession)?.kind).toBe("legacy");
+    expect(() => createSessionValue("family-123")).toThrow();
+    expect(() => createAdminSessionValue()).toThrow();
+  });
+
+  test("rejects signed account cookies after suspension or deletion", () => {
+    const session = readSessionValue(createSessionValue("family-123"));
+    expect(sessionHasAccountAccess(session, "active")).toBe(true);
+    expect(sessionHasAccountAccess(session, "suspended")).toBe(false);
+    expect(sessionHasAccountAccess(session, null)).toBe(false);
+  });
+
+  test("hashes account passwords and normalizes email addresses", () => {
+    const hash = hashPassword("BrightStars2026");
+    expect(verifyPassword("BrightStars2026", hash)).toBe(true);
+    expect(verifyPassword("WrongPassword1", hash)).toBe(false);
+    expect(normalizeEmail(" Parent@Example.COM ")).toBe("parent@example.com");
+    expect(passwordError("short")).not.toBeNull();
+    expect(passwordError("StrongFamily2026")).toBeNull();
   });
 
   test("hashes PINs with a unique salt", () => {

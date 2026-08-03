@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getStudent, getProfileId } from "@/lib/student";
+import { getStudentForRequest } from "@/lib/student";
 
 // POST /api/settings — update learner settings (currently: level).
 // Body: { level?: "preschool" | "grade3", soundOn?: boolean }
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "invalid body" }, { status: 400 });
-  const student = await getStudent(getProfileId(req));
+  const student = await getStudentForRequest(req);
   const data: { level?: string; soundOn?: boolean } = {};
   if (["preschool", "grade1", "grade2", "grade3", "grade4"].includes(body.level)) data.level = body.level;
   if (typeof body.soundOn === "boolean") data.soundOn = body.soundOn;

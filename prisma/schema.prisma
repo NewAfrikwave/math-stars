@@ -9,9 +9,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// A single learner profile (the daughter). Extensible to multiple students later.
+// Parent or guardian account. Children never need their own email address.
+model FamilyAccount {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  displayName  String
+  passwordHash String
+  status       String   @default("active") // active | suspended
+  privacyAcceptedAt DateTime
+  lastLoginAt  DateTime?
+  lastActiveAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  students Student[]
+  devices  AccountDevice[]
+
+  @@index([createdAt])
+  @@index([lastActiveAt])
+}
+
+// A learner profile belonging to one family. familyId remains optional only so
+// the existing access-code profiles can be migrated without losing data.
 model Student {
   id        String   @id @default(cuid())
+  familyId  String?
   name      String   @default("Star Learner")
   avatar    String   @default("fox")
   level     String   @default("grade3") // preschool | grade3
@@ -23,11 +45,42 @@ model Student {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  family      FamilyAccount? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
   progress    LessonProgress[]
   achievements Achievement[]
   tutorMessages TutorMessage[]
   dailyChallenges DailyChallenge[]
   activityEvents ActivityEvent[]
+
+  @@index([familyId])
+}
+
+// Privacy-safe browser/device presence. We intentionally store categories,
+// not location, IP address, advertising IDs, or a raw user-agent string.
+model AccountDevice {
+  id          String   @id @default(cuid())
+  scopeKey    String   // family account id, or "legacy" for the owner entrance
+  familyId    String?
+  deviceKey   String
+  deviceType  String   // phone | tablet | desktop | tv | unknown
+  platform    String
+  browser     String
+  launchMode  String   @default("browser") // browser | standalone | fullscreen
+  installed   Boolean  @default(false)
+  installedAt DateTime?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  visitCount  Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  family FamilyAccount? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([scopeKey, deviceKey])
+  @@index([familyId])
+  @@index([lastSeenAt])
+  @@index([installed])
 }
 
 // Progress record per lesson (one row per student + lessonId combo)
