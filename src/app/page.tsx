@@ -89,6 +89,13 @@ export default function Page() {
     return () => window.removeEventListener("mathstars-open-install", openInstall);
   }, []);
 
+  useEffect(() => {
+    if (localStorage.getItem("mathstars-open-admin") === "1") {
+      localStorage.removeItem("mathstars-open-admin");
+      setView({ name: "admin" });
+    }
+  }, [setView]);
+
   // Load site settings (feature flags, broadcast, donations) on first load.
   useEffect(() => {
     fetch("/api/site")
@@ -170,7 +177,7 @@ export default function Page() {
 
   // Show the landing/profile-picker page when no profile is selected, or when
   // the user taps the switch-profile button.
-  if (hydrated && (!currentProfileId || view.name === "landing")) {
+  if (hydrated && view.name !== "admin" && (!currentProfileId || view.name === "landing")) {
     return <LandingView />;
   }
 
