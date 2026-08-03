@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BookOpen,
+  Boxes,
   CheckCircle2,
   Lightbulb,
   PlayCircle,
@@ -27,6 +28,7 @@ export function LessonView({ lessonId }: { lessonId: string }) {
   const setView = useGameStore((state) => state.setView);
   const progress = useGameStore((state) => state.progress);
   const level = useGameStore((state) => state.level);
+  const siteSettings = useGameStore((state) => state.siteSettings);
   const [difficulty, setDifficulty] = useState<Difficulty | undefined>();
 
   if (!found) {
@@ -120,9 +122,11 @@ export function LessonView({ lessonId }: { lessonId: string }) {
                     <p className="mt-1 text-sm text-muted-foreground">Say each step out loud. Explaining math helps it stick.</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setView({ name: "tutor", lessonId })} className="mt-3 w-full rounded-full border-[#285f3b]/30 text-[#285f3b]">
-                  Ask Pip about this lesson
-                </Button>
+                {siteSettings?.aiTutorEnabled !== false && (
+                  <Button variant="outline" size="sm" onClick={() => setView({ name: "tutor", lessonId })} className="mt-3 w-full rounded-full border-[#285f3b]/30 text-[#285f3b]">
+                    Ask Pip about this lesson
+                  </Button>
+                )}
               </div>
             </aside>
 
@@ -171,9 +175,16 @@ export function LessonView({ lessonId }: { lessonId: string }) {
               <p className="mt-1 text-sm text-muted-foreground">{lesson.practiceCount} questions with hints, visuals, and read-aloud support.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setView({ name: "worksheet", lessonId })} className="gap-2 rounded-full">
-                <Printer className="h-4 w-4" /> Worksheet
-              </Button>
+              {lessonId === "mult-concept" && siteSettings?.manipulativesEnabled !== false && (
+                <Button variant="outline" onClick={() => setView({ name: "manipulative", lessonId })} className="gap-2 rounded-full">
+                  <Boxes className="h-4 w-4" /> Build it
+                </Button>
+              )}
+              {siteSettings?.worksheetsEnabled !== false && (
+                <Button variant="outline" onClick={() => setView({ name: "worksheet", lessonId })} className="gap-2 rounded-full">
+                  <Printer className="h-4 w-4" /> Worksheet
+                </Button>
+              )}
               {status === "completed" && (
                 <Button variant="outline" onClick={() => setView({ name: "domain", domainId: domain.id })} className="gap-2 rounded-full">
                   <RotateCcw className="h-4 w-4" /> Back

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 import { speakableText } from "@/lib/speech";
 
 // A simple in-memory cache so the same text isn't re-synthesized on replay.
@@ -8,6 +8,36 @@ const cache = new Map<string, string>();
 // A single shared <audio> element reused across the app.
 let sharedAudio: HTMLAudioElement | null = null;
 let speechRequest = 0;
+let nextOwnerId = 0;
+
+interface SharedSpeechState {
+  ownerId: number | null;
+  speaking: boolean;
+  loading: boolean;
+  error: string | null;
+}
+
+let sharedSpeechState: SharedSpeechState = {
+  ownerId: null,
+  speaking: false,
+  loading: false,
+  error: null,
+};
+const speechListeners = new Set<() => void>();
+
+function subscribeToSpeech(listener: () => void) {
+  speechListeners.add(listener);
+  return () => speechListeners.delete(listener);
+}
+
+function getSpeechSnapshot() {
+  return sharedSpeechState;
+}
+
+function updateSpeechState(next: SharedSpeechState) {
+  sharedSpeechState = next;
+  speechListeners.forEach((listener) => listener());
+}
 
 function getAudio(): HTMLAudioElement {
   if (typeof window === "undefined") {
@@ -34,17 +64,14 @@ interface UseTTSResult {
 // Read-aloud hook backed by /api/tts (z-ai-web-dev-sdk TTS).
 // Shared across all callers so only one piece of text plays at a time.
 export function useTTS(): UseTTSResult {
-  const [speaking, setSpeaking] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  const ownerId = useRef<number | null>(null);
+  if (ownerId.current === null) ownerId.current = ++nextOwnerId;
+  const id = ownerId.current;
+  const snapshot = useSyncExternalStore(subscribeToSpeech, getSpeechSnapshot, getSpeechSnapshot);
+  const ownsSpeech = snapshot.ownerId === id;
+  const speaking = ownsSpeech && snapshot.speaking;
+  const loading = ownsSpeech && snapshot.loading;
+  const error = ownsSpeech ? snapshot.error : null;
 
   const stop = useCallback(() => {
     speechRequest += 1;
@@ -54,7 +81,7 @@ export function useTTS(): UseTTSResult {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-    if (mounted.current) setSpeaking(false);
+    updateSpeechState({ ownerId: null, speaking: false, loading: false, error: null });
   }, []);
 
   const speak = useCallback(
@@ -67,14 +94,17 @@ export function useTTS(): UseTTSResult {
       audio.pause();
       audio.currentTime = 0;
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      updateSpeechState({ ownerId: id, speaking: false, loading: true, error: null });
 
       const speakInBrowser = (reason?: unknown) => {
-        if (request !== speechRequest || !("speechSynthesis" in window)) {
-          if (mounted.current) {
-            setError(reason instanceof Error ? reason.message : "Read aloud is unavailable on this device.");
-            setLoading(false);
-            setSpeaking(false);
-          }
+        if (request !== speechRequest) return;
+        if (!("speechSynthesis" in window)) {
+          updateSpeechState({
+            ownerId: id,
+            speaking: false,
+            loading: false,
+            error: reason instanceof Error ? reason.message : "Read aloud is unavailable on this device.",
+          });
           return;
         }
 
@@ -88,23 +118,26 @@ export function useTTS(): UseTTSResult {
           voices.find((voice) => voice.lang.startsWith("en")) ??
           null;
         utterance.onstart = () => {
-          if (mounted.current && request === speechRequest) {
-            setLoading(false);
-            setSpeaking(true);
-            setError(null);
+          if (request === speechRequest) {
+            updateSpeechState({ ownerId: id, speaking: true, loading: false, error: null });
           }
         };
         utterance.onend = () => {
-          if (mounted.current && request === speechRequest) setSpeaking(false);
-        };
-        utterance.onerror = (event) => {
-          if (mounted.current && request === speechRequest && event.error !== "canceled") {
-            setError("Your device could not play the question. Please try again.");
-            setLoading(false);
-            setSpeaking(false);
+          if (request === speechRequest) {
+            updateSpeechState({ ownerId: null, speaking: false, loading: false, error: null });
           }
         };
-        setLoading(false);
+        utterance.onerror = (event) => {
+          if (request === speechRequest && event.error !== "canceled") {
+            updateSpeechState({
+              ownerId: id,
+              speaking: false,
+              loading: false,
+              error: "Your device could not play the question. Please try again.",
+            });
+          }
+        };
+        updateSpeechState({ ownerId: id, speaking: false, loading: false, error: null });
         window.speechSynthesis.speak(utterance);
       };
 
@@ -115,16 +148,17 @@ export function useTTS(): UseTTSResult {
         audio
           .play()
           .then(() => {
-            if (mounted.current) {
-              setSpeaking(true);
-              setError(null);
+            if (request === speechRequest) {
+              updateSpeechState({ ownerId: id, speaking: true, loading: false, error: null });
             }
           })
           .catch(speakInBrowser);
       };
 
       audio.onended = () => {
-        if (mounted.current) setSpeaking(false);
+        if (request === speechRequest) {
+          updateSpeechState({ ownerId: null, speaking: false, loading: false, error: null });
+        }
       };
       audio.onerror = () => speakInBrowser(new Error("Audio playback failed."));
 
@@ -134,7 +168,6 @@ export function useTTS(): UseTTSResult {
         return;
       }
 
-      setLoading(true);
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 4500);
       fetch("/api/tts", {
@@ -161,7 +194,6 @@ export function useTTS(): UseTTSResult {
               cache.delete(firstKey);
             }
           }
-          if (mounted.current) setLoading(false);
           playUrl(url);
         })
         .catch((e) => {
@@ -169,7 +201,7 @@ export function useTTS(): UseTTSResult {
           speakInBrowser(e);
         });
     },
-    []
+    [id]
   );
 
   return { speaking, loading, error, speak, stop };

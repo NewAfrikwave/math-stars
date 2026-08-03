@@ -54,6 +54,7 @@ export function QuizRunner({
   const [correctCount, setCorrectCount] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const [sessionKey, setSessionKey] = useState(0);
   const siteSettings = useGameStore((s) => s.siteSettings);
   const sfx = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
   const { speak, stop } = useTTS();
@@ -115,11 +116,16 @@ export function QuizRunner({
   };
 
   const restart = () => {
+    stop();
     setIndex(0);
     setCurrentAnswer(null);
     setSubmitted(false);
     setShowHint(false);
     setCorrectCount(0);
+    setCelebrate(false);
+    // Force every answer control to remount, including when question 1 is
+    // already visible. Typed, spoken, and selected answers must all clear.
+    setSessionKey((value) => value + 1);
   };
 
   return (
@@ -162,7 +168,7 @@ export function QuizRunner({
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={problem.id}
+            key={`${sessionKey}-${problem.id}`}
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
@@ -302,11 +308,60 @@ export function QuizRunner({
 }
 
 function getLearningSteps(problem: Problem, preschool: boolean) {
+  if (problem.visual?.kind === "sharing-baskets") {
+    return [
+      { title: "See what you know", text: `Start with ${problem.visual.total} ${problem.visual.label ?? "items"}. Each basket holds ${problem.visual.perGroup}.` },
+      { title: "Share equally", text: `Make baskets with ${problem.visual.perGroup} in each until every item has a place.` },
+      { title: "Count the baskets", text: "The number of equal baskets you made is the answer." },
+    ];
+  }
   if (problem.visual?.kind === "equal-groups") {
     return [
       { title: "See it", text: "Look at each real basket and count the objects inside." },
       { title: "Say it", text: `Say “${problem.visual.groups} groups of ${problem.visual.perGroup}.”` },
       { title: "Solve it", text: "Find how many objects there are altogether." },
+    ];
+  }
+  if (problem.lessonId === "g4-equiv-frac") {
+    return [
+      { title: "Keep the same value", text: "Equivalent fractions name the same amount of the whole." },
+      { title: "Scale both parts", text: "Multiply the numerator and denominator by the same number." },
+      { title: "Check the match", text: "Choose the fraction whose top and bottom changed by that same factor." },
+    ];
+  }
+  if (problem.lessonId === "g4-compare-frac") {
+    return [
+      { title: "Notice the denominators", text: "The fractions have different-sized parts, so compare them on equal terms." },
+      { title: "Make a fair comparison", text: "Use a common denominator or cross-multiply." },
+      { title: "Choose the symbol", text: "Pick <, =, or > to show how the first fraction compares with the second." },
+    ];
+  }
+  if (problem.lessonId === "g4-add-frac") {
+    return [
+      { title: "Check the operation", text: "Look for the plus or minus sign. The denominators already match." },
+      { title: "Work with the numerators", text: "Add or subtract the top numbers and keep the denominator." },
+      { title: "Simplify", text: "Reduce the result if the numerator and denominator share a factor." },
+    ];
+  }
+  if (problem.lessonId === "g4-mult-frac") {
+    return [
+      { title: "Read the groups", text: "A whole number times a fraction means repeated equal fractional groups." },
+      { title: "Multiply the top", text: "Multiply the whole number by the numerator. Keep the denominator." },
+      { title: "Simplify", text: "Reduce the fraction or write an equivalent mixed number when needed." },
+    ];
+  }
+  if (problem.lessonId === "g4-mixed-numbers") {
+    return [
+      { title: "Find the wholes", text: "Divide the numerator by the denominator." },
+      { title: "Use the remainder", text: "The quotient is the whole number. Put the remainder over the original denominator." },
+      { title: "Check", text: "Multiply the whole by the denominator, then add the remainder to recover the numerator." },
+    ];
+  }
+  if (problem.lessonId === "g4-frac-dec") {
+    return [
+      { title: "Read the fraction", text: "The fraction bar means numerator divided by denominator." },
+      { title: "Divide", text: "Divide the top number by the bottom number." },
+      { title: "Match the decimal", text: "Choose the decimal that names the same amount as the shaded model." },
     ];
   }
   if (problem.visual?.kind === "fraction-pie" || problem.visual?.kind === "fraction-bar") {
