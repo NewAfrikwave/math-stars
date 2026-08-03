@@ -52,13 +52,14 @@ const featureList = [
 
 export function AccessGate({ authenticated, staleSession = false, children }: { authenticated: boolean; staleSession?: boolean; children: React.ReactNode }) {
   const pathname = usePathname();
-  const [mode, setMode] = useState<"signin" | "register" | "legacy">("signin");
+  const [mode, setMode] = useState<"signin" | "register" | "legacy" | "admin">("signin");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [code, setCode] = useState("");
+  const [adminPin, setAdminPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const signInPage = pathname === "/signin";
@@ -103,6 +104,35 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
       return;
     }
     try {
+      if (mode === "admin") {
+        if (!/^\d{4}$/.test(adminPin)) {
+          setError("Enter your four-digit admin PIN.");
+          return;
+        }
+        const ownerResponse = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        if (!ownerResponse.ok) {
+          const data = await ownerResponse.json().catch(() => null);
+          setError(data?.error ?? "The owner access code is incorrect.");
+          return;
+        }
+        const adminResponse = await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-admin-pin": adminPin },
+          body: JSON.stringify({ action: "verify-pin" }),
+        });
+        if (!adminResponse.ok) {
+          await fetch("/api/auth/logout", { method: "POST" });
+          setError(adminResponse.status === 429 ? "Too many attempts. Please wait and try again." : "The admin PIN is incorrect.");
+          return;
+        }
+        localStorage.setItem("mathstars-open-admin", "1");
+        window.location.href = "/";
+        return;
+      }
       const response = await fetch(mode === "register" ? "/api/auth/register" : "/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -197,10 +227,10 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
               </span>
               <div>
                 <h2 id="family-login-title" className="font-display text-lg font-bold">
-                  {mode === "register" ? "Create your free family account" : mode === "legacy" ? "Existing family code" : "Welcome back"}
+                  {mode === "register" ? "Create your free family account" : mode === "legacy" ? "Existing family code" : mode === "admin" ? "Administrator access" : "Welcome back"}
                 </h2>
                 <p className="mt-0.5 text-xs leading-5 text-stone-500">
-                  {mode === "register" ? "One private space for the grown-up and every learner." : "Sign in to your family’s private learning space."}
+                  {mode === "register" ? "One private space for the grown-up and every learner." : mode === "admin" ? "Go directly to the private Math Stars admin panel." : "Sign in to your family’s private learning space."}
                 </p>
               </div>
             </div>
@@ -217,7 +247,7 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
                   <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" required minLength={2} placeholder="Your name" className="h-12 rounded-xl border border-stone-200 bg-[#fffdf8] px-4 text-base font-normal outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
                 </label>
               )}
-              {mode !== "legacy" ? (
+              {mode !== "legacy" && mode !== "admin" ? (
                 <>
                   <label className="grid gap-1.5 text-sm font-bold">
                     Email address
@@ -244,22 +274,31 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
                   )}
                 </>
               ) : (
-                <label className="grid gap-1.5 text-sm font-bold">
-                  Family access code
-                  <input id="family-code" type="password" autoComplete="current-password" value={code} onChange={(event) => setCode(event.target.value)} required placeholder="Enter the existing code" className="h-12 rounded-xl border border-stone-200 bg-[#fffdf8] px-4 text-base font-normal outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
-                </label>
+                <>
+                  <label className="grid gap-1.5 text-sm font-bold">
+                    {mode === "admin" ? "Owner access code" : "Family access code"}
+                    <input id="family-code" type="password" autoComplete="current-password" value={code} onChange={(event) => setCode(event.target.value)} required placeholder="Enter the existing code" className="h-12 rounded-xl border border-stone-200 bg-[#fffdf8] px-4 text-base font-normal outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
+                  </label>
+                  {mode === "admin" && <label className="grid gap-1.5 text-sm font-bold">
+                    Admin PIN
+                    <input type="password" inputMode="numeric" autoComplete="current-password" value={adminPin} onChange={(event) => setAdminPin(event.target.value.replace(/\D/g, "").slice(0, 4))} required minLength={4} maxLength={4} placeholder="Enter four-digit PIN" className="h-12 rounded-xl border border-stone-200 bg-[#fffdf8] px-4 text-base font-normal outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
+                  </label>}
+                </>
               )}
             </div>
             <button
               disabled={loading}
               className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-7 font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-label="Signing in" /> : <>{mode === "register" ? "Create my free account" : "Enter Math Stars"} <ChevronRight className="h-4 w-4" aria-hidden="true" /></>}
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-label="Signing in" /> : <>{mode === "register" ? "Create my free account" : mode === "admin" ? "Open admin panel" : "Enter Math Stars"} <ChevronRight className="h-4 w-4" aria-hidden="true" /></>}
             </button>
             {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{error}</p>}
-            <div className="mt-4 border-t border-stone-100 pt-4 text-center">
+            <div className="mt-4 flex flex-col items-center gap-2 border-t border-stone-100 pt-4 text-center">
               <button type="button" onClick={() => { setMode(mode === "legacy" ? "signin" : "legacy"); setError(""); }} className="text-xs font-semibold text-stone-500 underline hover:text-stone-700">
                 {mode === "legacy" ? "Back to email sign in" : "Use the existing family access code"}
+              </button>
+              <button type="button" onClick={() => { setMode(mode === "admin" ? "signin" : "admin"); setError(""); }} className="text-xs font-semibold text-rose-600 underline hover:text-rose-700">
+                {mode === "admin" ? "Back to family sign in" : "Administrator sign in"}
               </button>
             </div>
           </form>
