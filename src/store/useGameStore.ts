@@ -310,11 +310,32 @@ export const useGameStore = create<GameState>((set, get) => ({
         headers: { "x-parent-pin": parentPin },
       });
       if (!response.ok) return false;
-      const remaining = get().profiles.filter((profile) => profile.id !== id);
-      set({
-        profiles: remaining,
-        currentProfileId: get().currentProfileId === id ? remaining[0]?.id ?? null : get().currentProfileId,
-      });
+      const state = get();
+      const remaining = state.profiles.filter((profile) => profile.id !== id);
+      const deletingActiveProfile = state.currentProfileId === id;
+      if (deletingActiveProfile && typeof window !== "undefined") {
+        localStorage.removeItem("mathstars-profile");
+      }
+      set(
+        deletingActiveProfile
+          ? {
+              profiles: remaining,
+              currentProfileId: null,
+              view: { name: "landing" },
+              studentName: "Star Learner",
+              level: null,
+              totalStars: 0,
+              streak: 0,
+              progress: initialProgress(),
+              earnedAchievements: [],
+              dailyDoneDate: null,
+              dailyScore: null,
+              lastEarnedAchievements: [],
+              domainCompleted: null,
+              hydrated: true,
+            }
+          : { profiles: remaining }
+      );
       return true;
     } catch {
       return false;
