@@ -40,4 +40,4 @@ EXPOSE 3000
 
 # On first run, push the schema to create/migrate the SQLite database.
 # The DATABASE_URL env var should point to /app/data/custom.db (persistent volume).
-CMD ["sh", "-c", "bunx prisma db push --accept-data-loss && node server.js"]
+CMD ["sh", "-c", "bunx prisma@6.11.1 db push --accept-data-loss && bun server.js"]
