@@ -1,13 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import type { ProblemVisual, ShapeKind, PatternItem } from "@/lib/types";
 
 // Dispatch component: renders a ProblemVisual payload with a friendly SVG/CSS visual.
 export function ProblemVisualRenderer({ visual }: { visual: ProblemVisual }) {
   switch (visual.kind) {
     case "equal-groups":
-      return <EqualGroups groups={visual.groups} perGroup={visual.perGroup} emoji={visual.emoji} />;
+      return <EqualGroups groups={visual.groups} perGroup={visual.perGroup} emoji={visual.emoji} label={visual.label} />;
     case "array":
       return <ArrayVisual rows={visual.rows} cols={visual.cols} emoji={visual.emoji} />;
     case "fraction-pie":
@@ -52,34 +53,54 @@ export function ProblemVisualRenderer({ visual }: { visual: ProblemVisual }) {
 }
 
 // ---------------------------------------------------------------------------
-// Equal groups: groups of emoji items
+// Equal groups: real baskets with countable items placed inside them.
 // ---------------------------------------------------------------------------
 function EqualGroups({
   groups,
   perGroup,
   emoji,
+  label,
 }: {
   groups: number;
   perGroup: number;
   emoji: string;
+  label?: string;
 }) {
   return (
-    <div className="flex flex-wrap justify-center gap-3">
-      {Array.from({ length: groups }).map((_, g) => (
-        <div
-          key={g}
-          className="rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50/60 px-3 py-2 dark:bg-rose-950/20"
-        >
-          <div className="mb-1 text-center text-xs font-semibold text-rose-500">
-            Group {g + 1}
+    <div
+      className="w-full"
+      role="img"
+      aria-label={`${groups} baskets with ${perGroup} ${label ?? "items"} in each basket`}
+    >
+      <div className="flex flex-wrap items-end justify-center gap-x-2 gap-y-5 sm:gap-x-4">
+        {Array.from({ length: groups }).map((_, g) => (
+          <div key={g} className="flex w-[112px] flex-col items-center sm:w-[132px]">
+            <span className="mb-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+              Basket {g + 1}
+            </span>
+            <div className="relative h-[125px] w-full sm:h-[148px]">
+              <div className="absolute left-1/2 top-[42%] z-0 flex w-[76%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-end justify-center gap-0.5 px-1 text-[22px] leading-none sm:text-[25px]">
+                {Array.from({ length: perGroup }).map((_, i) => (
+                  <span key={i} aria-hidden="true">{emoji}</span>
+                ))}
+              </div>
+              <Image
+                src="/lesson-basket.webp"
+                alt=""
+                fill
+                sizes="132px"
+                className="z-10 object-contain"
+                aria-hidden="true"
+              />
+            </div>
           </div>
-          <div className="flex max-w-[140px] flex-wrap justify-center gap-1 text-2xl">
-            {Array.from({ length: perGroup }).map((_, i) => (
-              <span key={i}>{emoji}</span>
-            ))}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      <div className="mx-auto mt-3 flex w-fit items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-2 font-display text-base font-bold text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100 sm:text-lg">
+        <span>{groups} groups of {perGroup}</span>
+        <span aria-hidden="true">=</span>
+        <span>{groups} × {perGroup}</span>
+      </div>
     </div>
   );
 }

@@ -1,65 +1,59 @@
-# Design QA: Daily Mission Board
+# Design QA: Guided Math Studio lesson system
 
-**Source visual truth**
+## Evidence
 
-- Path: `/workspace/scratch/a3be78015eb6/generated_images/exec-f4f8bea0-896f-4063-bee5-daa03328aed3.png`
-- Pixel dimensions: 1488 × 1058
-- Intended CSS viewport: 1440 × 1024 desktop
-- Density normalization: source is treated as a 1× desktop reference and compared by proportional layout because its exported dimensions are 3.3% larger than the intended CSS viewport.
-- State: fresh 3rd-grade learner named Fefe with zero stars and zero completed lessons.
+- Source visual truth: `/workspace/scratch/a3be78015eb6/generated_images/exec-5deab9aa-df19-4cbc-b5ea-49a5499fec5c.png`
+- Source pixels: 1488 × 1056.
+- Intended desktop CSS viewport: approximately 1488 × 1056 at device scale factor 1.
+- Implementation screenshot: unavailable.
+- Implementation URL attempted: local Work Mode preview on port 4173.
+- State: Grade 3 equal-groups lesson and practice question.
+- Browser evidence: blocked. The required cloud browser returned `net::ERR_BLOCKED_BY_CLIENT` for the Work Mode preview URL.
+- Full-view comparison evidence: unavailable because the implementation could not be captured in the required browser.
+- Focused region comparison evidence: unavailable for the same reason.
 
-**Implementation evidence**
+## Findings
 
-- Local implementation: child home in `src/components/game/HomeView.tsx`
-- Times Table Lab: `src/components/game/TimesTableView.tsx`
-- Browser-rendered screenshot path: unavailable
-- Requested browser viewport: cloud-browser desktop viewport; the browser connection timed out before page capture.
-- Preview state: the preview service reported running after a bounded restart, but no page could be reached from the cloud browser.
+- [P1] Browser-rendered visual verification is unavailable
+  - Location: complete lesson and practice flow.
+  - Evidence: the source mock opens successfully, but the required local implementation preview is blocked by the cloud browser before the app renders.
+  - Impact: typography, responsive wrapping, generated basket compositing, interactions, and console state cannot be signed off visually.
+  - Fix: restore cloud-browser access to the local preview, capture desktop and mobile states, compare them with the source in one combined view, and address any visible P0/P1/P2 differences.
 
-**Full-view comparison evidence**
+## Static and Build Validation
 
-- Blocked. The source image was opened at original resolution, but the required same-state browser-rendered implementation screenshot could not be captured. No claim of visual equivalence is made from source code or build output.
+- TypeScript: passed.
+- ESLint: passed.
+- Production build: passed.
+- Automated Bun tests: not run because Bun is unavailable in this environment.
+- Primary browser interactions: not tested due to the browser preview blocker.
+- Browser console errors: not checked due to the browser preview blocker.
 
-**Focused region comparison evidence**
+## Implementation Scope Completed
 
-- Blocked for the mission board, Pip character placement, journey rail, bottom navigation, and Times Table Lab because browser-rendered evidence is unavailable.
+- Shared guided-studio teaching layout for every curriculum and grade level.
+- Shared two-column practice layout with age-aware learning steps.
+- Prominent lesson and question read-aloud controls.
+- Server TTS with browser speech-synthesis fallback, stop state, retry state, timeout, and accessible labels.
+- Real woven basket asset for equal-group questions.
+- Spoken object names separated from visual emoji so narration says “apples,” “cookies,” and similar words naturally.
+- Responsive desktop and stacked mobile CSS structure.
+- Existing answer inputs, hints, feedback, progress, results, difficulty modes, worksheets, and Pip tutor navigation retained.
 
-**Findings**
+## Implementation Checklist
 
-- [P0] Browser verification is unavailable.
-  - Location: local preview and cloud browser connection.
-  - Evidence: the production build, TypeScript check, and lint pass, but cloud-browser navigation and tab inspection timed out. The preview service did not expose a capturable page.
-  - Impact: responsive layout, image masking, text wrapping, navigation, practice interactions, read-aloud behavior, and console errors cannot be truthfully verified.
-  - Fix: recover the cloud-browser preview connection, capture the home at the matching desktop state, exercise primary interactions, capture the Times Table Lab, compare the reference and implementation in one combined image, and resolve any P0/P1/P2 visual differences.
+- [x] Apply the selected Guided Math Studio information architecture.
+- [x] Repair read-aloud failure behavior and accessibility labels.
+- [x] Replace rectangle group placeholders with recognizable baskets.
+- [x] Apply the redesign through shared components used by all grades.
+- [x] Pass TypeScript, ESLint, and production build.
+- [ ] Capture and compare browser-rendered desktop practice state.
+- [ ] Test Read aloud, hint, answer, feedback, next question, and restart interactions.
+- [ ] Capture and inspect the mobile layout.
+- [ ] Confirm no application console errors.
 
-**Primary interactions pending browser test**
+## Follow-up Polish
 
-- Begin mission
-- Daily Challenge
-- Times Tables navigation
-- 2× through 12× table selection
-- Read aloud
-- Quick-practice correct and retry states
-- Ask Pip
-- More menu and switch learner
-- Browser console error check
-
-**Comparison history**
-
-- Iteration 1: implementation completed and passed TypeScript, lint, and production build. Browser-rendered capture was blocked by the preview/browser environment, so no visual-fix iteration could begin.
-
-**Implementation checklist**
-
-- [x] Faithful explorer-study structure implemented.
-- [x] Generated background, Pip, and equal-groups assets integrated.
-- [x] Existing learner progress and lesson routing retained.
-- [x] Interactive Times Table Lab from 2× through 12× implemented.
-- [x] TypeScript check passed.
-- [x] ESLint passed.
-- [x] Production build passed.
-- [ ] Capture browser-rendered desktop home.
-- [ ] Compare source and implementation in one combined image.
-- [ ] Test primary interactions and console errors.
-- [ ] Resolve any P0/P1/P2 visual issues.
+- Consider a future custom object-illustration library so every countable object uses the same premium 3D art direction as the baskets and Pip.
 
 final result: blocked

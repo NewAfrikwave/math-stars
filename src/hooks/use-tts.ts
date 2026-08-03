@@ -7,6 +7,7 @@ import { speakableText } from "@/lib/speech";
 const cache = new Map<string, string>();
 // A single shared <audio> element reused across the app.
 let sharedAudio: HTMLAudioElement | null = null;
+let speechRequest = 0;
 
 function getAudio(): HTMLAudioElement {
   if (typeof window === "undefined") {
@@ -46,9 +47,13 @@ export function useTTS(): UseTTSResult {
   }, []);
 
   const stop = useCallback(() => {
+    speechRequest += 1;
     const audio = getAudio();
     audio.pause();
     audio.currentTime = 0;
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     if (mounted.current) setSpeaking(false);
   }, []);
 
@@ -56,13 +61,56 @@ export function useTTS(): UseTTSResult {
     (text: string, opts?: { speed?: number }) => {
       const clean = speakableText(text);
       if (!clean) return;
+      const request = ++speechRequest;
       const audio = getAudio();
       // cancel anything currently playing
       audio.pause();
       audio.currentTime = 0;
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+      const speakInBrowser = (reason?: unknown) => {
+        if (request !== speechRequest || !("speechSynthesis" in window)) {
+          if (mounted.current) {
+            setError(reason instanceof Error ? reason.message : "Read aloud is unavailable on this device.");
+            setLoading(false);
+            setSpeaking(false);
+          }
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(clean);
+        utterance.lang = "en-US";
+        utterance.rate = Math.min(1.25, Math.max(0.65, opts?.speed ?? 0.92));
+        utterance.pitch = 1.04;
+        const voices = window.speechSynthesis.getVoices();
+        utterance.voice =
+          voices.find((voice) => voice.lang === "en-US" && /natural|samantha|google|aria/i.test(voice.name)) ??
+          voices.find((voice) => voice.lang.startsWith("en")) ??
+          null;
+        utterance.onstart = () => {
+          if (mounted.current && request === speechRequest) {
+            setLoading(false);
+            setSpeaking(true);
+            setError(null);
+          }
+        };
+        utterance.onend = () => {
+          if (mounted.current && request === speechRequest) setSpeaking(false);
+        };
+        utterance.onerror = (event) => {
+          if (mounted.current && request === speechRequest && event.error !== "canceled") {
+            setError("Your device could not play the question. Please try again.");
+            setLoading(false);
+            setSpeaking(false);
+          }
+        };
+        setLoading(false);
+        window.speechSynthesis.speak(utterance);
+      };
 
       const key = `${opts?.speed ?? 1}::${clean}`;
       const playUrl = (url: string) => {
+        if (request !== speechRequest) return;
         audio.src = url;
         audio
           .play()
@@ -72,25 +120,13 @@ export function useTTS(): UseTTSResult {
               setError(null);
             }
           })
-          .catch((e) => {
-            if (mounted.current) {
-              setError(e instanceof Error ? e.message : "playback failed");
-              setSpeaking(false);
-              setLoading(false);
-            }
-          });
+          .catch(speakInBrowser);
       };
 
       audio.onended = () => {
         if (mounted.current) setSpeaking(false);
       };
-      audio.onerror = () => {
-        if (mounted.current) {
-          setError("audio playback error");
-          setSpeaking(false);
-          setLoading(false);
-        }
-      };
+      audio.onerror = () => speakInBrowser(new Error("Audio playback failed."));
 
       const cached = cache.get(key);
       if (cached) {
@@ -99,16 +135,21 @@ export function useTTS(): UseTTSResult {
       }
 
       setLoading(true);
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 4500);
       fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: clean, speed: opts?.speed ?? 1 }),
+        signal: controller.signal,
       })
         .then((r) => {
           if (!r.ok) throw new Error("tts request failed");
           return r.blob();
         })
         .then((blob) => {
+          window.clearTimeout(timeout);
+          if (request !== speechRequest) return;
           const url = URL.createObjectURL(blob);
           cache.set(key, url);
           // cap cache size
@@ -124,11 +165,8 @@ export function useTTS(): UseTTSResult {
           playUrl(url);
         })
         .catch((e) => {
-          if (mounted.current) {
-            setError(e instanceof Error ? e.message : "tts failed");
-            setLoading(false);
-            setSpeaking(false);
-          }
+          window.clearTimeout(timeout);
+          speakInBrowser(e);
         });
     },
     []

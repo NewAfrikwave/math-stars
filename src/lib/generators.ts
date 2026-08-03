@@ -59,8 +59,20 @@ function nextId(lessonId: string) {
   return `${lessonId}-${problemCounter}`;
 }
 
-// EMOJI sets for equal-groups visuals
-const ITEM_EMOJIS = ["🍎", "🍪", "⭐", "🎈", "🌸", "🐠", "🐝", "🍇", "🍓", "🦋"];
+// Friendly counting objects. Keep the visible object separate from its spoken
+// name so prompts and read-aloud never try to pronounce an emoji.
+const GROUP_ITEMS = [
+  { emoji: "🍎", singular: "apple", plural: "apples" },
+  { emoji: "🍪", singular: "cookie", plural: "cookies" },
+  { emoji: "⭐", singular: "star", plural: "stars" },
+  { emoji: "🎈", singular: "balloon", plural: "balloons" },
+  { emoji: "🌸", singular: "flower", plural: "flowers" },
+  { emoji: "🐠", singular: "fish", plural: "fish" },
+  { emoji: "🐝", singular: "bee", plural: "bees" },
+  { emoji: "🍇", singular: "bunch of grapes", plural: "bunches of grapes" },
+  { emoji: "🍓", singular: "strawberry", plural: "strawberries" },
+  { emoji: "🦋", singular: "butterfly", plural: "butterflies" },
+];
 
 // ---------------------------------------------------------------------------
 // Generator functions — each returns one Problem
@@ -72,18 +84,19 @@ function genEqualGroups(lesson: Lesson, ctx?: GenContext): Problem {
   const groups = randInt(gMin, gMax);
   const perGroup = randInt(pMin, pMax);
   const total = groups * perGroup;
-  const emoji = pick(ITEM_EMOJIS);
-  const visual: ProblemVisual = { kind: "equal-groups", groups, perGroup, emoji };
+  const item = pick(GROUP_ITEMS);
+  const itemName = perGroup === 1 ? item.singular : item.plural;
+  const visual: ProblemVisual = { kind: "equal-groups", groups, perGroup, emoji: item.emoji, label: item.plural };
   // sometimes ask for total, sometimes ask for a factor
   if (Math.random() < 0.7) {
     return {
       id: nextId(lesson.id),
       lessonId: lesson.id,
-      prompt: `There are ${groups} baskets with ${perGroup} ${emoji} in each. How many ${emoji} in all?`,
+      prompt: `There are ${groups} baskets with ${perGroup} ${itemName} in each. How many ${item.plural} are there in all?`,
       visual,
       answerType: "number",
       answer: total,
-      unit: emoji,
+      unit: item.plural,
       hint: `Add ${perGroup} together ${groups} times, or multiply ${groups} × ${perGroup}.`,
       explanation: `${groups} groups of ${perGroup} = ${groups} × ${perGroup} = ${total}.`,
     };
@@ -92,7 +105,7 @@ function genEqualGroups(lesson: Lesson, ctx?: GenContext): Problem {
   return {
     id: nextId(lesson.id),
     lessonId: lesson.id,
-    prompt: `${total} ${emoji} are shared into baskets of ${perGroup}. How many baskets are there?`,
+    prompt: `${total} ${item.plural} are shared equally, with ${perGroup} in each basket. How many baskets are needed?`,
     visual,
     answerType: "number",
     answer: groups,
