@@ -16,7 +16,6 @@ import {
   Printer,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
   Star,
   Target,
 } from "lucide-react";
@@ -83,11 +82,15 @@ export function AccessGate({ authenticated, children }: { authenticated: boolean
     <main id="main-content" className="min-h-screen overflow-hidden bg-[#fffaf0] text-[#351d10]">
       <header className="relative z-20 border-b border-rose-100/70 bg-[#fffaf0]/95 backdrop-blur">
         <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-          <a href="#top" className="flex items-center gap-2.5" aria-label="Math Stars home">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
-              <Sparkles className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className="font-display text-2xl font-bold tracking-tight">Math Stars</span>
+          <a href="#top" className="flex items-center" aria-label="Math Stars home">
+            <Image
+              src="/brand/math-stars-logo.png"
+              alt="Math Stars"
+              width={1400}
+              height={360}
+              priority
+              className="h-12 w-auto sm:h-14"
+            />
           </a>
 
           <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex" aria-label="Landing page">
@@ -216,7 +219,13 @@ export function AccessGate({ authenticated, children }: { authenticated: boolean
           <div className="rounded-[2rem] border border-rose-100 bg-white p-3 shadow-[0_22px_70px_rgba(89,44,28,0.12)] sm:p-5">
             <div className="overflow-hidden rounded-[1.4rem] border border-stone-200 bg-[#fffdf8]">
               <div className="flex items-center justify-between border-b border-stone-200 bg-white px-5 py-4">
-                <div className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-5 w-5 text-rose-600" /> Math Stars</div>
+                <Image
+                  src="/brand/math-stars-logo.png"
+                  alt="Math Stars"
+                  width={1400}
+                  height={360}
+                  className="h-9 w-auto"
+                />
                 <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600">Avery · 2nd Grade</span>
               </div>
               <div className="p-5 sm:p-7">

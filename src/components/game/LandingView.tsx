@@ -7,7 +7,6 @@ import {
   ArrowRight,
   LockKeyhole,
   Plus,
-  Sparkles,
   Star,
   Volume2,
   X,
@@ -106,11 +105,15 @@ export function LandingView() {
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-4 pb-6 pt-4 sm:px-8 lg:px-12">
         <header className="flex items-center justify-between gap-4">
-          <div className="inline-flex items-center gap-2.5 rounded-2xl bg-[#fff8e8]/90 px-3 py-2 shadow-sm backdrop-blur-sm">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#d94b4b] text-white">
-              <Sparkles className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className="font-display text-xl font-bold text-[#b7253d] sm:text-2xl">Math Stars</span>
+          <div className="inline-flex items-center rounded-2xl bg-[#fff8e8]/90 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+            <Image
+              src="/brand/math-stars-logo.png"
+              alt="Math Stars"
+              width={1400}
+              height={360}
+              priority
+              className="h-11 w-auto sm:h-12"
+            />
           </div>
           <button
             type="button"
