@@ -12,6 +12,7 @@ import {
   Heart,
   Home,
   LockKeyhole,
+  LogOut,
   Map,
   Medal,
   Menu,
@@ -86,6 +87,10 @@ export function HomeView() {
   const missionDescription = nextMission.lesson.subtitle;
 
   const scrollToJourney = () => document.getElementById("journey-board")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const returnToWelcomePage = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/";
+  };
 
   return (
     <div className="explorer-home relative min-h-[100svh] overflow-hidden bg-[#3d2415] text-[#2d2318]">
@@ -210,6 +215,13 @@ export function HomeView() {
               <MoreButton icon={<Settings />} label="Install app" onClick={() => window.dispatchEvent(new Event("mathstars-open-install"))} />
               <MoreButton icon={<RefreshCcw />} label="Switch learner" onClick={() => { setCurrentProfile(null); setView({ name: "landing" }); }} />
             </div>
+            <button
+              onClick={returnToWelcomePage}
+              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#9e2f2b] bg-[#fff7df] px-4 font-display font-black text-[#8f2429] transition-colors hover:bg-[#f8dfca] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]"
+            >
+              <LogOut className="h-5 w-5" aria-hidden="true" />
+              Back to welcome page
+            </button>
             <a href="/privacy" className="mt-4 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-[#6e5737] hover:bg-[#ead6a8]"><LockKeyhole className="h-4 w-4" />Privacy for families</a>
           </motion.div>
         </div>
