@@ -11,6 +11,7 @@ import {
   Lock,
   ShieldCheck,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
@@ -42,12 +43,14 @@ interface ActivityItem {
 
 export function ParentView() {
   const setView = useGameStore((s) => s.setView);
+  const deleteProfile = useGameStore((s) => s.deleteProfile);
   const [stage, setStage] = useState<"loading" | "pin" | "dashboard" | "setup">("loading");
   const [pinInput, setPinInput] = useState("");
   const [profiles, setProfiles] = useState<ProfileSummaryData[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // First, check whether a PIN is set (via the summary endpoint).
   useEffect(() => {
@@ -139,6 +142,30 @@ export function ParentView() {
   const pickProfileActivity = (id: string) => {
     setSelectedProfileId(id);
     loadActivity(id);
+  };
+
+  const removeProfile = async (profile: ProfileSummaryData) => {
+    const confirmation = window.prompt(
+      `Deleting ${profile.name} permanently removes their lessons, stars, tutor history, and activity. Type DELETE ${profile.name} to continue.`
+    );
+    if (confirmation !== `DELETE ${profile.name}`) return;
+    setDeletingId(profile.id);
+    setError(null);
+    const deleted = await deleteProfile(profile.id, pinInput);
+    if (!deleted) {
+      setError(`Could not delete ${profile.name}. Please unlock the parent area again and retry.`);
+      setDeletingId(null);
+      return;
+    }
+    const remaining = profiles.filter((item) => item.id !== profile.id);
+    setProfiles(remaining);
+    if (selectedProfileId === profile.id) {
+      const nextId = remaining[0]?.id ?? null;
+      setSelectedProfileId(nextId);
+      if (nextId) loadActivity(nextId);
+      else setActivity([]);
+    }
+    setDeletingId(null);
   };
 
   // ----- PIN entry / setup screens -----
@@ -274,6 +301,18 @@ export function ParentView() {
                       );
                     })}
                   </div>
+                  <div className="mt-4 flex justify-end border-t border-border pt-3">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeProfile(p)}
+                      disabled={deletingId === p.id}
+                      className="gap-1.5"
+                    >
+                      {deletingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      Delete {p.name}&apos;s profile
+                    </Button>
+                  </div>
                 </div>
               </Card>
             );
@@ -337,6 +376,8 @@ export function ParentView() {
       <p className="mt-6 text-center text-xs text-muted-foreground">
         Tip: encourage daily practice and the Smart Review to grow mastery over time.
       </p>
+
+      {error && <p className="mt-4 text-center text-sm font-semibold text-rose-600">{error}</p>}
 
       <Card className="mt-6 p-4">
         <h2 className="font-display font-bold">Family data & privacy</h2>

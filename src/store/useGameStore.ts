@@ -88,8 +88,8 @@ interface GameState {
   setProfiles: (profiles: ProfileSummary[]) => void;
   setSiteSettings: (settings: SiteSettingsState | null) => void;
   setCurrentProfile: (id: string | null) => void;
-  createProfile: (name: string, level: Level) => Promise<ProfileSummary | null>;
-  deleteProfile: (id: string) => Promise<void>;
+  createProfile: (name: string, level: Level, avatar: "fox" | "owl") => Promise<ProfileSummary | null>;
+  deleteProfile: (id: string, parentPin: string) => Promise<boolean>;
   hydrate: (data: {
     studentName: string;
     level: Level | null;
@@ -279,12 +279,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setCurrentProfile: (id) => set({ currentProfileId: id, view: { name: "home" } }),
 
-  createProfile: async (name, level) => {
+  createProfile: async (name, level, avatar) => {
     try {
       const res = await fetch("/api/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, level }),
+        body: JSON.stringify({ name, level, avatar }),
       });
       const p = await res.json();
       if (!p.id) return null;
@@ -303,9 +303,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
-  deleteProfile: async (id) => {
-    await fetch(`/api/profiles?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
-    set({ profiles: get().profiles.filter((p) => p.id !== id) });
+  deleteProfile: async (id, parentPin) => {
+    try {
+      const response = await fetch(`/api/profiles?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "x-parent-pin": parentPin },
+      });
+      if (!response.ok) return false;
+      const remaining = get().profiles.filter((profile) => profile.id !== id);
+      set({
+        profiles: remaining,
+        currentProfileId: get().currentProfileId === id ? remaining[0]?.id ?? null : get().currentProfileId,
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   hydrate: (data) =>

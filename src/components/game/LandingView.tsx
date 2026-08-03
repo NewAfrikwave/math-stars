@@ -50,6 +50,7 @@ export function LandingView() {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [level, setLevel] = useState<Level>("grade3");
+  const [avatar, setAvatar] = useState<"fox" | "owl">("fox");
   const [creating, setCreating] = useState(false);
   const orderedProfiles = useMemo(
     () => [...profiles].sort((a, b) => {
@@ -82,10 +83,11 @@ export function LandingView() {
   const handleCreate = async () => {
     if (!name.trim()) return;
     setCreating(true);
-    const profile = await createProfile(name.trim(), level);
+    const profile = await createProfile(name.trim(), level, avatar);
     setCreating(false);
     if (!profile) return;
     setName("");
+    setAvatar("fox");
     setAdding(false);
     setCurrentProfile(profile.id);
   };
@@ -211,6 +213,29 @@ export function LandingView() {
                 className="mt-2 h-12 bg-white"
               />
               <fieldset className="mt-5">
+                <legend className="text-sm font-bold">Choose a character</legend>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {([
+                    { value: "fox" as const, label: "Fox explorer", src: "/learner-fox.webp" },
+                    { value: "owl" as const, label: "Owl explorer", src: "/learner-owl.webp" },
+                  ]).map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      onClick={() => setAvatar(option.value)}
+                      aria-pressed={avatar === option.value}
+                      className={cn(
+                        "flex items-center gap-3 rounded-2xl border-2 p-3 text-left transition",
+                        avatar === option.value ? "border-[#a92f43] bg-rose-50 shadow-sm" : "border-stone-200 bg-white hover:border-stone-300"
+                      )}
+                    >
+                      <Image src={option.src} alt="" width={72} height={72} className="h-14 w-14 rounded-full object-cover" />
+                      <span className="font-display text-sm font-bold">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="mt-5">
                 <legend className="text-sm font-bold">Grade level</legend>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {levelOptions.map((option) => (
@@ -245,7 +270,7 @@ export function LandingView() {
 }
 
 function ProfileDoor({ profile, index, isLastPlayed, onPick }: { profile: ProfileSummary; index: number; isLastPlayed: boolean; onPick: () => void }) {
-  const isForest = profile.avatar !== "owl" && index % 2 === 0;
+  const isForest = profile.avatar !== "owl";
   const playedLabel = formatLastPlayed(profile.lastPlayedAt);
 
   return (
