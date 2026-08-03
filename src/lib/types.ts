@@ -201,6 +201,7 @@ export type Level = "preschool" | "grade1" | "grade2" | "grade3" | "grade4";
 export type GameView =
   | { name: "landing" }
   | { name: "home" }
+  | { name: "times-tables" }
   | { name: "domain"; domainId: string }
   | { name: "lesson"; lessonId: string }
   | { name: "practice"; lessonId: string; difficulty?: Difficulty }

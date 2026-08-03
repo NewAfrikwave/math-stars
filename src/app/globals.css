@@ -45,6 +45,9 @@
 }
 
 :root {
+  --font-geist-sans: "Fredoka Variable", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-display: "Fredoka Variable", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
   --radius: 1rem;
   /* Warm, playful palette. Primary = friendly plum. */
   --background: oklch(0.99 0.012 80);
@@ -120,6 +123,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans);
     font-feature-settings: "ss01";
   }
 }

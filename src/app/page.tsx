@@ -20,6 +20,7 @@ import { DonationsView } from "@/components/game/DonationsView";
 import { AdminView } from "@/components/game/AdminView";
 import { InstallGuide } from "@/components/game/InstallGuide";
 import { LandingView } from "@/components/game/LandingView";
+import { TimesTableView } from "@/components/game/TimesTableView";
 import { DomainCelebration } from "@/components/game/DomainCelebration";
 import { Mascot } from "@/components/game/Mascot";
 import { Star, Trophy, Home, Bot, Loader2, Repeat, Download, Heart } from "lucide-react";
@@ -80,6 +81,13 @@ export default function Page() {
   const setSiteSettings = useGameStore((s) => s.setSiteSettings);
   const siteSettings = useGameStore((s) => s.siteSettings);
   const [installOpen, setInstallOpen] = useState(false);
+  const immersiveView = view.name === "home" || view.name === "times-tables";
+
+  useEffect(() => {
+    const openInstall = () => setInstallOpen(true);
+    window.addEventListener("mathstars-open-install", openInstall);
+    return () => window.removeEventListener("mathstars-open-install", openInstall);
+  }, []);
 
   // Load site settings (feature flags, broadcast, donations) on first load.
   useEffect(() => {
@@ -169,7 +177,7 @@ export default function Page() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+      {!immersiveView && <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-2 px-4">
           <button
             onClick={() => setView({ name: "home" })}
@@ -236,7 +244,7 @@ export default function Page() {
             </button>
           </div>
         </div>
-      </header>
+      </header>}
 
       {/* Broadcast banner (if admin has set one) */}
       {siteSettings?.broadcastMessage && (
@@ -268,7 +276,7 @@ export default function Page() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-border bg-card">
+      {!immersiveView && <footer className="mt-auto border-t border-border bg-card">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 px-4 py-5 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Mascot size={28} />
@@ -283,7 +291,7 @@ export default function Page() {
           </div>
           <div className="flex items-center gap-2">
             <FooterButton
-              active={view.name === "home"}
+              active={false}
               onClick={() => setView({ name: "home" })}
               icon={<Home className="h-4 w-4" />}
               label="Home"
@@ -304,7 +312,7 @@ export default function Page() {
             <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }} className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Sign out</button>
           </div>
         </div>
-      </footer>
+      </footer>}
 
       {/* Domain-completion celebration overlay (shows when a topic is finished) */}
       <DomainCelebration />
@@ -323,6 +331,8 @@ function renderView(
       return <LandingView />;
     case "home":
       return <HomeView />;
+    case "times-tables":
+      return <TimesTableView />;
     case "domain":
       return <DomainView domainId={view.domainId} />;
     case "lesson":
