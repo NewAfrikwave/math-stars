@@ -89,12 +89,8 @@ function SharingBaskets({
             {perGroup} in each
           </span>
           <div className="relative h-[145px] w-full">
-            <div className="absolute left-1/2 top-[42%] z-0 flex w-[76%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-end justify-center gap-0.5 px-1 text-[25px] leading-none">
-              {Array.from({ length: perGroup }).map((_, index) => (
-                <span key={index} aria-hidden="true">{emoji}</span>
-              ))}
-            </div>
             <Image src="/lesson-basket.webp" alt="" fill sizes="150px" className="z-10 object-contain" aria-hidden="true" />
+            <BasketContents count={perGroup} emoji={emoji} />
           </div>
         </div>
 
@@ -138,11 +134,6 @@ function EqualGroups({
               Basket {g + 1}
             </span>
             <div className="relative h-[125px] w-full sm:h-[148px]">
-              <div className="absolute left-1/2 top-[42%] z-0 flex w-[76%] -translate-x-1/2 -translate-y-1/2 flex-wrap items-end justify-center gap-0.5 px-1 text-[22px] leading-none sm:text-[25px]">
-                {Array.from({ length: perGroup }).map((_, i) => (
-                  <span key={i} aria-hidden="true">{emoji}</span>
-                ))}
-              </div>
               <Image
                 src="/lesson-basket.webp"
                 alt=""
@@ -151,6 +142,7 @@ function EqualGroups({
                 className="z-10 object-contain"
                 aria-hidden="true"
               />
+              <BasketContents count={perGroup} emoji={emoji} />
             </div>
           </div>
         ))}
@@ -160,6 +152,27 @@ function EqualGroups({
         <span aria-hidden="true">=</span>
         <span>{groups} × {perGroup}</span>
       </div>
+    </div>
+  );
+}
+
+function BasketContents({ count, emoji }: { count: number; emoji: string }) {
+  const columns = count <= 2 ? count : count === 3 ? 3 : count === 4 ? 2 : 3;
+  const sizeClass = count <= 4
+    ? "text-[23px] sm:text-[26px]"
+    : count <= 6
+      ? "text-[19px] sm:text-[22px]"
+      : "text-[16px] sm:text-[19px]";
+
+  return (
+    <div
+      className="absolute left-1/2 top-[55%] z-20 grid w-[68%] -translate-x-1/2 -translate-y-1/2 place-items-center gap-x-0.5 gap-y-0.5 px-1 leading-none"
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      aria-hidden="true"
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <span key={index} className={`${sizeClass} drop-shadow-sm`}>{emoji}</span>
+      ))}
     </div>
   );
 }
