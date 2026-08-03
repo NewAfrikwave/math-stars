@@ -1,0 +1,18 @@
+{
+  "name": "Math Stars — Math Learning for Kids",
+  "short_name": "Math Stars",
+  "description": "A fun, interactive math learning app for preschool and 3rd grade — counting, multiplication, fractions, and more.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff7ed",
+  "theme_color": "#e11d48",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

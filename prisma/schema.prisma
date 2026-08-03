@@ -1,0 +1,152 @@
+// Prisma schema for the Math Stars 3rd grade learning app
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A single learner profile (the daughter). Extensible to multiple students later.
+model Student {
+  id        String   @id @default(cuid())
+  name      String   @default("Star Learner")
+  avatar    String   @default("fox")
+  level     String   @default("grade3") // preschool | grade3
+  totalStars Int     @default(0)
+  streak    Int      @default(0)
+  lastPlayedAt DateTime?
+  parentPin String?  // optional 4-digit PIN gating the parent dashboard
+  soundOn   Boolean  @default(true) // learner sound preference
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  progress    LessonProgress[]
+  achievements Achievement[]
+  tutorMessages TutorMessage[]
+  dailyChallenges DailyChallenge[]
+  activityEvents ActivityEvent[]
+}
+
+// Progress record per lesson (one row per student + lessonId combo)
+model LessonProgress {
+  id         String   @id @default(cuid())
+  studentId  String
+  lessonId   String
+  status     String   @default("locked") // locked | available | in-progress | completed
+  stars      Int      @default(0) // 0-3 stars earned
+  bestScore  Int      @default(0) // best percentage correct
+  attempts   Int      @default(0)
+  lastScore  Int      @default(0)
+  lastDifficulty String? // easy | challenge — last difficulty played
+  completedAt DateTime?
+  lastPlayedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+}
+
+// One row per daily challenge attempt (one per calendar day)
+model DailyChallenge {
+  id         String   @id @default(cuid())
+  studentId  String
+  dateKey    String   // YYYY-MM-DD — ensures one attempt per day
+  score      Int      @default(0) // percent
+  correct    Int      @default(0)
+  total      Int      @default(0)
+  completedAt DateTime @default(now())
+
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, dateKey])
+  @@index([studentId])
+}
+
+// Achievement badges earned by the student
+model Achievement {
+  id          String   @id @default(cuid())
+  studentId   String
+  achievementId String // logical id from code, e.g. "first-lesson"
+  earnedAt    DateTime @default(now())
+
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, achievementId])
+  @@index([studentId])
+}
+
+// Saved AI tutor conversation messages
+model TutorMessage {
+  id        String   @id @default(cuid())
+  studentId String
+  role      String // user | assistant
+  content   String
+  context   String? // lesson context the question was asked in
+  createdAt DateTime @default(now())
+
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+// A timestamped activity event for the parent timeline (one row per practice
+// session, daily challenge, or placement test).
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  studentId String
+  type      String   // lesson | daily | placement
+  lessonId  String?
+  title     String   // human-readable label, e.g. "Count to 5"
+  emoji     String   @default("📘")
+  score     Int      @default(0) // percent
+  correct   Int      @default(0)
+  total     Int      @default(0)
+  stars     Int      @default(0) // stars earned (lesson only)
+  createdAt DateTime @default(now())
+
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([createdAt])
+}
+
+// Site-wide settings (singleton row, id = "site"). Stores feature flags,
+// donation handles, broadcast messages, and the admin PIN.
+model SiteSettings {
+  id              String   @id @default("site")
+  adminPin        String?  // separate 4-digit PIN for the admin panel
+  // Feature flags
+  dailyChallengeEnabled Boolean @default(true)
+  aiTutorEnabled        Boolean @default(true)
+  voiceAnswersEnabled   Boolean @default(true)
+  worksheetsEnabled     Boolean @default(true)
+  manipulativesEnabled  Boolean @default(true)
+  soundEffectsEnabled   Boolean @default(true)
+  // Donation handles (editable from admin)
+  cashappHandle   String   @default("$mathstars")
+  zelleInfo       String   @default("donate@mathstars.app")
+  // Broadcast banner
+  broadcastMessage String?
+  broadcastActive  Boolean @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+// System error log — API routes can log errors here for the admin monitor.
+model ErrorLog {
+  id        String   @id @default(cuid())
+  route     String   // e.g. "/api/tutor"
+  method    String   // GET | POST
+  message   String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([route])
+}
+

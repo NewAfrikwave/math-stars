@@ -1,0 +1,406 @@
+"use client";
+
+import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useGameStore, profileFetch } from "@/store/useGameStore";
+import { HomeView } from "@/components/game/HomeView";
+import { DomainView } from "@/components/game/DomainView";
+import { LessonView } from "@/components/game/LessonView";
+import { PracticeSession } from "@/components/game/PracticeSession";
+import { ResultsView } from "@/components/game/ResultsView";
+import { AchievementsView } from "@/components/game/AchievementsView";
+import { TutorView } from "@/components/game/TutorView";
+import { ReviewView } from "@/components/game/ReviewView";
+import { DailyChallengeView } from "@/components/game/DailyChallengeView";
+import { WorksheetView } from "@/components/game/WorksheetView";
+import { ManipulativeView } from "@/components/game/ManipulativeView";
+import { ParentView } from "@/components/game/ParentView";
+import { PlacementView } from "@/components/game/PlacementView";
+import { DonationsView } from "@/components/game/DonationsView";
+import { AdminView } from "@/components/game/AdminView";
+import { InstallGuide } from "@/components/game/InstallGuide";
+import { LandingView } from "@/components/game/LandingView";
+import { DomainCelebration } from "@/components/game/DomainCelebration";
+import { Mascot } from "@/components/game/Mascot";
+import { Star, Trophy, Home, Bot, Loader2, Repeat, Download, Heart } from "lucide-react";
+import { useState } from "react";
+
+// Load a single profile's full state from the server (with the profile header).
+async function loadProfileState(
+  profileId: string,
+  hydrate: (data: {
+    studentName: string;
+    level: "preschool" | "grade1" | "grade2" | "grade3" | "grade4" | null;
+    totalStars: number;
+    streak: number;
+    soundOn: boolean;
+    progress: Record<string, import("@/lib/types").LessonProgressState>;
+    earnedAchievements: string[];
+    dailyDoneDate: string | null;
+    dailyScore: number | null;
+  }) => void,
+  cancelled: boolean
+) {
+  try {
+    const res = await fetch("/api/state", { headers: { "x-profile-id": profileId } });
+    const data = await res.json();
+    if (cancelled || !data) return;
+    hydrate({
+      studentName: data.studentName ?? "Star Learner",
+      level: data.level ?? null,
+      totalStars: data.totalStars ?? 0,
+      streak: data.streak ?? 0,
+      soundOn: data.soundOn ?? true,
+      progress: data.progress ?? {},
+      earnedAchievements: data.earnedAchievements ?? [],
+      dailyDoneDate: data.dailyDoneDate ?? null,
+      dailyScore: data.dailyScore ?? null,
+    });
+  } catch {
+    /* offline — keep defaults */
+  }
+}
+
+export default function Page() {
+  const view = useGameStore((s) => s.view);
+  const setView = useGameStore((s) => s.setView);
+  const level = useGameStore((s) => s.level);
+  const setLevel = useGameStore((s) => s.setLevel);
+  const hydrated = useGameStore((s) => s.hydrated);
+  const hydrate = useGameStore((s) => s.hydrate);
+  const totalStars = useGameStore((s) => s.totalStars);
+  const earnedAchievements = useGameStore((s) => s.earnedAchievements);
+  const soundOn = useGameStore((s) => s.soundOn);
+  const setSoundOn = useGameStore((s) => s.setSoundOn);
+  const studentName = useGameStore((s) => s.studentName);
+  const currentProfileId = useGameStore((s) => s.currentProfileId);
+  const profiles = useGameStore((s) => s.profiles);
+  const setProfiles = useGameStore((s) => s.setProfiles);
+  const setCurrentProfile = useGameStore((s) => s.setCurrentProfile);
+  const setSiteSettings = useGameStore((s) => s.setSiteSettings);
+  const siteSettings = useGameStore((s) => s.siteSettings);
+  const [installOpen, setInstallOpen] = useState(false);
+
+  // Load site settings (feature flags, broadcast, donations) on first load.
+  useEffect(() => {
+    fetch("/api/site")
+      .then((r) => r.json())
+      .then((d) => { if (d) setSiteSettings(d); })
+      .catch(() => {});
+  }, [setSiteSettings]);
+
+  // On first load: fetch the profiles list, then restore the last-used
+  // profile from localStorage and load its state.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/profiles")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled || !data) return;
+        const list = (data.profiles ?? []) as Array<{
+          id: string; name: string; avatar: string; level: string;
+          totalStars: number; streak: number;
+        }>;
+        setProfiles(
+          list.map((p) => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar,
+            level: (["preschool", "grade1", "grade2", "grade3", "grade4"].includes(p.level) ? p.level : "grade3") as "preschool" | "grade1" | "grade2" | "grade3" | "grade4",
+            totalStars: p.totalStars,
+            streak: p.streak,
+          }))
+        );
+        // restore last profile
+        const saved = typeof window !== "undefined" ? localStorage.getItem("mathstars-profile") : null;
+        const useId = saved && list.some((p) => p.id === saved) ? saved : null;
+        if (useId) {
+          setCurrentProfile(useId);
+          loadProfileState(useId, hydrate, cancelled);
+        } else {
+          // no profile selected → show landing/picker
+          hydrate({
+            studentName: "Star Learner",
+            level: null,
+            totalStars: 0,
+            streak: 0,
+            soundOn: true,
+            progress: {},
+            earnedAchievements: [],
+            dailyDoneDate: null,
+            dailyScore: null,
+          });
+        }
+      })
+      .catch(() => {
+        hydrate({
+          studentName: "Star Learner",
+          level: null,
+          totalStars: 0,
+          streak: 0,
+          soundOn: true,
+          progress: {},
+          earnedAchievements: [],
+          dailyDoneDate: null,
+          dailyScore: null,
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // When the current profile changes, load its state and remember it.
+  useEffect(() => {
+    if (!currentProfileId) return;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mathstars-profile", currentProfileId);
+    }
+    loadProfileState(currentProfileId, hydrate, false);
+  }, [currentProfileId, hydrate]);
+
+  // Show the landing/profile-picker page when no profile is selected, or when
+  // the user taps the switch-profile button.
+  if (hydrated && (!currentProfileId || view.name === "landing")) {
+    return <LandingView />;
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-2 px-4">
+          <button
+            onClick={() => setView({ name: "home" })}
+            className="flex items-center gap-2 transition-transform hover:scale-[1.02]"
+          >
+            <Mascot size={36} />
+            <div className="text-left">
+              <p className="font-display text-lg font-bold leading-none">{studentName}</p>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {level === "preschool" ? "Preschool"
+                : level === "grade1" ? "1st Grade"
+                : level === "grade2" ? "2nd Grade"
+                : level === "grade4" ? "4th Grade"
+                : "3rd Grade"}
+              </p>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <HeaderChip
+              icon={<Star className="h-4 w-4 fill-amber-400 text-amber-400" />}
+              value={totalStars}
+              label="stars"
+            />
+            <HeaderChip
+              icon={<Trophy className="h-4 w-4 text-rose-500" />}
+              value={earnedAchievements.length}
+              label="badges"
+            />
+            <button
+              onClick={() => setInstallOpen(true)}
+              title="Install on your tablet"
+              className="flex h-9 items-center gap-1 rounded-full bg-muted px-3 text-xs font-bold transition-colors hover:bg-muted/70"
+              aria-label="Install app"
+            >
+              <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Install</span>
+            </button>
+            <button
+              onClick={() => setView({ name: "donations" })}
+              title="Donate"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-100 text-rose-600 transition-colors hover:bg-rose-200 dark:bg-rose-950/40 dark:text-rose-300"
+              aria-label="Donate"
+            >
+              <Heart className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
+                setCurrentProfile(null);
+                setView({ name: "landing" });
+              }}
+              title="Switch learner"
+              className="flex h-9 items-center gap-1 rounded-full bg-muted px-3 text-xs font-bold transition-colors hover:bg-muted/70"
+              aria-label="Switch learner"
+            >
+              <Repeat className="h-3.5 w-3.5" /> Switch
+            </button>
+            <button
+              onClick={() => setSoundOn(!soundOn)}
+              title={soundOn ? "Sound on" : "Sound off"}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm transition-colors hover:bg-muted/70"
+              aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
+            >
+              {soundOn ? "🔊" : "🔇"}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Broadcast banner (if admin has set one) */}
+      {siteSettings?.broadcastMessage && (
+        <div className="bg-gradient-to-r from-amber-400 to-rose-400 px-4 py-2 text-center text-sm font-bold text-white">
+          {siteSettings.broadcastMessage}
+        </div>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1">
+        {!hydrated ? (
+          <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="font-medium">Loading your math adventure…</p>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view.name + ("lessonId" in view ? view.lessonId : "") + ("domainId" in view ? view.domainId : "")}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderView(view, setView)}
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-auto border-t border-border bg-card">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 px-4 py-5 sm:flex-row">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Mascot size={28} />
+            <span>
+              <span className="font-semibold text-foreground">Math Stars</span> — {level === "preschool" ? "playful early math"
+              : level === "grade1" ? "1st grade math"
+              : level === "grade2" ? "2nd grade math"
+              : level === "grade4" ? "4th grade math"
+              : "3rd grade math"},
+              one star at a time.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <FooterButton
+              active={view.name === "home"}
+              onClick={() => setView({ name: "home" })}
+              icon={<Home className="h-4 w-4" />}
+              label="Home"
+            />
+            <FooterButton
+              active={view.name === "achievements"}
+              onClick={() => setView({ name: "achievements" })}
+              icon={<Trophy className="h-4 w-4" />}
+              label="Badges"
+            />
+            <FooterButton
+              active={view.name === "tutor"}
+              onClick={() => setView({ name: "tutor" })}
+              icon={<Bot className="h-4 w-4" />}
+              label="Ask Pip"
+            />
+          </div>
+        </div>
+      </footer>
+
+      {/* Domain-completion celebration overlay (shows when a topic is finished) */}
+      <DomainCelebration />
+      {/* PWA install guide modal */}
+      <InstallGuide open={installOpen} onClose={() => setInstallOpen(false)} />
+    </div>
+  );
+}
+
+function renderView(
+  view: ReturnType<typeof useGameStore.getState>["view"],
+  setView: ReturnType<typeof useGameStore.getState>["setView"]
+) {
+  switch (view.name) {
+    case "landing":
+      return <LandingView />;
+    case "home":
+      return <HomeView />;
+    case "domain":
+      return <DomainView domainId={view.domainId} />;
+    case "lesson":
+      return <LessonView lessonId={view.lessonId} />;
+    case "practice":
+      return <PracticeSession lessonId={view.lessonId} difficulty={view.difficulty} />;
+    case "results":
+      return (
+        <ResultsView
+          lessonId={view.lessonId}
+          score={view.score}
+          stars={view.stars}
+          correct={view.correct}
+          total={view.total}
+        />
+      );
+    case "achievements":
+      return <AchievementsView />;
+    case "tutor":
+      return <TutorView />;
+    case "review":
+      return <ReviewView />;
+    case "daily":
+      return <DailyChallengeView />;
+    case "worksheet":
+      return <WorksheetView lessonId={view.lessonId} />;
+    case "manipulative":
+      return <ManipulativeView lessonId={view.lessonId} />;
+    case "parent":
+      return <ParentView />;
+    case "placement":
+      return <PlacementView domainId={view.domainId} />;
+    case "donations":
+      return <DonationsView />;
+    case "admin":
+      return <AdminView />;
+    default:
+      return <HomeView />;
+  }
+}
+
+function HeaderChip({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
+      {icon}
+      <span className="font-display text-sm font-bold tabular-nums">{value}</span>
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
+function FooterButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}

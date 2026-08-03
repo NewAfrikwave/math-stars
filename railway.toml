@@ -1,0 +1,11 @@
+# Railway deployment config for Math Stars
+# https://railway.app
+
+[build]
+dockerfile = "Dockerfile"
+
+[deploy]
+# The app listens on PORT (Railway injects this). The Dockerfile sets PORT=3000.
+startCommand = "sh -c 'bunx prisma db push --accept-data-loss && bun server.js'"
+healthcheckPath = "/"
+healthcheckTimeout = 30

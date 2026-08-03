@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+db/*.db
+db/*.db-journal
+dev.log
+server.log
+*.md
+.env
+.env.local
+tests
+examples
+download
+skills
