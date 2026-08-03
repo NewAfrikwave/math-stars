@@ -73,6 +73,24 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
     }
   }, [signInPage]);
 
+  useEffect(() => {
+    if (authenticated && signInPage) window.location.replace("/");
+  }, [authenticated, signInPage]);
+
+  if (authenticated && signInPage) {
+    return (
+      <main id="main-content" className="flex min-h-screen items-center justify-center bg-[#fffaf0] px-5 text-[#351d10]">
+        <div className="text-center">
+          <Image src="/brand/math-stars-logo.png" alt="Math Stars" width={1400} height={360} priority className="mx-auto h-16 w-auto" />
+          <p className="mt-6 inline-flex items-center gap-2 font-semibold text-stone-600">
+            <Loader2 className="h-5 w-5 animate-spin text-rose-600" aria-hidden="true" />
+            Opening your learning space…
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   if (authenticated || pathname === "/privacy") return <>{children}</>;
 
   async function submit(event: FormEvent) {
