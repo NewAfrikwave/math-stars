@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSiteSettings } from "@/lib/settings";
+import { pinFrom, verifyPin } from "@/lib/pin";
 
 // GET /api/admin/system?pin=XXXX — DB stats + recent error log.
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const pin = url.searchParams.get("pin") ?? "";
+  const pin = pinFrom(req);
   const settings = await getSiteSettings();
-  if (settings.adminPin && settings.adminPin !== pin) {
+  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
     return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
   }
 

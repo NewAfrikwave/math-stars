@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (!body) return NextResponse.json({ error: "invalid body" }, { status: 400 });
   const student = await getStudent(getProfileId(req));
   const data: { level?: string; soundOn?: boolean } = {};
-  if (body.level === "preschool" || body.level === "grade3") data.level = body.level;
+  if (["preschool", "grade1", "grade2", "grade3", "grade4"].includes(body.level)) data.level = body.level;
   if (typeof body.soundOn === "boolean") data.soundOn = body.soundOn;
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ ok: true, unchanged: true });

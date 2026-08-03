@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { listStudents } from "@/lib/student";
 import type { Level } from "@/lib/types";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 // GET /api/profiles — list all learner profiles.
 export async function GET() {
@@ -12,6 +13,8 @@ export async function GET() {
 // POST /api/profiles — create a new profile.
 // Body: { name: string, level: "preschool" | "grade3", avatar?: string }
 export async function POST(req: Request) {
+  const attempt = rateLimit(clientKey(req, "profile-create"), 10, 60 * 60 * 1000);
+  if (!attempt.allowed) return NextResponse.json({ error: "Too many profile requests" }, { status: 429 });
   const body = await req.json().catch(() => null);
   if (!body || typeof body.name !== "string" || !body.name.trim()) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -23,7 +26,9 @@ export async function POST(req: Request) {
     body.level === "grade2" ? "grade2" :
     body.level === "grade4" ? "grade4" :
     "grade3";
-  const avatar = typeof body.avatar === "string" ? body.avatar : "fox";
+  if (await db.student.count() >= 12) return NextResponse.json({ error: "profile limit reached" }, { status: 409 });
+  const allowedAvatars = ["fox", "owl", "bear", "cat", "rabbit", "panda"];
+  const avatar = allowedAvatars.includes(body.avatar) ? body.avatar : "fox";
   const id = `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const student = await db.student.create({
     data: { id, name, level, avatar, totalStars: 0, streak: 0, soundOn: true },

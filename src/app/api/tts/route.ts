@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 // POST /api/tts
 // Body: { text: string, speed?: number, voice?: string }
 // Returns: audio/wav binary
 // Used for read-aloud on questions/choices and Pip the tutor's voice.
 export async function POST(req: Request) {
+  const attempt = rateLimit(clientKey(req, "tts"), 40, 10 * 60 * 1000);
+  if (!attempt.allowed) return NextResponse.json({ error: "Too many speech requests" }, { status: 429, headers: { "Retry-After": String(attempt.retryAfter) } });
   const body = await req.json().catch(() => null);
   if (!body || typeof body.text !== "string" || !body.text.trim()) {
     return NextResponse.json({ error: "text is required" }, { status: 400 });

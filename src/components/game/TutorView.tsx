@@ -108,8 +108,7 @@ export function TutorView() {
   };
 
   const clearChat = async () => {
-    // We don't have a delete endpoint, but we can clear local messages and
-    // reset to a greeting. Server history remains but is fine.
+    await profileFetch("/api/tutor", { method: "DELETE" });
     setMessages([
       {
         role: "assistant",

@@ -3,6 +3,9 @@ import { Geist, Geist_Mono, Fredoka } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { AccessGate } from "@/components/AccessGate";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, verifySessionValue } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,20 +53,22 @@ export const viewport: Viewport = {
   themeColor: "#e11d48",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const authenticated = verifySessionValue(cookieStore.get(SESSION_COOKIE)?.value);
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} antialiased bg-background text-foreground`}
       >
-        {children}
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:p-3 focus:text-black">Skip to main content</a>
+        <AccessGate authenticated={authenticated}>{children}</AccessGate>
         <Toaster />
         <ServiceWorkerRegister />
       </body>

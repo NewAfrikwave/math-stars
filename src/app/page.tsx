@@ -245,7 +245,7 @@ export default function Page() {
       )}
 
       {/* Main content */}
-      <main className="flex-1">
+      <main id="main-content" className="flex-1" tabIndex={-1}>
         {!hydrated ? (
           <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -299,6 +299,8 @@ export default function Page() {
               icon={<Bot className="h-4 w-4" />}
               label="Ask Pip"
             />
+            <a href="/privacy" className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Privacy</a>
+            <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }} className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Sign out</button>
           </div>
         </div>
       </footer>

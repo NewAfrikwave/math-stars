@@ -85,6 +85,7 @@ interface GameState {
   setSoundOn: (on: boolean) => void;
   setLevel: (level: Level) => void;
   setProfiles: (profiles: ProfileSummary[]) => void;
+  setSiteSettings: (settings: SiteSettingsState | null) => void;
   setCurrentProfile: (id: string | null) => void;
   createProfile: (name: string, level: Level) => Promise<ProfileSummary | null>;
   deleteProfile: (id: string) => Promise<void>;

@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSiteSettings } from "@/lib/settings";
-import { getProfileId, getStudent } from "@/lib/student";
+import { hashPin, pinFrom, verifyPin } from "@/lib/pin";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
+
+export async function GET() {
+  const settings = await getSiteSettings();
+  return NextResponse.json({ hasAdminPin: !!settings.adminPin });
+}
 
 // POST /api/admin/settings — update site-wide settings.
 // Body: { adminPin?: string, action?: "verify-pin"|"set-pin"|"clear-pin", pin?: string, ...settings }
 // Requires the admin PIN (if set) to be passed as ?pin=XXXX.
 export async function POST(req: Request) {
-  const url = new URL(req.url);
-  const pin = url.searchParams.get("pin") ?? "";
+  const attempt = rateLimit(clientKey(req, "admin-pin"), 20, 15 * 60 * 1000);
+  if (!attempt.allowed) return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+  const pin = pinFrom(req);
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "invalid body" }, { status: 400 });
 
@@ -20,23 +27,29 @@ export async function POST(req: Request) {
     if (!/^\d{4}$/.test(newPin)) {
       return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
     }
-    await db.siteSettings.update({ where: { id: "site" }, data: { adminPin: newPin } });
+    if (settings.adminPin && !verifyPin(pin, settings.adminPin)) {
+      return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
+    }
+    await db.siteSettings.update({ where: { id: "site" }, data: { adminPin: hashPin(newPin) } });
     return NextResponse.json({ ok: true, hasAdminPin: true });
   }
   if (body.action === "verify-pin") {
     if (!settings.adminPin) return NextResponse.json({ ok: true, hasAdminPin: false });
-    if (settings.adminPin !== pin) {
+    if (!verifyPin(pin, settings.adminPin)) {
       return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
     }
     return NextResponse.json({ ok: true, hasAdminPin: true });
   }
   if (body.action === "clear-pin") {
+    if (settings.adminPin && !verifyPin(pin, settings.adminPin)) {
+      return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
+    }
     await db.siteSettings.update({ where: { id: "site" }, data: { adminPin: null } });
     return NextResponse.json({ ok: true, hasAdminPin: false });
   }
 
   // For all other updates, require admin PIN.
-  if (settings.adminPin && settings.adminPin !== pin) {
+  if (settings.adminPin && !verifyPin(pin, settings.adminPin)) {
     return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
   }
 

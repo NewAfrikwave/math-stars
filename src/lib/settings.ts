@@ -23,8 +23,8 @@ const DEFAULTS: SiteSettingsData = {
   worksheetsEnabled: true,
   manipulativesEnabled: true,
   soundEffectsEnabled: true,
-  cashappHandle: "$mathstars",
-  zelleInfo: "donate@mathstars.app",
+  cashappHandle: "",
+  zelleInfo: "",
   broadcastMessage: null,
   broadcastActive: false,
 };
@@ -43,8 +43,8 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     worksheetsEnabled: row.worksheetsEnabled,
     manipulativesEnabled: row.manipulativesEnabled,
     soundEffectsEnabled: row.soundEffectsEnabled,
-    cashappHandle: row.cashappHandle,
-    zelleInfo: row.zelleInfo,
+    cashappHandle: row.cashappHandle === "$mathstars" ? "" : row.cashappHandle,
+    zelleInfo: row.zelleInfo === "donate@mathstars.app" ? "" : row.zelleInfo,
     broadcastMessage: row.broadcastMessage,
     broadcastActive: row.broadcastActive,
   };
@@ -55,8 +55,10 @@ export { DEFAULTS };
 // Log an error to the ErrorLog table (best-effort, never throws).
 export async function logError(route: string, method: string, message: string, detail?: string) {
   try {
+    const safeMessage = message.replace(/[\w.+-]+@[\w.-]+/g, "[redacted-email]").slice(0, 500);
+    const safeDetail = detail?.replace(/[\w.+-]+@[\w.-]+/g, "[redacted-email]").slice(0, 2000);
     await db.errorLog.create({
-      data: { route, method, message, detail: detail ?? null },
+      data: { route, method, message: safeMessage, detail: safeDetail ?? null },
     });
   } catch {
     /* never let error logging itself fail the request */

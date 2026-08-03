@@ -43,6 +43,12 @@ const SHAPE_NAMES: Record<ShapeKind, string> = {
   square: "Square",
   triangle: "Triangle",
   rectangle: "Rectangle",
+  rhombus: "Rhombus",
+  parallelogram: "Parallelogram",
+  trapezoid: "Trapezoid",
+  pentagon: "Pentagon",
+  hexagon: "Hexagon",
+  quadrilateral: "Quadrilateral",
 };
 
 // Build 3 distractor choices for a string answer

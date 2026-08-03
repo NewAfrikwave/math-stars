@@ -62,9 +62,9 @@ export function AdminView() {
   const verifyPin = async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/admin/settings?pin=${encodeURIComponent(pinInput)}`, {
+    const res = await fetch("/api/admin/settings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-admin-pin": pinInput },
       body: JSON.stringify({ action: "verify-pin" }),
     });
     if (res.status === 401) {
@@ -226,7 +226,7 @@ function AnalyticsTab() {
     // Actually, the admin panel already verified the PIN. Let me read it from a shared state.
     // For simplicity, we'll prompt for the pin via a stored value.
     const storedPin = typeof window !== "undefined" ? sessionStorage.getItem("admin-pin") ?? "" : "";
-    fetch(`/api/admin/analytics?pin=${encodeURIComponent(storedPin)}`)
+    fetch("/api/admin/analytics", { headers: { "x-admin-pin": storedPin } })
       .then((r) => r.json())
       .then((d) => { if (!d.error) setData(d); })
       .finally(() => setLoading(false));
@@ -326,7 +326,7 @@ function UsersTab() {
 
   const load = () => {
     const pin = typeof window !== "undefined" ? sessionStorage.getItem("admin-pin") ?? "" : "";
-    fetch(`/api/admin/users?pin=${encodeURIComponent(pin)}`)
+    fetch("/api/admin/users", { headers: { "x-admin-pin": pin } })
       .then((r) => r.json())
       .then((d) => { if (d.users) setUsers(d.users); })
       .finally(() => setLoading(false));
@@ -338,9 +338,9 @@ function UsersTab() {
     const pin = sessionStorage.getItem("admin-pin") ?? "";
     if (act === "delete" && !confirm(`Delete this profile permanently? This cannot be undone.`)) return;
     if (act === "reset" && !confirm(`Reset all progress for this profile?`)) return;
-    const res = await fetch(`/api/admin/users?pin=${encodeURIComponent(pin)}`, {
+    const res = await fetch("/api/admin/users", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-admin-pin": pin },
       body: JSON.stringify({ profileId, action: act, ...extra }),
     });
     const d = await res.json();
@@ -407,9 +407,9 @@ function FeaturesTab({ settings, setSettings }: { settings: SiteSettings | null;
     setSettings({ ...settings, [key]: newVal });
     setSaving(key as string);
     const pin = sessionStorage.getItem("admin-pin") ?? "";
-    await fetch(`/api/admin/settings?pin=${encodeURIComponent(pin)}`, {
+    await fetch("/api/admin/settings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-admin-pin": pin },
       body: JSON.stringify({ [key]: newVal }),
     });
     setSaving(null);
@@ -462,7 +462,7 @@ function SystemTab() {
 
   useEffect(() => {
     const pin = sessionStorage.getItem("admin-pin") ?? "";
-    fetch(`/api/admin/system?pin=${encodeURIComponent(pin)}`)
+    fetch("/api/admin/system", { headers: { "x-admin-pin": pin } })
       .then((r) => r.json())
       .then((d) => { if (d.dbStats) setData(d); })
       .finally(() => setLoading(false));
@@ -548,9 +548,9 @@ function SettingsTab({ settings, setSettings }: { settings: SiteSettings | null;
 
   const save = async () => {
     const pin = sessionStorage.getItem("admin-pin") ?? "";
-    await fetch(`/api/admin/settings?pin=${encodeURIComponent(pin)}`, {
+    await fetch("/api/admin/settings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-admin-pin": pin },
       body: JSON.stringify({
         cashappHandle: cashapp,
         zelleInfo: zelle,
@@ -606,7 +606,7 @@ function SettingsTab({ settings, setSettings }: { settings: SiteSettings | null;
           if (newPin && /^\d{4}$/.test(newPin)) {
             fetch("/api/admin/settings", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "x-admin-pin": pin },
               body: JSON.stringify({ action: "set-pin", pin: newPin }),
             }).then(() => { sessionStorage.setItem("admin-pin", newPin); alert("Admin PIN updated!"); });
           }

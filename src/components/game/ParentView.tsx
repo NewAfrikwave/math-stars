@@ -66,7 +66,7 @@ export function ParentView() {
   }, []);
 
   const loadSummary = async (pin: string) => {
-    const res = await fetch(`/api/parent?summary=1&pin=${encodeURIComponent(pin)}`);
+    const res = await fetch("/api/parent?summary=1", { headers: { "x-parent-pin": pin } });
     if (res.status === 401) return null;
     const d = await res.json();
     if (d.error) return null;
@@ -118,7 +118,7 @@ export function ParentView() {
     setError(null);
     const res = await fetch("/api/parent", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-parent-pin": pinInput },
       body: JSON.stringify({ action: "set-pin", pin: pinInput }),
     });
     const d = await res.json();
@@ -337,6 +337,33 @@ export function ParentView() {
       <p className="mt-6 text-center text-xs text-muted-foreground">
         Tip: encourage daily practice and the Smart Review to grow mastery over time.
       </p>
+
+      <Card className="mt-6 p-4">
+        <h2 className="font-display font-bold">Family data & privacy</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Download a copy of the family's learning records or permanently erase them.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={async () => {
+            const response = await fetch("/api/family-data", { headers: { "x-parent-pin": pinInput } });
+            if (!response.ok) return setError("Unable to export family data.");
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url; link.download = `math-stars-family-data-${new Date().toISOString().slice(0, 10)}.json`; link.click();
+            URL.revokeObjectURL(url);
+          }}>Download family data</Button>
+          <Button variant="destructive" onClick={async () => {
+            const confirmation = prompt('Type "DELETE ALL FAMILY DATA" to permanently erase every learner profile and record.');
+            if (confirmation !== "DELETE ALL FAMILY DATA") return;
+            const response = await fetch("/api/family-data", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json", "x-parent-pin": pinInput },
+              body: JSON.stringify({ confirmation }),
+            });
+            if (response.ok) window.location.reload(); else setError("Family data was not deleted.");
+          }}>Delete all family data</Button>
+          <a href="/privacy" className="inline-flex h-10 items-center px-3 text-sm font-semibold text-primary underline">Privacy details</a>
+        </div>
+      </Card>
 
       {/* Admin access (for the site owner) */}
       <div className="mt-4 text-center">

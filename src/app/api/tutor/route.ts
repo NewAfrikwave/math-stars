@@ -4,17 +4,24 @@ import { db } from "@/lib/db";
 import { getStudent, getProfileId } from "@/lib/student";
 import { logError } from "@/lib/settings";
 import { findLesson } from "@/lib/curriculum";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 // POST /api/tutor
 // Body: { message: string, lessonId?: string }
 // Returns: { reply: string }
 // Uses the LLM skill to act as a warm, patient 3rd-grade math tutor.
 export async function POST(req: Request) {
+  const attempt = rateLimit(clientKey(req, "tutor"), 20, 10 * 60 * 1000);
+  if (!attempt.allowed) return NextResponse.json({ error: "Please take a short break before asking again." }, { status: 429, headers: { "Retry-After": String(attempt.retryAfter) } });
   const body = await req.json().catch(() => null);
   if (!body || typeof body.message !== "string" || !body.message.trim()) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
-  const message = body.message as string;
+  const message = body.message.trim().slice(0, 500) as string;
+  const personalInfo = /(?:\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b|\b\S+@\S+\.\S+\b|\b(?:my address|i live at|my phone|my school)\b)/i;
+  if (personalInfo.test(message)) {
+    return NextResponse.json({ reply: "Let's keep personal information private. Ask a math question without names, addresses, phone numbers, schools, or email addresses. 🌟" });
+  }
   const lessonId = typeof body.lessonId === "string" ? body.lessonId : undefined;
 
   const student = await getStudent(getProfileId(req));
@@ -36,6 +43,7 @@ Rules:
 - Use concrete, fun examples: cookies, balloons, puppies, stars, pizza.
 - If they seem frustrated, reassure them that mistakes help our brains grow.
 - Keep replies under 90 words unless they specifically ask for a longer explanation.
+- Never ask for or repeat a child's full name, address, school, phone number, email, passwords, or other identifying information.
 - If a question is not about math, gently steer back to math in a friendly way.${lessonContext}`;
 
   // Load recent conversation for memory (last 6 turns).
@@ -88,16 +96,16 @@ Rules:
     return NextResponse.json({ reply });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
-    await logError("/api/tutor", "POST", msg, err instanceof Error ? err.stack : undefined);
+    await logError("/api/tutor", "POST", msg);
     return NextResponse.json(
-      { reply: `I'm having trouble thinking right now (${msg}). Try again in a moment! 🌟` },
+      { reply: "I'm having trouble thinking right now. Try again in a moment!" },
       { status: 200 }
     );
   }
 }
 
 // GET /api/tutor — load the saved conversation history.
-export async function GET() {
+export async function GET(req: Request) {
   const student = await getStudent(getProfileId(req));
   const rows = await db.tutorMessage.findMany({
     where: { studentId: student.id },
@@ -111,4 +119,10 @@ export async function GET() {
       createdAt: r.createdAt.toISOString(),
     })),
   });
+}
+
+export async function DELETE(req: Request) {
+  const student = await getStudent(getProfileId(req));
+  await db.tutorMessage.deleteMany({ where: { studentId: student.id } });
+  return NextResponse.json({ ok: true });
 }

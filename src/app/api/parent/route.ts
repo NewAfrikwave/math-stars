@@ -6,6 +6,8 @@ import { PRESCHOOL_CURRICULUM } from "@/lib/preschool";
 import { GRADE1_CURRICULUM } from "@/lib/grade1";
 import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
+import { hashPin, pinFrom, verifyPin } from "@/lib/pin";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 const ALL_DOMAINS = [...CURRICULUM, ...PRESCHOOL_CURRICULUM, ...GRADE1_CURRICULUM, ...GRADE2_CURRICULUM, ...GRADE4_CURRICULUM];
 
@@ -14,8 +16,10 @@ const ALL_DOMAINS = [...CURRICULUM, ...PRESCHOOL_CURRICULUM, ...GRADE1_CURRICULU
 // Pass ?summary=1 to get a lightweight summary of ALL profiles (for the
 // multi-child parent dashboard).
 export async function GET(req: Request) {
+  const attempt = rateLimit(clientKey(req, "parent-dashboard"), 60, 15 * 60 * 1000);
+  if (!attempt.allowed) return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
   const url = new URL(req.url);
-  const pin = url.searchParams.get("pin") ?? "";
+  const pin = pinFrom(req);
   const wantSummary = url.searchParams.get("summary") === "1";
   const profileId = getProfileId(req);
   const student = await getStudent(profileId);
@@ -29,14 +33,18 @@ export async function GET(req: Request) {
       where: { NOT: { parentPin: null } },
       select: { id: true, parentPin: true },
     });
-    if (withPin && withPin.parentPin && withPin.parentPin !== pin) {
+    if (withPin && withPin.parentPin && !verifyPin(pin, withPin.parentPin)) {
       return NextResponse.json({ error: "wrong-pin", hasPin: true }, { status: 401 });
     }
     if (!withPin) {
       // No PIN set anywhere yet.
       return NextResponse.json({ profiles: [], hasPin: false });
     }
-    const summaries = [];
+    const summaries: Array<{
+      id: string; name: string; avatar: string; level: string; totalStars: number;
+      streak: number; completedLessons: number; totalLessons: number; avgScore: number;
+      domains: Record<string, { completed: number; total: number }>;
+    }> = [];
     for (const p of all) {
       const rows = await db.lessonProgress.findMany({ where: { studentId: p.id } });
       const completed = rows.filter((r) => r.status === "completed");
@@ -149,6 +157,8 @@ export async function GET(req: Request) {
 // POST /api/parent
 // Body: { action: "set-pin" | "verify-pin" | "clear-pin", pin?: string }
 export async function POST(req: Request) {
+  const attempt = rateLimit(clientKey(req, "parent-pin"), 20, 15 * 60 * 1000);
+  if (!attempt.allowed) return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
   const body = await req.json().catch(() => null);
   if (!body || typeof body.action !== "string") {
     return NextResponse.json({ error: "action required" }, { status: 400 });
@@ -162,10 +172,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
     }
     // Set the PIN on ALL profiles so the global parent check works.
-    await db.student.updateMany({ where: {}, data: { parentPin: pin } });
+    const existing = await db.student.findFirst({ where: { NOT: { parentPin: null } }, select: { parentPin: true } });
+    if (existing?.parentPin && !verifyPin(pinFrom(req), existing.parentPin)) {
+      return NextResponse.json({ error: "wrong-pin", hasPin: true }, { status: 401 });
+    }
+    await db.student.updateMany({ where: {}, data: { parentPin: hashPin(pin) } });
     return NextResponse.json({ ok: true, hasPin: true });
   }
   if (body.action === "clear-pin") {
+    const existing = await db.student.findFirst({ where: { NOT: { parentPin: null } }, select: { parentPin: true } });
+    if (existing?.parentPin && !verifyPin(pinFrom(req), existing.parentPin)) {
+      return NextResponse.json({ error: "wrong-pin", hasPin: true }, { status: 401 });
+    }
     await db.student.updateMany({ where: {}, data: { parentPin: null } });
     return NextResponse.json({ ok: true, hasPin: false });
   }
@@ -176,7 +194,7 @@ export async function POST(req: Request) {
       select: { parentPin: true },
     });
     if (!withPin || !withPin.parentPin) return NextResponse.json({ ok: true, hasPin: false });
-    if (withPin.parentPin !== pin) {
+    if (!verifyPin(pin, withPin.parentPin)) {
       return NextResponse.json({ error: "wrong-pin", hasPin: true }, { status: 401 });
     }
     return NextResponse.json({ ok: true, hasPin: true });

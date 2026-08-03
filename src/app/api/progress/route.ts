@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getStudent, getProfileId } from "@/lib/student";
-import { ALL_LESSONS, CURRICULUM, isLessonAvailable } from "@/lib/curriculum";
+import { ALL_LESSONS, CURRICULUM, findLesson, isLessonAvailable } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS, psIsLessonAvailable, findPsLesson } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS, isLessonAvailable as isG1LessonAvailable, findG1Lesson } from "@/lib/grade1";
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS, isLessonAvailable as isG2LessonAvailable, findG2Lesson } from "@/lib/grade2";
@@ -19,8 +19,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "lessonId is required" }, { status: 400 });
   }
   const { lessonId } = body as { lessonId: string };
-  const correct = Math.max(0, Math.floor(Number(body.correct ?? 0)));
+  const correctRaw = Math.floor(Number(body.correct ?? 0));
   const total = Math.max(1, Math.floor(Number(body.total ?? 1)));
+  const correct = Math.min(total, Math.max(0, correctRaw));
   const score = Math.round((correct / total) * 100);
   const stars = score >= 90 ? 3 : score >= 70 ? 2 : score >= 50 ? 1 : 0;
   const difficulty =
@@ -28,11 +29,25 @@ export async function POST(req: Request) {
 
   const profileId = getProfileId(req);
   const student = await getStudent(profileId);
+  const foundLesson = findLessonAny(lessonId);
+  if (!foundLesson) return NextResponse.json({ error: "unknown lesson" }, { status: 400 });
+  const allowedLevel = foundLesson.level === student.level;
+  if (!allowedLevel) return NextResponse.json({ error: "lesson is not in this learner's grade" }, { status: 403 });
 
   // upsert the lesson progress row
   const existing = await db.lessonProgress.findUnique({
     where: { studentId_lessonId: { studentId: student.id, lessonId } },
   });
+  const currentRows = await db.lessonProgress.findMany({ where: { studentId: student.id } });
+  const completedBefore = (id: string) => currentRows.some((row) => row.lessonId === id && row.status === "completed");
+  const availableByRules = student.level === "preschool" ? psIsLessonAvailable(lessonId, completedBefore)
+    : student.level === "grade1" ? isG1LessonAvailable(lessonId, completedBefore)
+    : student.level === "grade2" ? isG2LessonAvailable(lessonId, completedBefore)
+    : student.level === "grade4" ? isG4LessonAvailable(lessonId, completedBefore)
+    : isLessonAvailable(lessonId, completedBefore);
+  if (existing?.status === "locked" || (!existing && !availableByRules)) {
+    return NextResponse.json({ error: "lesson is locked" }, { status: 403 });
+  }
 
   const wasCompleted = existing?.status === "completed";
   const newBest = Math.max(existing?.bestScore ?? 0, score);
@@ -180,15 +195,7 @@ export async function POST(req: Request) {
   }
 
   // Log an activity event for the parent timeline.
-  const lessonMeta = ALL_LESSONS.flatMap((d) => d.lessons).find((l) => l.id === lessonId)
-    ?? PRESCHOOL_CURRICULUM.flatMap((d) => d.lessons).find((l) => l.id === lessonId)
-    ?? GRADE1_CURRICULUM.flatMap((d) => d.lessons).find((l) => l.id === lessonId)
-    ?? GRADE2_CURRICULUM.flatMap((d) => d.lessons).find((l) => l.id === lessonId)
-    ?? GRADE4_CURRICULUM.flatMap((d) => d.lessons).find((l) => l.id === lessonId)
-    ?? findPsLesson(lessonId)?.lesson
-    ?? findG1Lesson(lessonId)?.lesson
-    ?? findG2Lesson(lessonId)?.lesson
-    ?? findG4Lesson(lessonId)?.lesson;
+  const lessonMeta = foundLesson.lesson;
   await db.activityEvent.create({
     data: {
       studentId: student.id,
@@ -214,4 +221,20 @@ export async function POST(req: Request) {
     streak,
     newlyEarned,
   });
+}
+
+function findLessonAny(lessonId: string) {
+  const grade3 = findLesson(lessonId)?.lesson;
+  if (grade3) return { level: "grade3", lesson: grade3 };
+  const groups = [
+    { level: "preschool", domains: PRESCHOOL_CURRICULUM },
+    { level: "grade1", domains: GRADE1_CURRICULUM },
+    { level: "grade2", domains: GRADE2_CURRICULUM },
+    { level: "grade4", domains: GRADE4_CURRICULUM },
+  ];
+  for (const group of groups) {
+    const lesson = group.domains.flatMap((d) => d.lessons).find((l) => l.id === lessonId);
+    if (lesson) return { level: group.level, lesson };
+  }
+  return null;
 }

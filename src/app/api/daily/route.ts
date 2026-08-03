@@ -8,8 +8,9 @@ import { getStudent, getProfileId } from "@/lib/student";
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "invalid body" }, { status: 400 });
-  const correct = Math.max(0, Math.floor(Number(body.correct ?? 0)));
+  const correctRaw = Math.floor(Number(body.correct ?? 0));
   const total = Math.max(1, Math.floor(Number(body.total ?? 1)));
+  const correct = Math.min(total, Math.max(0, correctRaw));
   const score = Math.round((correct / total) * 100);
 
   const student = await getStudent(getProfileId(req));
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
 }
 
 // GET /api/daily — returns recent daily challenge history
-export async function GET() {
+export async function GET(req: Request) {
   const student = await getStudent(getProfileId(req));
   const rows = await db.dailyChallenge.findMany({
     where: { studentId: student.id },

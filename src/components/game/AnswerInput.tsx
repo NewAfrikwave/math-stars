@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, Mic } from "lucide-react";
-import type { Problem } from "@/lib/types";
+import type { MultipleChoiceProblem, NumberProblem, Problem, TrueFalseProblem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSpeechRecognition, parseSpokenNumber } from "@/hooks/use-speech-recognition";
 import { useGameStore } from "@/store/useGameStore";
@@ -22,6 +22,8 @@ interface AnswerInputProps {
   // instead of a keyboard text field — easier for little fingers.
   bigButtons?: boolean;
 }
+
+type TypedAnswerProps<T extends Problem> = Omit<AnswerInputProps, "problem"> & { problem: T };
 
 export function AnswerInput({ problem, submitted, onAnswerChange, onSubmit, bigButtons }: AnswerInputProps) {
   switch (problem.answerType) {
@@ -50,7 +52,7 @@ export function AnswerInput({ problem, submitted, onAnswerChange, onSubmit, bigB
 // remount fresh for each new question — no manual reset effects needed.
 
 // ---------------------------------------------------------------------------
-function NumberInput({ problem, submitted, onAnswerChange, onSubmit }: AnswerInputProps) {
+function NumberInput({ problem, submitted, onAnswerChange, onSubmit }: TypedAnswerProps<NumberProblem>) {
   const [val, setVal] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -145,7 +147,7 @@ function ChoiceVisual({ choice }: { choice: string }) {
   return null;
 }
 
-function MultipleChoice({ problem, submitted, onAnswerChange, onSubmit }: AnswerInputProps) {
+function MultipleChoice({ problem, submitted, onAnswerChange, onSubmit }: TypedAnswerProps<MultipleChoiceProblem>) {
   const [selected, setSelected] = useState<number | null>(null);
   const hasVisual = problem.choices.some((c) => {
     const l = c.toLowerCase();
@@ -193,7 +195,7 @@ function MultipleChoice({ problem, submitted, onAnswerChange, onSubmit }: Answer
 }
 
 // ---------------------------------------------------------------------------
-function TrueFalse({ problem, submitted, onAnswerChange, onSubmit }: AnswerInputProps) {
+function TrueFalse({ problem, submitted, onAnswerChange, onSubmit }: TypedAnswerProps<TrueFalseProblem>) {
   const [selected, setSelected] = useState<boolean | null>(null);
 
   return (
@@ -317,7 +319,7 @@ function TimeInput({ problem, submitted, onAnswerChange, onSubmit }: AnswerInput
 
 // ---------------------------------------------------------------------------
 // Big tappable number pad for preschoolers — no keyboard needed.
-function NumberPad({ problem, submitted, onAnswerChange, onSubmit }: AnswerInputProps) {
+function NumberPad({ problem, submitted, onAnswerChange, onSubmit }: TypedAnswerProps<NumberProblem>) {
   const [val, setVal] = useState("");
   useEffect(() => {
     // focus not needed for buttons

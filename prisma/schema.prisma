@@ -18,7 +18,7 @@ model Student {
   totalStars Int     @default(0)
   streak    Int      @default(0)
   lastPlayedAt DateTime?
-  parentPin String?  // optional 4-digit PIN gating the parent dashboard
+  parentPin String?  // salted scrypt hash of optional parent PIN
   soundOn   Boolean  @default(true) // learner sound preference
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -120,7 +120,7 @@ model ActivityEvent {
 // donation handles, broadcast messages, and the admin PIN.
 model SiteSettings {
   id              String   @id @default("site")
-  adminPin        String?  // separate 4-digit PIN for the admin panel
+  adminPin        String?  // salted scrypt hash of separate admin PIN
   // Feature flags
   dailyChallengeEnabled Boolean @default(true)
   aiTutorEnabled        Boolean @default(true)
@@ -129,8 +129,8 @@ model SiteSettings {
   manipulativesEnabled  Boolean @default(true)
   soundEffectsEnabled   Boolean @default(true)
   // Donation handles (editable from admin)
-  cashappHandle   String   @default("$mathstars")
-  zelleInfo       String   @default("donate@mathstars.app")
+  cashappHandle   String   @default("")
+  zelleInfo       String   @default("")
   // Broadcast banner
   broadcastMessage String?
   broadcastActive  Boolean @default(false)
@@ -149,4 +149,3 @@ model ErrorLog {
   @@index([createdAt])
   @@index([route])
 }
-

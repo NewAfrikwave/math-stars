@@ -6,13 +6,13 @@ import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS, psIsLessonAvailable } from 
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS, isLessonAvailable as isG1LessonAvailable } from "@/lib/grade1";
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS, isLessonAvailable as isG2LessonAvailable } from "@/lib/grade2";
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS, isLessonAvailable as isG4LessonAvailable } from "@/lib/grade4";
+import { pinFrom, verifyPin } from "@/lib/pin";
 
 // GET /api/admin/users?pin=XXXX — list all profiles with full details.
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const pin = url.searchParams.get("pin") ?? "";
+  const pin = pinFrom(req);
   const settings = await getSiteSettings();
-  if (settings.adminPin && settings.adminPin !== pin) {
+  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
     return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
   }
 
@@ -55,10 +55,9 @@ export async function GET(req: Request) {
 // POST /api/admin/users?pin=XXXX — manage a profile.
 // Body: { action: "reset"|"delete"|"change-level"|"rename", profileId, level?, name? }
 export async function POST(req: Request) {
-  const url = new URL(req.url);
-  const pin = url.searchParams.get("pin") ?? "";
+  const pin = pinFrom(req);
   const settings = await getSiteSettings();
-  if (settings.adminPin && settings.adminPin !== pin) {
+  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
     return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
   }
 
@@ -125,7 +124,8 @@ export async function POST(req: Request) {
   }
 
   if (action === "change-level") {
-    const level = body.level === "preschool" ? "preschool" : "grade3";
+    const allowed = ["preschool", "grade1", "grade2", "grade3", "grade4"];
+    const level = allowed.includes(body.level) ? body.level : "grade3";
     await db.student.update({ where: { id: profileId }, data: { level } });
     return NextResponse.json({ ok: true, message: `Level changed to ${level}` });
   }

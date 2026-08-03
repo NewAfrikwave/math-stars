@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSiteSettings } from "@/lib/settings";
+import { pinFrom, verifyPin } from "@/lib/pin";
 import { ALL_LESSONS, CURRICULUM } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS } from "@/lib/grade1";
@@ -9,10 +10,9 @@ import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS } from "@/lib/grade4";
 
 // GET /api/admin/analytics?pin=XXXX — aggregated usage stats across ALL profiles.
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const pin = url.searchParams.get("pin") ?? "";
+  const pin = pinFrom(req);
   const settings = await getSiteSettings();
-  if (settings.adminPin && settings.adminPin !== pin) {
+  if (!settings.adminPin || !verifyPin(pin, settings.adminPin)) {
     return NextResponse.json({ error: "wrong-pin", hasAdminPin: true }, { status: 401 });
   }
 

@@ -112,7 +112,8 @@ export function QuizRunner({
   const progressValue = ((index + (submitted ? 1 : 0)) / problems.length) * 100;
 
   // Build the full read-aloud text for the current problem.
-  const speakText = [problem.story, problem.prompt, problem.unit ? `(answer in ${problem.unit})` : ""]
+  const unit = problem.answerType === "number" ? problem.unit : undefined;
+  const speakText = [problem.story, problem.prompt, unit ? `(answer in ${unit})` : ""]
     .filter(Boolean)
     .join(" ");
 

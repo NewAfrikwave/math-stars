@@ -15,7 +15,7 @@ export function getProfileId(req: Request): string {
 // Get-or-create a student (profile) by its id.
 export async function getStudent(profileId: string) {
   let student = await db.student.findUnique({ where: { id: profileId } });
-  if (!student) {
+  if (!student && profileId === "default-student") {
     student = await db.student.create({
       data: {
         id: profileId,
@@ -28,6 +28,7 @@ export async function getStudent(profileId: string) {
       },
     });
   }
+  if (!student) throw new Error("profile not found");
   return student;
 }
 
