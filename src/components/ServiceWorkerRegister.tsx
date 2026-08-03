@@ -53,6 +53,8 @@ export function ServiceWorkerRegister({ authenticated }: { authenticated: boolea
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...details, deviceKey: deviceKey(), event, installed: event === "install" || details.installed }),
         keepalive: true,
+      }).then((response) => {
+        if (response.status === 401 || response.status === 403) window.location.reload();
       }).catch(() => {});
     };
     sendPresence("launch");

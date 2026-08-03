@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   BarChart3,
   Blocks,
@@ -50,7 +50,7 @@ const featureList = [
   { icon: ChartNoAxesCombined, title: "Parent Progress", body: "See learner activity, skill growth, and where to help." },
 ];
 
-export function AccessGate({ authenticated, children }: { authenticated: boolean; children: React.ReactNode }) {
+export function AccessGate({ authenticated, staleSession = false, children }: { authenticated: boolean; staleSession?: boolean; children: React.ReactNode }) {
   const pathname = usePathname();
   const [mode, setMode] = useState<"signin" | "register" | "legacy">("signin");
   const [displayName, setDisplayName] = useState("");
@@ -61,6 +61,10 @@ export function AccessGate({ authenticated, children }: { authenticated: boolean
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (staleSession) fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+  }, [staleSession]);
 
   if (authenticated || pathname === "/privacy") return <>{children}</>;
 

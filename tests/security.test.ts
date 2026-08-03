@@ -7,6 +7,7 @@ import {
   verifyAdminSessionValue,
   verifySessionValue,
 } from "../src/lib/auth";
+import { sessionHasAccountAccess } from "../src/lib/session-access";
 import { hashPassword, normalizeEmail, passwordError, verifyPassword } from "../src/lib/password";
 import { hashPin, verifyPin } from "../src/lib/pin";
 import { rateLimit } from "../src/lib/rate-limit";
@@ -43,6 +44,21 @@ describe("security helpers", () => {
     const session = createAdminSessionValue();
     expect(verifyAdminSessionValue(session)).toBe(true);
     expect(verifyAdminSessionValue(`${session}x`)).toBe(false);
+  });
+
+  test("does not let the public access code sign account or admin sessions", () => {
+    delete process.env.SESSION_SECRET;
+    const legacySession = createSessionValue(null);
+    expect(readSessionValue(legacySession)?.kind).toBe("legacy");
+    expect(() => createSessionValue("family-123")).toThrow();
+    expect(() => createAdminSessionValue()).toThrow();
+  });
+
+  test("rejects signed account cookies after suspension or deletion", () => {
+    const session = readSessionValue(createSessionValue("family-123"));
+    expect(sessionHasAccountAccess(session, "active")).toBe(true);
+    expect(sessionHasAccountAccess(session, "suspended")).toBe(false);
+    expect(sessionHasAccountAccess(session, null)).toBe(false);
   });
 
   test("hashes account passwords and normalizes email addresses", () => {

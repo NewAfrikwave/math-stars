@@ -7,6 +7,7 @@ import {
   ADMIN_SESSION_COOKIE,
   adminSessionCookieOptions,
   createAdminSessionValue,
+  hasPrivilegedSessionSecret,
   isAdminRequest,
   sessionFromRequest,
 } from "@/lib/auth";
@@ -41,6 +42,10 @@ export async function POST(req: Request) {
   if (!body) return NextResponse.json({ error: "invalid body" }, { status: 400 });
 
   const settings = await getSiteSettings();
+
+  if ((body.action === "set-pin" || body.action === "verify-pin") && !hasPrivilegedSessionSecret()) {
+    return NextResponse.json({ error: "SESSION_SECRET must be configured before admin access can be used." }, { status: 503 });
+  }
 
   // PIN management actions
   if (body.action === "set-pin") {

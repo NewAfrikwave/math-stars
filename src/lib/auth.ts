@@ -9,22 +9,34 @@ export type AppSession =
   | { kind: "account"; familyId: string; expires: number }
   | { kind: "legacy"; familyId: null; expires: number };
 
-function secret() {
-  return process.env.SESSION_SECRET || process.env.FAMILY_ACCESS_CODE || "";
+function privilegedSecret() {
+  return process.env.SESSION_SECRET || "";
 }
 
-function signature(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("base64url");
+function legacySecret() {
+  return privilegedSecret() || process.env.FAMILY_ACCESS_CODE || "";
+}
+
+function signature(payload: string, signingSecret: string) {
+  return createHmac("sha256", signingSecret).update(payload).digest("base64url");
+}
+
+export function hasPrivilegedSessionSecret() {
+  return privilegedSecret().length >= 32;
 }
 
 export function createSessionValue(familyId?: string | null) {
+  const signingSecret = familyId ? privilegedSecret() : legacySecret();
+  if (!signingSecret || (familyId && !hasPrivilegedSessionSecret())) {
+    throw new Error("SESSION_SECRET must contain at least 32 characters");
+  }
   const expires = Math.floor(Date.now() / 1000) + SESSION_AGE_SECONDS;
   const payload = familyId ? `account.${familyId}.${expires}` : `legacy.${expires}`;
-  return `${payload}.${signature(payload)}`;
+  return `${payload}.${signature(payload, signingSecret)}`;
 }
 
 export function readSessionValue(value?: string | null): AppSession | null {
-  if (!value || !secret()) return null;
+  if (!value) return null;
   const parts = value.split(".");
   const scope = parts[0];
   const isAccount = scope === "account";
@@ -32,10 +44,12 @@ export function readSessionValue(value?: string | null): AppSession | null {
   const expiresRaw = isAccount ? parts[2] : parts[1];
   const supplied = isAccount ? parts[3] : parts[2];
   if (!expiresRaw || !supplied || (scope !== "account" && scope !== "legacy" && scope !== "family")) return null;
+  const signingSecret = isAccount ? privilegedSecret() : legacySecret();
+  if (!signingSecret || (isAccount && !hasPrivilegedSessionSecret())) return null;
   const expires = Number(expiresRaw);
   if (!Number.isFinite(expires) || expires <= Math.floor(Date.now() / 1000)) return null;
   const payload = isAccount ? `${scope}.${familyId}.${expiresRaw}` : `${scope}.${expiresRaw}`;
-  const expected = signature(payload);
+  const expected = signature(payload, signingSecret);
   const a = Buffer.from(expected);
   const b = Buffer.from(supplied);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
@@ -58,16 +72,17 @@ export function sessionFromRequest(req: Request) {
 }
 
 export function createAdminSessionValue() {
+  if (!hasPrivilegedSessionSecret()) throw new Error("SESSION_SECRET must contain at least 32 characters");
   const expires = Math.floor(Date.now() / 1000) + ADMIN_SESSION_AGE_SECONDS;
   const payload = `admin.${expires}`;
-  return `${payload}.${signature(payload)}`;
+  return `${payload}.${signature(payload, privilegedSecret())}`;
 }
 
 export function verifyAdminSessionValue(value?: string | null) {
-  if (!value || !secret()) return false;
+  if (!value || !hasPrivilegedSessionSecret()) return false;
   const [scope, expiresRaw, supplied] = value.split(".");
   if (scope !== "admin" || !expiresRaw || !supplied || Number(expiresRaw) <= Math.floor(Date.now() / 1000)) return false;
-  const expected = signature(`${scope}.${expiresRaw}`);
+  const expected = signature(`${scope}.${expiresRaw}`, privilegedSecret());
   const a = Buffer.from(expected);
   const b = Buffer.from(supplied);
   return a.length === b.length && timingSafeEqual(a, b);

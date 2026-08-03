@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSessionValue, SESSION_COOKIE, sessionCookieOptions, verifyAccessCode } from "@/lib/auth";
+import { createSessionValue, hasPrivilegedSessionSecret, SESSION_COOKIE, sessionCookieOptions, verifyAccessCode } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizeEmail, verifyPassword } from "@/lib/password";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
@@ -23,6 +23,9 @@ export async function POST(req: Request) {
     return response;
   }
 
+  if (!hasPrivilegedSessionSecret()) {
+    return NextResponse.json({ error: "Account sign-in is temporarily unavailable." }, { status: 503 });
+  }
   const email = normalizeEmail(body?.email);
   const password = typeof body?.password === "string" ? body.password : "";
   const account = email ? await db.familyAccount.findUnique({ where: { email } }) : null;

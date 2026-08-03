@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { createSessionValue, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
+import { createSessionValue, hasPrivilegedSessionSecret, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashPassword, isValidEmail, normalizeEmail, passwordError } from "@/lib/password";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  if (!hasPrivilegedSessionSecret()) {
+    return NextResponse.json({ error: "Account sign-up is temporarily unavailable." }, { status: 503 });
+  }
   const attempt = rateLimit(clientKey(req, "register"), 5, 60 * 60 * 1000);
   if (!attempt.allowed) {
     return NextResponse.json({ error: "Too many signup attempts" }, {

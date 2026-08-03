@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { familyScope, getStudentForRequest, listStudents, requireSession } from "@/lib/student";
+import { familyScope, getStudentForRequest, listStudents, requireActiveSession } from "@/lib/student";
 import { ALL_LESSONS, CURRICULUM } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM } from "@/lib/preschool";
 import { GRADE1_CURRICULUM } from "@/lib/grade1";
@@ -21,8 +21,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const pin = pinFrom(req);
   const wantSummary = url.searchParams.get("summary") === "1";
-  const student = await getStudentForRequest(req);
-  const scope = familyScope(requireSession(req));
+  const scope = familyScope(await requireActiveSession(req));
 
   // Multi-profile summary for the parent dashboard.
   // Uses one shared parent PIN across this family's profiles.
@@ -74,6 +73,8 @@ export async function GET(req: Request) {
     }
     return NextResponse.json({ profiles: summaries });
   }
+
+  const student = await getStudentForRequest(req);
 
   const rows = await db.lessonProgress.findMany({
     where: { studentId: student.id },
@@ -163,8 +164,7 @@ export async function POST(req: Request) {
   if (!body || typeof body.action !== "string") {
     return NextResponse.json({ error: "action required" }, { status: 400 });
   }
-  await getStudentForRequest(req);
-  const scope = familyScope(requireSession(req));
+  const scope = familyScope(await requireActiveSession(req));
 
   if (body.action === "set-pin") {
     const pin = String(body.pin ?? "").trim();
