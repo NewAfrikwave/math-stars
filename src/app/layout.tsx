@@ -26,10 +26,13 @@ const fredoka = Fredoka({
 export const metadata: Metadata = {
   title: "Math Stars — Math Learning for Kids",
   description:
-    "A fun, interactive math learning app for preschool and 3rd grade — counting, multiplication, fractions, measurement, geometry, and more.",
+    "A calm, encouraging math learning adventure for children from preschool through 4th grade, with practice, rewards, and parent progress tracking.",
   keywords: [
-    "3rd grade math",
     "preschool math",
+    "1st grade math",
+    "2nd grade math",
+    "3rd grade math",
+    "4th grade math",
     "multiplication",
     "division",
     "fractions",
@@ -50,7 +53,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#e11d48",
+  themeColor: "#fffaf0",
   width: "device-width",
   initialScale: 1,
 };
