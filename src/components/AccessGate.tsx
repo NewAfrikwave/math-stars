@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { FormEvent, useState } from "react";
 import {
   BarChart3,
@@ -49,11 +50,12 @@ const featureList = [
 ];
 
 export function AccessGate({ authenticated, children }: { authenticated: boolean; children: React.ReactNode }) {
+  const pathname = usePathname();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (authenticated) return <>{children}</>;
+  if (authenticated || pathname === "/privacy") return <>{children}</>;
 
   async function submit(event: FormEvent) {
     event.preventDefault();

@@ -30,6 +30,7 @@ export interface ProfileSummary {
   level: Level;
   totalStars: number;
   streak: number;
+  lastPlayedAt?: string | null;
 }
 
 export interface SiteSettingsState {

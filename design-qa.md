@@ -45,4 +45,48 @@ No application-origin console errors were present. The browser reported unrelate
 
 - P3: the source mock uses decorative dotted callout lines between the feature list and product preview. The implementation keeps the grouping cleaner at responsive sizes and omits those purely decorative connectors.
 
-final result: passed
+Landing page result: passed
+
+---
+
+# Learner Picker Design QA
+
+- Source visual truth: `/workspace/scratch/a3be78015eb6/generated_images/exec-ef6ce672-f7d1-4a77-8c96-7363ef00f8d3.png`
+- Implementation screenshot: unavailable because the supervised cloud preview could not be reached
+- Intended comparison viewport: 1600 × 1000 CSS px at 1× density
+- Source pixels: 1600 × 1000
+- State: authenticated family space, two learner profiles, add-learner dialog closed
+
+## Evidence reviewed
+
+The selected source visual was opened and inspected at original resolution. The implementation source, generated raster assets, typecheck, lint output, and production build were reviewed. Browser-rendered implementation evidence is missing, so a valid same-state visual comparison could not be produced.
+
+## Findings
+
+- Fonts and typography: Fredoka and Geist are applied consistently in source, but browser-rendered sizing and wrapping could not be verified.
+- Spacing and layout rhythm: responsive grid and mobile stacking rules are present, but actual viewport fit and scroll behavior could not be visually verified.
+- Colors and visual tokens: the implementation uses the selected cream, forest, cranberry, gold, and violet palette. Browser color rendering could not be compared.
+- Image quality and asset fidelity: the library hall, fox learner, and owl learner are dedicated WebP assets generated for the selected direction. Their final crop and overlay alignment could not be visually compared.
+- Copy and content: learner names, grades, stars, streaks, and last-played state come from real profile data. No invented progress values were added.
+- Interaction coverage: source-level behavior exists for profile selection, add-learner dialog, profile creation, read aloud, keyboard-accessible controls, and parent-area routing. Browser interaction testing was blocked.
+
+## Blocking issue
+
+The cloud preview service reported a running preview, but the cloud browser could not navigate to it after the bounded recovery attempt. Without a browser-rendered screenshot, interaction checks, or console inspection, Product Design's visual QA gate cannot pass.
+
+## Comparison history
+
+1. Source visual and generated assets were opened and inspected.
+2. The production build, typecheck, and lint passed after the initial implementation fixes.
+3. Two cloud-preview navigation attempts timed out; no valid implementation screenshot was captured.
+
+## Primary interactions tested
+
+- Not browser-tested because the cloud preview was unreachable.
+- Production compilation confirms all interaction handlers typecheck and bundle successfully.
+
+## Console check
+
+Blocked. No browser-origin console evidence was available.
+
+final result: blocked
