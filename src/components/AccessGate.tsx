@@ -61,10 +61,17 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const signInPage = pathname === "/signin";
 
   useEffect(() => {
     if (staleSession) fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   }, [staleSession]);
+
+  useEffect(() => {
+    if (signInPage && new URLSearchParams(window.location.search).get("mode") === "register") {
+      setMode("register");
+    }
+  }, [signInPage]);
 
   if (authenticated || pathname === "/privacy") return <>{children}</>;
 
@@ -100,7 +107,7 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
     <main id="main-content" className="min-h-screen overflow-hidden bg-[#fffaf0] text-[#351d10]">
       <header className="relative z-20 border-b border-rose-100/70 bg-[#fffaf0]/95 backdrop-blur">
         <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-          <a href="#top" className="flex items-center" aria-label="Math Stars home">
+          <a href="/" className="flex items-center" aria-label="Math Stars home">
             <Image
               src="/brand/math-stars-logo.png"
               alt="Math Stars"
@@ -111,22 +118,22 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
             />
           </a>
 
-          <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex" aria-label="Landing page">
+          {!signInPage && <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex" aria-label="Landing page">
             <a href="#adventure" className="transition-colors hover:text-rose-600">The adventure</a>
             <a href="#parents" className="transition-colors hover:text-rose-600">For parents</a>
             <a href="/privacy" className="transition-colors hover:text-rose-600">Privacy</a>
-          </nav>
+          </nav>}
 
-          <a href="#family-access" className="inline-flex h-11 items-center gap-2 rounded-xl border-2 border-rose-500 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50">
+          <a href={signInPage ? "/" : "/signin"} className="inline-flex h-11 items-center gap-2 rounded-xl border-2 border-rose-500 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50">
             <LockKeyhole className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Family sign in</span>
-            <span className="sm:hidden">Sign in</span>
+            <span>{signInPage ? "Back home" : "Family sign in"}</span>
           </a>
         </div>
       </header>
 
-      <section id="top" className="relative px-5 pb-12 pt-8 sm:px-8 sm:pt-10">
+      <section id="top" className={`relative px-5 pb-12 pt-8 sm:px-8 sm:pt-10 ${signInPage ? "flex min-h-[calc(100vh-5rem)] items-center bg-gradient-to-b from-[#fffaf0] to-rose-50/50" : ""}`}>
         <div className="mx-auto w-full max-w-6xl text-center">
+          {!signInPage && <>
           <p className="font-display text-3xl font-bold text-rose-600 sm:text-4xl lg:text-5xl">Choose Your Adventure.</p>
           <h1 className="mx-auto mt-2 max-w-5xl font-display text-3xl font-bold leading-[1.06] tracking-tight sm:text-4xl lg:text-5xl">
             A calm, encouraging math journey for every young learner.
@@ -146,10 +153,24 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
             />
           </div>
 
+          <div className="relative z-10 mx-auto -mt-2 flex max-w-xl flex-col justify-center gap-3 sm:flex-row">
+            <a href="/signin" className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 font-bold text-white shadow-md transition hover:bg-rose-700">
+              <LockKeyhole className="h-5 w-5" aria-hidden="true" /> Sign in
+            </a>
+            <a href="/signin?mode=register" className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-rose-500 bg-white px-6 font-bold text-rose-600 transition hover:bg-rose-50">
+              <UserPlus className="h-5 w-5" aria-hidden="true" /> Create account
+            </a>
+          </div>
+          </>}
+
+          {signInPage && <>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-600">Private family access</p>
+          <h1 className="mx-auto mt-2 max-w-2xl font-display text-3xl font-bold sm:text-4xl">Welcome to your family’s learning space</h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-stone-600 sm:text-base">Sign in, create a parent account, or use the existing family access code.</p>
           <form
             id="family-access"
             onSubmit={submit}
-            className="relative z-10 mx-auto -mt-3 max-w-2xl rounded-3xl border border-rose-100 bg-white p-5 text-left shadow-[0_18px_55px_rgba(74,38,21,0.13)] sm:p-7"
+            className="relative z-10 mx-auto mt-7 max-w-2xl rounded-3xl border border-rose-100 bg-white p-5 text-left shadow-[0_18px_55px_rgba(74,38,21,0.13)] sm:p-7"
             aria-labelledby="family-login-title"
           >
             <div className="flex min-w-0 items-center gap-3">
@@ -228,9 +249,11 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
             <ShieldCheck className="h-4 w-4 text-rose-500" aria-hidden="true" />
             A parent or guardian manages this private family space.
           </p>
+          </>}
         </div>
       </section>
 
+      {!signInPage && <>
       <section id="adventure" className="border-y border-amber-100 bg-[#fff7e8] px-5 py-16 sm:px-8 sm:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="text-center">
@@ -328,6 +351,7 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
           <a href="/privacy" className="text-sm font-bold text-rose-600 hover:text-rose-700">Read the privacy details <ChevronRight className="inline h-4 w-4" /></a>
         </div>
       </footer>
+      </>}
     </main>
   );
 }
