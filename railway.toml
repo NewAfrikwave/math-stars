@@ -2,7 +2,8 @@
 # https://railway.app
 
 [build]
-dockerfile = "Dockerfile"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 # The app listens on PORT (Railway injects this). The Dockerfile sets PORT=3000.
