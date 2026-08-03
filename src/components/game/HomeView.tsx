@@ -52,6 +52,8 @@ export function HomeView() {
   const totalStars = useGameStore((s) => s.totalStars);
   const streak = useGameStore((s) => s.streak);
   const progress = useGameStore((s) => s.progress);
+  const profiles = useGameStore((s) => s.profiles);
+  const currentProfileId = useGameStore((s) => s.currentProfileId);
   const soundOn = useGameStore((s) => s.soundOn);
   const setSoundOn = useGameStore((s) => s.setSoundOn);
   const setCurrentProfile = useGameStore((s) => s.setCurrentProfile);
@@ -78,10 +80,10 @@ export function HomeView() {
   })();
 
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
-  const missionTitle = level === "grade3" ? "Discover Equal Groups" : nextMission.lesson.title;
-  const missionDescription = level === "grade3"
-    ? "Learn how multiplication puts things into equal groups."
-    : nextMission.lesson.subtitle;
+  const activeProfile = profiles.find((profile) => profile.id === currentProfileId);
+  const activeAvatar = activeProfile?.avatar === "owl" ? "owl" : "fox";
+  const missionTitle = nextMission.lesson.title;
+  const missionDescription = nextMission.lesson.subtitle;
 
   const scrollToJourney = () => document.getElementById("journey-board")?.scrollIntoView({ behavior: "smooth", block: "center" });
 
@@ -94,7 +96,13 @@ export function HomeView() {
         <div className="mx-auto flex h-[86px] w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
           <button onClick={() => setView({ name: "home" })} className="group flex items-center gap-3 rounded-2xl text-left focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457]">
             <span className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[#d5af4d] bg-[#f1d792] shadow-md transition-transform group-hover:scale-105 sm:h-16 sm:w-16">
-              <Image src="/learner-fox.webp" alt="Fefe's fox avatar" fill sizes="64px" className="object-cover" />
+              <Image
+                src={`/learner-${activeAvatar}.webp`}
+                alt={`${studentName}'s ${activeAvatar} avatar`}
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
             </span>
             <span>
               <span className="block font-display text-2xl font-black leading-none sm:text-3xl">{studentName}</span>
