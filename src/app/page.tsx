@@ -99,7 +99,7 @@ export default function Page() {
         if (cancelled || !data) return;
         const list = (data.profiles ?? []) as Array<{
           id: string; name: string; avatar: string; level: string;
-          totalStars: number; streak: number;
+          totalStars: number; streak: number; lastPlayedAt?: string | null;
         }>;
         setProfiles(
           list.map((p) => ({
@@ -109,6 +109,7 @@ export default function Page() {
             level: (["preschool", "grade1", "grade2", "grade3", "grade4"].includes(p.level) ? p.level : "grade3") as "preschool" | "grade1" | "grade2" | "grade3" | "grade4",
             totalStars: p.totalStars,
             streak: p.streak,
+            lastPlayedAt: p.lastPlayedAt ?? null,
           }))
         );
         // restore last profile

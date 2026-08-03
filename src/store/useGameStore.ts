@@ -30,6 +30,7 @@ export interface ProfileSummary {
   level: Level;
   totalStars: number;
   streak: number;
+  lastPlayedAt?: string | null;
 }
 
 export interface SiteSettingsState {
@@ -87,8 +88,8 @@ interface GameState {
   setProfiles: (profiles: ProfileSummary[]) => void;
   setSiteSettings: (settings: SiteSettingsState | null) => void;
   setCurrentProfile: (id: string | null) => void;
-  createProfile: (name: string, level: Level) => Promise<ProfileSummary | null>;
-  deleteProfile: (id: string) => Promise<void>;
+  createProfile: (name: string, level: Level, avatar: "fox" | "owl") => Promise<ProfileSummary | null>;
+  deleteProfile: (id: string, parentPin: string) => Promise<boolean>;
   hydrate: (data: {
     studentName: string;
     level: Level | null;
@@ -278,12 +279,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setCurrentProfile: (id) => set({ currentProfileId: id, view: { name: "home" } }),
 
-  createProfile: async (name, level) => {
+  createProfile: async (name, level, avatar) => {
     try {
       const res = await fetch("/api/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, level }),
+        body: JSON.stringify({ name, level, avatar }),
       });
       const p = await res.json();
       if (!p.id) return null;
@@ -302,9 +303,43 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
-  deleteProfile: async (id) => {
-    await fetch(`/api/profiles?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
-    set({ profiles: get().profiles.filter((p) => p.id !== id) });
+  deleteProfile: async (id, parentPin) => {
+    try {
+      const response = await fetch(`/api/profiles?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "x-parent-pin": parentPin },
+      });
+      if (!response.ok) return false;
+      const state = get();
+      const remaining = state.profiles.filter((profile) => profile.id !== id);
+      const deletingActiveProfile = state.currentProfileId === id;
+      if (deletingActiveProfile && typeof window !== "undefined") {
+        localStorage.removeItem("mathstars-profile");
+      }
+      set(
+        deletingActiveProfile
+          ? {
+              profiles: remaining,
+              currentProfileId: null,
+              view: { name: "landing" },
+              studentName: "Star Learner",
+              level: null,
+              totalStars: 0,
+              streak: 0,
+              progress: initialProgress(),
+              earnedAchievements: [],
+              dailyDoneDate: null,
+              dailyScore: null,
+              lastEarnedAchievements: [],
+              domainCompleted: null,
+              hydrated: true,
+            }
+          : { profiles: remaining }
+      );
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   hydrate: (data) =>
