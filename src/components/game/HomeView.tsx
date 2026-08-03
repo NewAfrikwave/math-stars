@@ -1,21 +1,32 @@
 "use client";
 
+import Image from "next/image";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import {
+  ArrowRight,
+  BookOpen,
+  Calculator,
+  ChevronRight,
+  Flame,
+  Heart,
+  Home,
+  LockKeyhole,
+  Map,
+  Medal,
+  Menu,
+  MoreHorizontal,
+  Printer,
+  RefreshCcw,
+  Settings,
+  ShieldQuestion,
+  Sparkles,
   Star,
   Trophy,
-  Flame,
-  Sparkles,
-  ChevronRight,
-  Award,
-  Bot,
-  Lock,
-  CheckCircle2,
-  PlayCircle,
+  UserRoundCog,
+  Volume2,
+  VolumeX,
+  X,
 } from "lucide-react";
 import { CURRICULUM } from "@/lib/curriculum";
 import { PRESCHOOL_CURRICULUM } from "@/lib/preschool";
@@ -23,307 +34,196 @@ import { GRADE1_CURRICULUM } from "@/lib/grade1";
 import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
 import { useGameStore, useOverallProgress } from "@/store/useGameStore";
-import { Mascot } from "@/components/game/Mascot";
-import { cn } from "@/lib/utils";
+
+const journeyIcons = [Calculator, BookOpen, Sparkles, Map, Medal];
+
+function gradeLabel(level: ReturnType<typeof useGameStore.getState>["level"]) {
+  if (level === "preschool") return "Preschool";
+  if (level === "grade1") return "1st Grade";
+  if (level === "grade2") return "2nd Grade";
+  if (level === "grade4") return "4th Grade";
+  return "3rd Grade";
+}
 
 export function HomeView() {
   const setView = useGameStore((s) => s.setView);
   const level = useGameStore((s) => s.level);
-  const siteSettings = useGameStore((s) => s.siteSettings);
   const studentName = useGameStore((s) => s.studentName);
   const totalStars = useGameStore((s) => s.totalStars);
   const streak = useGameStore((s) => s.streak);
-  const earnedAchievements = useGameStore((s) => s.earnedAchievements);
   const progress = useGameStore((s) => s.progress);
+  const soundOn = useGameStore((s) => s.soundOn);
+  const setSoundOn = useGameStore((s) => s.setSoundOn);
+  const setCurrentProfile = useGameStore((s) => s.setCurrentProfile);
   const overall = useOverallProgress();
-  const dailyDoneDate = useGameStore((s) => s.dailyDoneDate);
-  const dailyScore = useGameStore((s) => s.dailyScore);
-  const today = new Date().toISOString().slice(0, 10);
-  const dailyDone = dailyDoneDate === today;
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const curriculum =
-    level === "preschool" ? PRESCHOOL_CURRICULUM :
-    level === "grade1" ? GRADE1_CURRICULUM :
-    level === "grade2" ? GRADE2_CURRICULUM :
-    level === "grade4" ? GRADE4_CURRICULUM :
-    CURRICULUM;
+    level === "preschool" ? PRESCHOOL_CURRICULUM
+    : level === "grade1" ? GRADE1_CURRICULUM
+    : level === "grade2" ? GRADE2_CURRICULUM
+    : level === "grade4" ? GRADE4_CURRICULUM
+    : CURRICULUM;
 
-  // find the next lesson to play (first available or in-progress, not completed-first)
-  const nextLesson = (() => {
+  const nextMission = (() => {
     for (const domain of curriculum) {
       for (const lesson of domain.lessons) {
-        const p = progress[lesson.id];
-        if (p && p.status !== "completed" && p.status !== "locked") {
-          return { lesson, domain };
+        const state = progress[lesson.id];
+        if (!state || (state.status !== "completed" && state.status !== "locked")) {
+          return { lesson, domain, returning: state?.status === "in-progress" };
         }
       }
     }
-    return null;
+    return { lesson: curriculum[0].lessons[0], domain: curriculum[0], returning: false };
   })();
 
+  const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
+  const missionTitle = level === "grade3" ? "Discover Equal Groups" : nextMission.lesson.title;
+  const missionDescription = level === "grade3"
+    ? "Learn how multiplication puts things into equal groups."
+    : nextMission.lesson.subtitle;
+
+  const scrollToJourney = () => document.getElementById("journey-board")?.scrollIntoView({ behavior: "smooth", block: "center" });
+
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6">
-      {/* Hero */}
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-400 via-orange-400 to-amber-300 p-6 text-white shadow-lg sm:p-8"
-      >
-        <div className="absolute -right-8 -top-8 text-[120px] opacity-20">✨</div>
-        <div className="absolute -bottom-10 right-24 text-[90px] opacity-20">🌟</div>
-        <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Mascot size={72} className="animate-bob drop-shadow" />
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-white/90">
-                Welcome back,
-              </p>
-              <h1 className="font-display text-3xl font-bold sm:text-4xl">{studentName}! 🎉</h1>
-              <p className="mt-1 max-w-md text-sm text-white/90">
-                {level === "preschool"
-                  ? "Let's play and learn math! Count, find shapes, and have fun."
-                  : level === "grade1"
-                  ? "Let's grow your math brain! Add, subtract, and explore."
-                  : level === "grade2"
-                  ? "Ready for bigger numbers? Let's keep learning!"
-                  : level === "grade4"
-                  ? "Let's tackle advanced math — multiplication, fractions, decimals!"
-                  : "Let's power up your 3rd grade math brain. Pick a topic or jump back in where you left off."}
-              </p>
+    <div className="explorer-home relative min-h-[100svh] overflow-hidden bg-[#3d2415] text-[#2d2318]">
+      <Image src="/explorer-study-bg.webp" alt="A cozy explorer study filled with books and a map" fill priority sizes="100vw" className="object-cover object-center" />
+      <div className="absolute inset-0 bg-[#2b1808]/10" />
+
+      <header className="relative z-30 border-b border-[#ad9455]/50 bg-[#142d1d]/95 text-[#fff7d5] shadow-lg">
+        <div className="mx-auto flex h-[86px] w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
+          <button onClick={() => setView({ name: "home" })} className="group flex items-center gap-3 rounded-2xl text-left focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457]">
+            <span className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[#d5af4d] bg-[#f1d792] shadow-md transition-transform group-hover:scale-105 sm:h-16 sm:w-16">
+              <Image src="/learner-fox.webp" alt="Fefe's fox avatar" fill sizes="64px" className="object-cover" />
+            </span>
+            <span>
+              <span className="block font-display text-2xl font-black leading-none sm:text-3xl">{studentName}</span>
+              <span className="mt-1 block text-xs font-bold uppercase tracking-[0.12em] text-[#e1ca84] sm:text-sm">{gradeLabel(level)}</span>
+            </span>
+          </button>
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex h-11 items-center gap-2 rounded-full border border-[#b49a58]/50 bg-[#2b462e] px-4 font-display text-lg font-black shadow-inner sm:h-12 sm:px-6">
+              <Star className="h-6 w-6 fill-[#f8c53d] text-[#f8c53d]" aria-hidden="true" />
+              <span>{totalStars}</span><span className="sr-only">stars</span>
+            </div>
+            <button onClick={() => setSoundOn(!soundOn)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#b49a58]/50 bg-[#2b462e] shadow-md transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457] sm:h-12 sm:w-12" aria-label={soundOn ? "Turn sound off" : "Turn sound on"}>
+              {soundOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+            </button>
+            <button onClick={() => setMoreOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#b49a58]/50 bg-[#2b462e] shadow-md transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457] sm:h-12 sm:w-12" aria-label="Open more options">
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto grid w-full max-w-[1280px] gap-5 px-3 pb-32 pt-5 sm:px-6 lg:grid-cols-[minmax(0,3fr)_minmax(270px,1fr)] lg:pb-28 lg:pt-7">
+        <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="relative rounded-[28px] border-[5px] border-[#68421f] bg-[#f5dfad]/95 p-3 shadow-[0_18px_40px_rgba(30,13,3,0.42)] sm:p-7 lg:min-h-[670px]">
+          <div className="pointer-events-none absolute inset-2 rounded-[20px] border border-[#aa7b36]/60" />
+          <div className="relative z-10 text-center">
+            <h1 className="font-display text-3xl font-black text-[#24482d] sm:text-5xl">{greeting}, {studentName}</h1>
+            <p className="mx-auto mt-3 w-fit rounded-full bg-[#9e2f2b] px-6 py-2 font-display text-sm font-black uppercase tracking-[0.12em] text-[#fff5d5] shadow-md sm:text-base">
+              {nextMission.returning ? "Continue your mission" : "Your first mission"}
+            </p>
+          </div>
+
+          <div className="relative z-10 mt-5 grid items-center gap-4 rounded-2xl border-2 border-[#c79d4d] bg-[#fff4d2]/80 p-4 shadow-inner sm:grid-cols-[190px_1fr] sm:p-5 lg:pr-[210px]">
+            <Image src="/equal-groups-baskets.webp" alt="Two baskets with three apples in each basket" width={760} height={507} className="mx-auto h-auto w-full max-w-[220px] drop-shadow-md" />
+            <div className="text-center sm:text-left">
+              <p className="font-display text-2xl font-black text-[#8f2429] sm:text-3xl">{missionTitle}</p>
+              <p className="mx-auto mt-2 max-w-sm text-base font-semibold leading-snug text-[#3d3224] sm:mx-0 sm:text-lg">{missionDescription}</p>
+              <button onClick={() => setView({ name: "lesson", lessonId: nextMission.lesson.id })} className="mt-5 inline-flex min-h-14 items-center justify-center gap-3 rounded-full border-2 border-[#7a2328] bg-[#aa2f34] px-7 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]">
+                {nextMission.returning ? "Continue mission" : "Begin mission"}<ArrowRight className="h-5 w-5" />
+              </button>
             </div>
           </div>
-          {nextLesson && (
-            <Button
-              size="lg"
-              onClick={() => setView({ name: "lesson", lessonId: nextLesson.lesson.id })}
-              className="gap-2 bg-white text-rose-600 shadow-md hover:bg-white/90"
-            >
-              <PlayCircle className="h-5 w-5" />
-              Continue: {nextLesson.lesson.title}
-            </Button>
-          )}
-        </div>
-      </motion.section>
 
-      {/* Stat row */}
-      <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={<Star className="h-5 w-5 text-amber-500" />} label="Stars" value={totalStars} tint="amber" />
-        <StatCard icon={<Flame className="h-5 w-5 text-orange-500" />} label="Day streak" value={streak} tint="orange" />
-        <StatCard icon={<Trophy className="h-5 w-5 text-rose-500" />} label="Badges" value={earnedAchievements.length} tint="rose" />
-        <StatCard
-          icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-          label="Lessons done"
-          value={`${overall.completed}/${overall.total}`}
-          tint="emerald"
-        />
-      </section>
-
-      {/* Overall progress */}
-      <section className="mt-5">
-        <Card className="p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold">School year progress</h2>
-            <span className="text-sm font-semibold text-muted-foreground">{overall.percent}%</span>
+          <div className="relative z-10 mt-4 grid gap-3 lg:pr-[210px]">
+            <MissionLink icon={<Flame className="h-7 w-7" />} title="Warm-up: Daily Challenge" subtitle="Kickstart your brain with five quick questions." onClick={() => setView({ name: "daily" })} tone="red" />
+            <MissionLink icon={<Calculator className="h-7 w-7" />} title="Explore: Times Table Lab, 2× to 12×" subtitle="Build speed and confidence with every table." onClick={() => setView({ name: "times-tables" })} tone="purple" />
           </div>
-          <Progress value={overall.percent} className="h-3" />
-        </Card>
-      </section>
 
-      {/* Quick actions */}
-      <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {siteSettings?.dailyChallengeEnabled !== false && (
-          <QuickAction emoji="⚡" tint="fuchsia" title="Daily Challenge" desc={dailyDone ? `Done today: ${dailyScore}%` : "5 mixed questions — keep your streak!"} onClick={() => setView({ name: "daily" })} />
-        )}
-        <QuickAction emoji="🔄" tint="emerald" title="Smart Review" desc="Practice the lessons that need love." onClick={() => setView({ name: "review" })} />
-        {siteSettings?.aiTutorEnabled !== false && (
-          <QuickAction emoji="🦊" tint="violet" title="Ask Pip the Tutor" desc="Stuck? Chat with your AI math buddy." onClick={() => setView({ name: "tutor" })} />
-        )}
-        {siteSettings?.worksheetsEnabled !== false && (
-          <QuickAction emoji="🖨️" tint="sky" title="Printable Worksheets" desc="Take math offline with an answer key." onClick={() => setView({ name: "worksheet" })} />
-        )}
-        {level !== "preschool" && siteSettings?.manipulativesEnabled !== false && (
-          <QuickAction emoji="🧮" tint="amber" title="Build the Groups" desc="Drag counters to see multiplication." onClick={() => setView({ name: "manipulative", lessonId: "mult-concept" })} />
-        )}
-        <QuickAction emoji="🏅" tint="amber" title="My Badges" desc={`${earnedAchievements.length} earned — tap to see them!`} onClick={() => setView({ name: "achievements" })} />
-      </section>
+          <motion.div className="pointer-events-none absolute bottom-0 right-0 z-20 hidden w-[285px] lg:block" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+            <Image src="/pip-explorer.webp" alt="Pip the fox points toward your first mission" width={900} height={1350} className="h-auto w-full drop-shadow-[0_18px_16px_rgba(48,20,4,0.35)]" />
+          </motion.div>
+        </motion.section>
 
-      {/* Donate banner */}
-      <section className="mt-3">
-        <button
-          onClick={() => setView({ name: "donations" })}
-          className="group flex w-full items-center gap-3 rounded-2xl border-2 border-rose-200 bg-rose-50/60 px-4 py-3 text-left transition-colors hover:bg-rose-50 dark:border-rose-900 dark:bg-rose-950/20"
-        >
-          <span className="text-2xl">💛</span>
-          <div className="flex-1">
-            <p className="font-display text-sm font-bold text-rose-700 dark:text-rose-300">Keep Math Stars free</p>
-            <p className="text-xs text-muted-foreground">Donate via Cash App or Zelle — every bit helps!</p>
+        <motion.aside id="journey-board" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="rounded-[24px] border-[4px] border-[#795027] bg-[#f4dfb4]/95 p-5 shadow-[0_18px_40px_rgba(30,13,3,0.4)] lg:min-h-[670px]">
+          <div className="mx-auto -mt-2 w-fit rounded-lg bg-[#284a2e] px-7 py-2 font-display text-xl font-black text-[#fff1c8] shadow-md">Your journey</div>
+          <div className="mt-5 text-center">
+            <Medal className="mx-auto h-14 w-14 text-[#a36a20]" />
+            <p className="mt-1 font-display text-2xl font-black">{overall.completed === 0 ? "New explorer" : `${overall.percent}% explored`}</p>
+            <p className="mt-2 font-bold">{overall.completed} of {overall.total} lessons</p>
+            <div className="mt-3 h-3 overflow-hidden rounded-full border border-[#bd9855] bg-[#ead2a2]">
+              <div className="h-full rounded-full bg-[#3f6a3c] transition-all" style={{ width: `${overall.percent}%` }} />
+            </div>
           </div>
-          <ChevronRight className="h-5 w-5 text-rose-400 transition-transform group-hover:translate-x-1" />
-        </button>
-      </section>
-
-      {/* Parent link */}
-      <section className="mt-3">
-        <button
-          onClick={() => setView({ name: "parent" })}
-          className="group flex w-full items-center justify-between rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-2.5 text-left transition-colors hover:bg-muted"
-        >
-          <span className="text-xs text-muted-foreground">
-            🔒 <span className="font-semibold">For Grown-ups</span> — track progress & see where to help
-          </span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-        </button>
-      </section>
-
-      {/* Topic map */}
-      <section className="mt-7">
-        <div className="mb-3 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-xl font-bold">Choose your math adventure</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {curriculum.map((domain, i) => {
-            const lessonsDone = domain.lessons.filter(
-              (l) => progress[l.id]?.status === "completed"
-            ).length;
-            const domainStars = domain.lessons.reduce(
-              (sum, l) => sum + (progress[l.id]?.stars ?? 0),
-              0
-            );
-            const pct = Math.round((lessonsDone / domain.lessons.length) * 100);
-            return (
-              <motion.button
-                key={domain.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => setView({ name: "domain", domainId: domain.id })}
-                className="group relative overflow-hidden rounded-3xl border-2 border-border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div className={cn("absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r", domain.color)} />
-                <div className="flex items-start justify-between">
-                  <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br text-3xl shadow-sm", domain.color)}>
-                    {domain.emoji}
-                  </div>
-                  <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                    <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                    {domainStars}
-                  </div>
-                </div>
-                <h3 className="mt-3 font-display text-lg font-bold leading-tight">{domain.title}</h3>
-                <p className="mt-0.5 text-sm text-muted-foreground">{domain.description}</p>
-                <div className="mt-3 flex items-center gap-2">
-                  <Progress value={pct} className="h-2 flex-1" />
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {lessonsDone}/{domain.lessons.length}
+          <div className="mt-6 space-y-3">
+            {curriculum.slice(0, 5).map((domain, index) => {
+              const Icon = journeyIcons[index];
+              const done = domain.lessons.filter((lesson) => progress[lesson.id]?.status === "completed").length;
+              return (
+                <button key={domain.id} onClick={() => setView({ name: "domain", domainId: domain.id })} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent p-2 text-left transition-colors hover:border-[#b7924e] hover:bg-[#fff2cd] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2a5132]">
+                  <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 shadow-sm ${index === 0 ? "border-[#bc6b35] bg-[#e6a260] text-[#6c301f]" : index === 1 ? "border-[#7462a5] bg-[#a99cd2] text-[#3e315f]" : index === 2 ? "border-[#b38c3a] bg-[#e4c66d] text-[#664c18]" : index === 3 ? "border-[#3a8b7d] bg-[#6dc4b0] text-[#1f554c]" : "border-[#5674a8] bg-[#84a7d8] text-[#2c4269]"}`}>
+                    <Icon className="h-6 w-6" />
                   </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {domain.lessons.slice(0, 4).map((l) => {
-                    const p = progress[l.id];
-                    return (
-                      <span
-                        key={l.id}
-                        title={l.title}
-                        className={cn(
-                          "inline-flex h-7 w-7 items-center justify-center rounded-full text-xs",
-                          p?.status === "completed"
-                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            : p?.status === "available" || p?.status === "in-progress"
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {p?.status === "completed" ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : p?.status === "locked" ? (
-                          <Lock className="h-3 w-3" />
-                        ) : (
-                          l.emoji
-                        )}
-                      </span>
-                    );
-                  })}
-                  {domain.lessons.length > 4 && (
-                    <span className="inline-flex h-7 items-center px-1.5 text-xs font-semibold text-muted-foreground">
-                      +{domain.lessons.length - 4}
-                    </span>
-                  )}
-                </div>
-              </motion.button>
-            );
-          })}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-lg font-black">{domain.title.replace(" & Division", "").replace(" & Big Numbers", "").replace(" & Data", "").replace(" & Shapes", "")}</span>
+                    <span className="text-xs font-bold text-[#735d3e]">{done}/{domain.lessons.length} complete</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </button>
+              );
+            })}
+          </div>
+        </motion.aside>
+      </main>
+
+      <nav aria-label="Learner navigation" className="fixed inset-x-2 bottom-2 z-40 mx-auto grid max-w-[1160px] grid-cols-5 rounded-[28px] border-2 border-[#c8a968] bg-[#fff2cf]/95 p-2 shadow-[0_10px_35px_rgba(40,17,4,0.45)] backdrop-blur-sm sm:inset-x-6 sm:bottom-5">
+        <NavButton active icon={<Home />} label="Home" onClick={() => setView({ name: "home" })} />
+        <NavButton icon={<Map />} label="Adventure Map" onClick={scrollToJourney} />
+        <NavButton icon={<Calculator />} label="Times Tables" onClick={() => setView({ name: "times-tables" })} />
+        <NavButton icon={<ShieldQuestion />} label="Ask Pip" onClick={() => setView({ name: "tutor" })} />
+        <NavButton icon={<MoreHorizontal />} label="More" onClick={() => setMoreOpen(true)} />
+      </nav>
+
+      {moreOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#150b05]/65 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label="More options">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg rounded-[28px] border-4 border-[#70471f] bg-[#fff0c9] p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div><p className="font-display text-2xl font-black text-[#24482d]">Explorer kit</p><p className="text-sm font-semibold text-[#725c3d]">More ways to learn and manage the app.</p></div>
+              <button onClick={() => setMoreOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ead6a8] hover:bg-[#ddc48f]" aria-label="Close more options"><X /></button>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <MoreButton icon={<Trophy />} label="My badges" onClick={() => setView({ name: "achievements" })} />
+              <MoreButton icon={<Printer />} label="Worksheets" onClick={() => setView({ name: "worksheet" })} />
+              <MoreButton icon={<UserRoundCog />} label="Grown-ups" onClick={() => setView({ name: "parent" })} />
+              <MoreButton icon={<Heart />} label="Keep it free" onClick={() => setView({ name: "donations" })} />
+              <MoreButton icon={<Settings />} label="Install app" onClick={() => window.dispatchEvent(new Event("mathstars-open-install"))} />
+              <MoreButton icon={<RefreshCcw />} label="Switch learner" onClick={() => { setCurrentProfile(null); setView({ name: "landing" }); }} />
+            </div>
+            <a href="/privacy" className="mt-4 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-[#6e5737] hover:bg-[#ead6a8]"><LockKeyhole className="h-4 w-4" />Privacy for families</a>
+          </motion.div>
         </div>
-      </section>
+      )}
     </div>
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  tint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number | string;
-  tint: "amber" | "orange" | "rose" | "emerald";
-}) {
-  const tints: Record<string, string> = {
-    amber: "bg-amber-50 dark:bg-amber-950/30",
-    orange: "bg-orange-50 dark:bg-orange-950/30",
-    rose: "bg-rose-50 dark:bg-rose-950/30",
-    emerald: "bg-emerald-50 dark:bg-emerald-950/30",
-  };
+function MissionLink({ icon, title, subtitle, onClick, tone }: { icon: React.ReactNode; title: string; subtitle: string; onClick: () => void; tone: "red" | "purple" }) {
   return (
-    <Card className={cn("flex items-center gap-3 p-3", tints[tint])}>
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/70 dark:bg-white/10">
-        {icon}
-      </div>
-      <div>
-        <p className="font-display text-2xl font-bold leading-none">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </Card>
+    <button onClick={onClick} className="group flex min-h-[72px] w-full items-center gap-4 rounded-2xl border border-[#caa568] bg-[#fff4d4]/90 p-3 text-left shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]">
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-white shadow-sm ${tone === "red" ? "border-[#9b4538] bg-[#c65a42]" : "border-[#5b477d] bg-[#8066a5]"}`}>{icon}</span>
+      <span className="min-w-0 flex-1"><span className="block font-display text-lg font-black text-[#24482d]">{title}</span><span className="block text-sm font-semibold text-[#725d40]">{subtitle}</span></span>
+      <ChevronRight className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-1" />
+    </button>
   );
 }
 
-function QuickAction({
-  emoji,
-  tint,
-  title,
-  desc,
-  onClick,
-}: {
-  emoji: string;
-  tint: "amber" | "violet" | "emerald" | "sky" | "fuchsia";
-  title: string;
-  desc: string;
-  onClick: () => void;
-}) {
-  const tints: Record<string, string> = {
-    amber: "bg-amber-100 dark:bg-amber-950/40 hover:border-amber-300",
-    violet: "bg-violet-100 dark:bg-violet-950/40 hover:border-violet-300",
-    emerald: "bg-emerald-100 dark:bg-emerald-950/40 hover:border-emerald-300",
-    sky: "bg-sky-100 dark:bg-sky-950/40 hover:border-sky-300",
-    fuchsia: "bg-fuchsia-100 dark:bg-fuchsia-950/40 hover:border-fuchsia-300",
-  };
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "group flex items-center gap-3 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md",
-      )}
-    >
-      <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl text-2xl", tints[tint])}>
-        {emoji}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-display font-bold">{title}</p>
-        <p className="truncate text-xs text-muted-foreground">{desc}</p>
-      </div>
-      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-    </button>
-  );
+function NavButton({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void }) {
+  return <button onClick={onClick} className={`flex min-h-14 items-center justify-center gap-2 rounded-2xl px-2 font-display text-[11px] font-black transition-colors focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d] sm:text-base ${active ? "bg-[#f0d89e] text-[#31563a]" : "text-[#634c2e] hover:bg-[#f3dfae]"}`}><span className="[&>svg]:h-6 [&>svg]:w-6">{icon}</span><span className="hidden sm:inline">{label}</span><span className="sr-only sm:hidden">{label}</span></button>;
+}
+
+function MoreButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return <button onClick={onClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#d2b274] bg-[#fff7df] p-3 font-display font-black text-[#31543a] transition-transform hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]"><span className="[&>svg]:h-6 [&>svg]:w-6">{icon}</span>{label}</button>;
 }
