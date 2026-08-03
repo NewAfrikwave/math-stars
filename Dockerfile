@@ -24,6 +24,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 # Create a directory for the SQLite database (mounted as a Railway volume)
 RUN mkdir -p /app/data

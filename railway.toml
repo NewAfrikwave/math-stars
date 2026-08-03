@@ -9,4 +9,4 @@ dockerfilePath = "Dockerfile"
 # The app listens on PORT (Railway injects this). The Dockerfile sets PORT=3000.
 startCommand = "sh -c 'bunx prisma@6.11.1 db push --accept-data-loss && bun server.js'"
 healthcheckPath = "/"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
