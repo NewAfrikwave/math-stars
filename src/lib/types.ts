@@ -90,6 +90,7 @@ export type Problem =
 // Visual payloads rendered by dedicated components
 export type ProblemVisual =
   | { kind: "equal-groups"; groups: number; perGroup: number; emoji: string; label?: string }
+  | { kind: "sharing-baskets"; total: number; perGroup: number; emoji: string; label?: string }
   | { kind: "array"; rows: number; cols: number; emoji: string }
   | { kind: "fraction-pie"; numerator: number; denominator: number; fillStyle?: "solid" | "none" }
   | { kind: "fraction-bar"; numerator: number; denominator: number }
