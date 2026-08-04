@@ -6,6 +6,7 @@ import { PRESCHOOL_CURRICULUM } from "@/lib/preschool";
 import { GRADE1_CURRICULUM } from "@/lib/grade1";
 import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
+import { domainsForLevel } from "@/lib/rewards";
 import { hashPin, pinFrom, verifyPin } from "@/lib/pin";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
@@ -45,6 +46,7 @@ export async function GET(req: Request) {
       domains: Record<string, { completed: number; total: number }>;
     }> = [];
     for (const p of all) {
+      const profileDomains = domainsForLevel(p.level);
       const rows = await db.lessonProgress.findMany({ where: { studentId: p.id } });
       const completed = rows.filter((r) => r.status === "completed");
       const avg =
@@ -52,7 +54,7 @@ export async function GET(req: Request) {
           ? Math.round(completed.reduce((s, r) => s + r.bestScore, 0) / completed.length)
           : 0;
       const domains: Record<string, { completed: number; total: number }> = {};
-      for (const d of ALL_DOMAINS) {
+      for (const d of profileDomains) {
         domains[d.id] = {
           completed: d.lessons.filter((l) => rows.find((r) => r.lessonId === l.id)?.status === "completed").length,
           total: d.lessons.length,
@@ -66,7 +68,7 @@ export async function GET(req: Request) {
         totalStars: p.totalStars,
         streak: p.streak,
         completedLessons: completed.length,
-        totalLessons: ALL_DOMAINS.reduce((s, d) => s + d.lessons.length, 0),
+        totalLessons: profileDomains.reduce((s, d) => s + d.lessons.length, 0),
         avgScore: avg,
         domains,
       });

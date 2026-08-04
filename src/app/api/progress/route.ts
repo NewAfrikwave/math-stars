@@ -8,6 +8,7 @@ import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS, isLessonAvailable as isG2LessonAv
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS, isLessonAvailable as isG4LessonAvailable, findG4Lesson } from "@/lib/grade4";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import type { LessonStatus } from "@/lib/types";
+import { getCurrentRewardMission } from "@/lib/reward-server";
 
 // POST /api/progress
 // Body: { lessonId, correct, total }
@@ -50,6 +51,8 @@ export async function POST(req: Request) {
   }
 
   const wasCompleted = existing?.status === "completed";
+  const passed = score >= 70;
+  const nextStatus: LessonStatus = wasCompleted || passed ? "completed" : "in-progress";
   const newBest = Math.max(existing?.bestScore ?? 0, score);
   const newStars = Math.max(existing?.stars ?? 0, stars);
 
@@ -58,23 +61,23 @@ export async function POST(req: Request) {
     create: {
       studentId: student.id,
       lessonId,
-      status: "completed",
+      status: nextStatus,
       stars: newStars,
       bestScore: newBest,
       attempts: 1,
       lastScore: score,
       lastDifficulty: difficulty,
-      completedAt: new Date(),
+      completedAt: passed ? new Date() : null,
       lastPlayedAt: new Date(),
     },
     update: {
-      status: "completed",
+      status: nextStatus,
       stars: newStars,
       bestScore: newBest,
       attempts: (existing?.attempts ?? 0) + 1,
       lastScore: score,
       lastDifficulty: difficulty ?? existing?.lastDifficulty ?? null,
-      completedAt: new Date(),
+      completedAt: wasCompleted ? existing?.completedAt : passed ? new Date() : null,
       lastPlayedAt: new Date(),
     },
   });
@@ -133,7 +136,7 @@ export async function POST(req: Request) {
   const today = new Date();
   const last = student.lastPlayedAt;
   let streak = student.streak;
-  if (!wasCompleted) {
+  if (!wasCompleted && passed) {
     const sameDay =
       last &&
       last.getFullYear() === today.getFullYear() &&
@@ -210,16 +213,21 @@ export async function POST(req: Request) {
     },
   }).catch(() => {});
 
+  const reward = await getCurrentRewardMission(student.id);
+
   return NextResponse.json({
     ok: true,
     lessonId,
     stars: newStars,
+    sessionStars: stars,
     score,
     bestScore: newBest,
     attempts: row.attempts,
     totalStars,
     streak,
     newlyEarned,
+    reward,
+    passed,
   });
 }
 

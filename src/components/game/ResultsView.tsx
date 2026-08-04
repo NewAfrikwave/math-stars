@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Sparkles,
   Award,
+  Gift,
 } from "lucide-react";
 import { findLesson, CURRICULUM, ALL_LESSONS } from "@/lib/curriculum";
 import { findPsLesson, PRESCHOOL_LESSON_IDS } from "@/lib/preschool";
@@ -42,6 +43,7 @@ export function ResultsView({
   const found = findLesson(lessonId) ?? findPsLesson(lessonId) ?? findG1Lesson(lessonId) ?? findG2Lesson(lessonId) ?? findG4Lesson(lessonId);
   const setView = useGameStore((s) => s.setView);
   const lastEarned = useGameStore((s) => s.lastEarnedAchievements);
+  const reward = useGameStore((s) => s.reward);
   const [showConfetti, setShowConfetti] = useState(score >= 70);
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export function ResultsView({
         className="text-center"
       >
         <MascotMotion mood={score >= 70 ? "celebrate" : "encourage"}><Mascot size={80} className="mx-auto" /></MascotMotion>
-        <h1 className="mt-2 font-display text-3xl font-bold">Lesson Complete!</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold">{score >= 70 ? "Lesson Complete!" : "Practice Saved!"}</h1>
         <p className="mt-1 text-muted-foreground">{found.lesson.title}</p>
       </motion.div>
 
@@ -167,9 +169,24 @@ export function ResultsView({
         </motion.div>
       )}
 
+      {reward?.status === "earned" && (
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...springy, delay: 0.5 }} className="mt-5">
+          <Card className="border-2 border-fuchsia-300 bg-gradient-to-br from-fuchsia-50 to-amber-50 p-5 dark:from-fuchsia-950/30 dark:to-amber-950/20">
+            <div className="flex items-center gap-4">
+              <span className="text-5xl" aria-hidden="true">{reward.emoji}</span>
+              <div>
+                <p className="flex items-center gap-2 font-display text-lg font-bold text-fuchsia-800 dark:text-fuchsia-200"><Gift className="h-5 w-5" /> Reward unlocked!</p>
+                <p className="font-display text-2xl font-bold">{reward.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">You reached your goal. Show your grown-up so you can celebrate together!</p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Actions */}
       <div className="mt-6 grid gap-3">
-        {nextLesson && nextDomain && (
+        {score >= 70 && nextLesson && nextDomain && (
           <Button
             size="lg"
             onClick={() => setView({ name: "lesson", lessonId: nextLesson.lesson.id })}

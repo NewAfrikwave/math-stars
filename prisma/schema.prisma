@@ -52,8 +52,33 @@ model Student {
   tutorMessages TutorMessage[]
   dailyChallenges DailyChallenge[]
   activityEvents ActivityEvent[]
+  rewardGoals RewardGoal[]
 
   @@index([familyId])
+}
+
+// A real-world reward chosen by a parent. Progress is derived from saved
+// learning records so it cannot drift or be lost when a device changes.
+model RewardGoal {
+  id          String   @id @default(cuid())
+  studentId   String
+  title       String
+  emoji       String   @default("🎁")
+  description String?
+  targetType  String   // lessons | stars | topic
+  targetValue Int
+  startValue  Int      @default(0)
+  domainId    String?
+  status      String   @default("active") // active | earned | claimed | archived
+  earnedAt    DateTime?
+  claimedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([createdAt])
 }
 
 // Privacy-safe browser/device presence. We intentionally store categories,

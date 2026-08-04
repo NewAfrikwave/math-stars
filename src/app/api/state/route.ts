@@ -7,6 +7,7 @@ import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS, isLessonAvailable as isG1LessonAv
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS, isLessonAvailable as isG2LessonAvailable } from "@/lib/grade2";
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS, isLessonAvailable as isG4LessonAvailable } from "@/lib/grade4";
 import type { LessonProgressState, LessonStatus, Level } from "@/lib/types";
+import { getCurrentRewardMission } from "@/lib/reward-server";
 
 // GET /api/state — load the learner's full saved state.
 // On first run this creates the default student and seeds availability
@@ -100,6 +101,8 @@ export async function GET(req: Request) {
       ? student.level
       : null;
 
+  const reward = await getCurrentRewardMission(student.id);
+
   return NextResponse.json({
     studentName: student.name,
     level,
@@ -110,6 +113,7 @@ export async function GET(req: Request) {
     earnedAchievements: achievements.map((a) => a.achievementId),
     dailyDoneDate: todayDaily?.dateKey ?? null,
     dailyScore: todayDaily?.score ?? null,
+    reward,
     domainCount: CURRICULUM.length + PRESCHOOL_CURRICULUM.length + GRADE1_CURRICULUM.length + GRADE2_CURRICULUM.length + GRADE4_CURRICULUM.length,
     lessonCount: ALL_LESSONS.length + PRESCHOOL_LESSON_IDS.length + GRADE1_LESSON_IDS.length + GRADE2_LESSON_IDS.length + GRADE4_LESSON_IDS.length,
   });

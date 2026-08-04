@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Heart,
   Lightbulb,
+  Loader2,
   Mic2,
   PartyPopper,
   RotateCcw,
@@ -35,7 +36,7 @@ export interface QuizRunnerProps {
   emoji: string;
   problems: Problem[];
   onExit: () => void;
-  onFinish: (result: { correct: number; total: number }) => void;
+  onFinish: (result: { correct: number; total: number }) => void | Promise<void>;
   soundOn?: boolean;
   preschool?: boolean;
 }
@@ -56,6 +57,8 @@ export function QuizRunner({
   const [showHint, setShowHint] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
+  const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const siteSettings = useGameStore((s) => s.siteSettings);
   const sfx = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
   const { speak, stop } = useTTS();
@@ -99,15 +102,29 @@ export function QuizRunner({
       setCorrectCount((count) => count + 1);
       setCelebrate(true);
       sfx.playCorrect();
+      if (soundOn) {
+        const olderPhrases = ["Excellent thinking!", "Math star! You got it!", "Brilliant work!", "You nailed it!"];
+        const youngerPhrases = ["Hooray! You got it!", "Great job, math star!", "Amazing work!", "You did it!"];
+        const phrases = preschool ? youngerPhrases : olderPhrases;
+        speak(phrases[(index + correctCount) % phrases.length], { speed: preschool ? 0.86 : 0.96 });
+      }
       window.setTimeout(() => setCelebrate(false), 1500);
     } else {
       sfx.playWrong();
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLast) {
-      onFinish({ correct: correctCount, total: problems.length });
+      if (finishing) return;
+      setFinishing(true);
+      setFinishError(null);
+      try {
+        await onFinish({ correct: correctCount, total: problems.length });
+      } catch (error) {
+        setFinishError(error instanceof Error ? error.message : "Your progress could not be saved. Please try again.");
+        setFinishing(false);
+      }
       return;
     }
     setIndex((value) => value + 1);
@@ -124,6 +141,8 @@ export function QuizRunner({
     setShowHint(false);
     setCorrectCount(0);
     setCelebrate(false);
+    setFinishing(false);
+    setFinishError(null);
     // Force every answer control to remount, including when question 1 is
     // already visible. Typed, spoken, and selected answers must all clear.
     setSessionKey((value) => value + 1);
@@ -275,11 +294,20 @@ export function QuizRunner({
                 ) : <span />}
 
                 {submitted && (
-                  <Button size="lg" onClick={handleNext} className="ml-auto gap-2 rounded-full bg-[#285f3b] px-7 hover:bg-[#1f4d30]">
-                    {isLast ? <><Sparkles className="h-5 w-5" /> See my results</> : <>Next question <ChevronRight className="h-5 w-5" /></>}
+                  <Button size="lg" onClick={handleNext} disabled={finishing} className="ml-auto gap-2 rounded-full bg-[#285f3b] px-7 hover:bg-[#1f4d30]">
+                    {finishing ? <><Loader2 className="h-5 w-5 animate-spin" /> Saving your progress…</>
+                      : isLast ? <><Sparkles className="h-5 w-5" /> Save and see results</>
+                      : <>Next question <ChevronRight className="h-5 w-5" /></>}
                   </Button>
                 )}
               </div>
+              {finishError && (
+                <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+                  <p>We have not marked this lesson complete yet.</p>
+                  <p className="mt-1 font-normal">{finishError}</p>
+                  <p className="mt-1 font-normal">Your answers are still here. Tap “Save and see results” to try again.</p>
+                </div>
+              )}
             </section>
           </motion.div>
         </AnimatePresence>

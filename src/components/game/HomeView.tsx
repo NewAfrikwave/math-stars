@@ -9,6 +9,7 @@ import {
   Calculator,
   ChevronRight,
   Flame,
+  Gift,
   Heart,
   Home,
   LockKeyhole,
@@ -53,6 +54,7 @@ export function HomeView() {
   const studentName = useGameStore((s) => s.studentName);
   const totalStars = useGameStore((s) => s.totalStars);
   const streak = useGameStore((s) => s.streak);
+  const reward = useGameStore((s) => s.reward);
   const progress = useGameStore((s) => s.progress);
   const profiles = useGameStore((s) => s.profiles);
   const currentProfileId = useGameStore((s) => s.currentProfileId);
@@ -154,6 +156,32 @@ export function HomeView() {
           </motion.div>
 
           <motion.div variants={staggerContainer} className="relative z-10 mt-4 grid gap-3 lg:pr-[210px]">
+            {reward && (
+              <motion.div
+                variants={staggerItem}
+                className={`rounded-2xl border-2 p-4 shadow-sm ${reward.status === "earned" ? "border-[#e0a929] bg-[#fff0a6]" : "border-[#9b6ab2] bg-[#f4e5ff]"}`}
+                role="status"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/75 text-3xl shadow-sm" aria-hidden="true">{reward.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-2 font-display text-sm font-black uppercase tracking-[0.1em] text-[#674076]"><Gift className="h-4 w-4" /> My reward mission</p>
+                    <p className="mt-0.5 font-display text-xl font-black text-[#38233f]">{reward.title}</p>
+                    <p className="text-sm font-bold text-[#68516e]">
+                      {reward.status === "earned"
+                        ? "You earned it! Show a grown-up to celebrate."
+                        : reward.targetType === "topic"
+                          ? `${reward.currentValue} of ${reward.targetValue} ${reward.domainTitle ?? "topic"} lessons complete`
+                          : `${reward.currentValue} of ${reward.targetValue} ${reward.targetType} earned`}
+                    </p>
+                  </div>
+                  <span className="font-display text-xl font-black text-[#674076]">{reward.percent}%</span>
+                </div>
+                <div className="mt-3 h-3 overflow-hidden rounded-full border border-[#b993c8] bg-white/70">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${reward.percent}%` }} className="h-full rounded-full bg-gradient-to-r from-[#8f5aa4] to-[#e1a82d]" />
+                </div>
+              </motion.div>
+            )}
             <MissionLink icon={<Flame className="h-7 w-7" />} title="Warm-up: Daily Challenge" subtitle="Kickstart your brain with five quick questions." onClick={() => setView({ name: "daily" })} tone="red" />
             <MissionLink icon={<Calculator className="h-7 w-7" />} title="Explore: Times Table Lab, 2× to 12×" subtitle="Build speed and confidence with every table." onClick={() => setView({ name: "times-tables" })} tone="purple" />
           </motion.div>
