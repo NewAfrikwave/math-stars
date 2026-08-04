@@ -3,10 +3,7 @@ import { rewardMission } from "@/lib/rewards";
 
 export async function getCurrentRewardMission(studentId: string) {
   const student = await db.student.findUniqueOrThrow({ where: { id: studentId } });
-  const reward = await db.rewardGoal.findFirst({
-    where: { studentId, status: { in: ["active", "earned"] } },
-    orderBy: { createdAt: "desc" },
-  });
+  const reward = await db.rewardGoal.findUnique({ where: { currentKey: studentId } });
   if (!reward) return null;
   const rows = await db.lessonProgress.findMany({
     where: { studentId, status: "completed" },

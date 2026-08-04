@@ -21,6 +21,7 @@ export function PracticeSession({
   const setView = useGameStore((s) => s.setView);
   const recordResult = useGameStore((s) => s.recordResult);
   const soundOn = useGameStore((s) => s.soundOn);
+  const [attemptId] = useState(() => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   const [problems] = useState<Problem[]>(() =>
     found
@@ -82,7 +83,7 @@ export function PracticeSession({
           const response = await profileFetch("/api/progress", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lessonId, correct, total, difficulty }),
+            body: JSON.stringify({ lessonId, correct, total, difficulty, attemptId }),
           });
           const saved = await response.json().catch(() => null) as {
             error?: string;

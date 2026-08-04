@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const familyStudents = await db.student.findMany({ where: scope, select: { id: true } });
   const studentIds = familyStudents.map((student) => student.id);
   const [students, progress, achievements, dailyChallenges, activityEvents, tutorMessages, rewardGoals] = await Promise.all([
-    db.student.findMany({ where: scope, select: { id: true, name: true, avatar: true, level: true, totalStars: true, streak: true, soundOn: true, createdAt: true, updatedAt: true } }),
+    db.student.findMany({ where: scope, select: { id: true, name: true, avatar: true, level: true, totalStars: true, streak: true, soundOn: true, lastPlayedAt: true, lastCompletedAt: true, createdAt: true, updatedAt: true } }),
     db.lessonProgress.findMany({ where: { studentId: { in: studentIds } } }),
     db.achievement.findMany({ where: { studentId: { in: studentIds } } }),
     db.dailyChallenge.findMany({ where: { studentId: { in: studentIds } } }),

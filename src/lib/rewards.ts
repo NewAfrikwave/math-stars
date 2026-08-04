@@ -43,6 +43,13 @@ export function domainsForLevel(level: string) {
   return curriculaByLevel[level as keyof typeof curriculaByLevel] ?? CURRICULUM;
 }
 
+export function topicGoalBaseline(domainLessonIds: string[], completedLessonIds: Iterable<string>) {
+  const completed = new Set(completedLessonIds);
+  const startValue = domainLessonIds.filter((lessonId) => completed.has(lessonId)).length;
+  const targetValue = domainLessonIds.length - startValue;
+  return targetValue > 0 ? { startValue, targetValue } : null;
+}
+
 export function rewardMission(
   reward: RewardGoal,
   input: { totalStars: number; completedLessonIds: string[]; level: string },
@@ -57,8 +64,8 @@ export function rewardMission(
   if (reward.targetType === "stars") {
     currentValue = Math.max(0, input.totalStars - reward.startValue);
   } else if (reward.targetType === "topic" && domain) {
-    currentValue = domain.lessons.filter((lesson) => completed.has(lesson.id)).length;
-    targetValue = domain.lessons.length;
+    const completedInDomain = domain.lessons.filter((lesson) => completed.has(lesson.id)).length;
+    currentValue = Math.max(0, completedInDomain - reward.startValue);
   } else {
     currentValue = Math.max(0, completed.size - reward.startValue);
   }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RewardGoal } from "@prisma/client";
-import { domainsForLevel, rewardMission } from "../src/lib/rewards";
+import { domainsForLevel, rewardMission, topicGoalBaseline } from "../src/lib/rewards";
 
 function goal(overrides: Partial<RewardGoal> = {}): RewardGoal {
   return {
@@ -13,6 +13,7 @@ function goal(overrides: Partial<RewardGoal> = {}): RewardGoal {
     targetValue: 3,
     startValue: 4,
     domainId: null,
+    currentKey: "learner-1",
     status: "active",
     earnedAt: null,
     claimedAt: null,
@@ -45,16 +46,34 @@ describe("parent-set reward missions", () => {
     expect(mission.status).toBe("earned");
   });
 
-  test("uses the learner's actual topic lessons for a topic reward", () => {
+  test("excludes topic lessons completed before the reward was created", () => {
     const domain = domainsForLevel("preschool")[0];
-    const completedLessonIds = domain.lessons.map((lesson) => lesson.id);
-    const mission = rewardMission(goal({ targetType: "topic", domainId: domain.id }), {
+    const completedLessonIds = domain.lessons.slice(0, 3).map((lesson) => lesson.id);
+    const mission = rewardMission(goal({ targetType: "topic", domainId: domain.id, startValue: 2, targetValue: domain.lessons.length - 2 }), {
       totalStars: 0,
       completedLessonIds,
       level: "preschool",
     });
     expect(mission.domainTitle).toBe(domain.title);
-    expect(mission.currentValue).toBe(domain.lessons.length);
+    expect(mission.currentValue).toBe(1);
+    expect(mission.targetValue).toBe(domain.lessons.length - 2);
+    expect(mission.status).toBe("active");
+  });
+
+  test("earns a topic reward only after all remaining lessons are completed", () => {
+    const domain = domainsForLevel("preschool")[0];
+    const mission = rewardMission(goal({ targetType: "topic", domainId: domain.id, startValue: 2, targetValue: domain.lessons.length - 2 }), {
+      totalStars: 0,
+      completedLessonIds: domain.lessons.map((lesson) => lesson.id),
+      level: "preschool",
+    });
+    expect(mission.currentValue).toBe(domain.lessons.length - 2);
     expect(mission.status).toBe("earned");
+  });
+
+  test("does not create a new topic goal for an already completed topic", () => {
+    const domain = domainsForLevel("grade3")[0];
+    const ids = domain.lessons.map((lesson) => lesson.id);
+    expect(topicGoalBaseline(ids, ids)).toBeNull();
   });
 });
