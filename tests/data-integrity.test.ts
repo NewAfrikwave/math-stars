@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { streakAfterCompletion } from "../src/lib/progress-save";
+import { latestCompletionDate, streakAfterCompletion } from "../src/lib/progress-save";
 
 describe("launch data integrity", () => {
   test("a failed attempt does not consume the date used by a later passing streak", () => {
@@ -13,5 +13,15 @@ describe("launch data integrity", () => {
     const schema = readFileSync(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
     expect(schema).toContain("currentKey  String?  @unique");
     expect(schema).toContain("attemptId String?  @unique");
+  });
+
+  test("backfills an existing learner from saved completions, not a failed play timestamp", () => {
+    const completedYesterday = new Date("2026-08-03T15:00:00Z");
+    const failedPlayToday = new Date("2026-08-04T09:00:00Z");
+    const passingAttemptToday = new Date("2026-08-04T16:00:00Z");
+    const baseline = latestCompletionDate([completedYesterday]);
+
+    expect(failedPlayToday.getTime()).toBeGreaterThan(baseline!.getTime());
+    expect(streakAfterCompletion(4, baseline, passingAttemptToday)).toBe(5);
   });
 });

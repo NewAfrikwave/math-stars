@@ -38,6 +38,13 @@ export function streakAfterCompletion(previous: number, lastCompletion: Date | n
   return 1;
 }
 
+export function latestCompletionDate(values: Array<Date | null | undefined>) {
+  return values.reduce<Date | null>((latest, value) => {
+    if (!value) return latest;
+    return !latest || value.getTime() > latest.getTime() ? value : latest;
+  }, null);
+}
+
 export async function saveProgressAttempt(input: SaveInput) {
   try {
     return await db.$transaction(async (tx) => {
@@ -53,6 +60,11 @@ export async function saveProgressAttempt(input: SaveInput) {
         where: { studentId_lessonId: { studentId: input.studentId, lessonId: input.lessonId } },
       });
       const currentRows = await tx.lessonProgress.findMany({ where: { studentId: input.studentId } });
+      const latestDaily = await tx.dailyChallenge.findFirst({
+        where: { studentId: input.studentId },
+        orderBy: { completedAt: "desc" },
+        select: { completedAt: true },
+      });
       const completedBefore = (id: string) => currentRows.some((row) => row.lessonId === id && row.status === "completed");
       const availableByRules = input.level === "preschool" ? psIsLessonAvailable(input.lessonId, completedBefore)
         : input.level === "grade1" ? isG1LessonAvailable(input.lessonId, completedBefore)
@@ -103,7 +115,14 @@ export async function saveProgressAttempt(input: SaveInput) {
 
       const freshRows = await tx.lessonProgress.findMany({ where: { studentId: input.studentId } });
       const totalStars = freshRows.filter((progress) => progress.status === "completed").reduce((sum, progress) => sum + progress.stars, 0);
-      const lastCompletion = student.lastCompletedAt ?? student.lastPlayedAt;
+      // Existing Railway learners have no lastCompletedAt yet. Backfill from
+      // successful persisted work only, never from lastPlayedAt (which also
+      // includes failed practice attempts).
+      const legacyCompletion = latestCompletionDate([
+        ...currentRows.map((progress) => progress.completedAt),
+        latestDaily?.completedAt,
+      ]);
+      const lastCompletion = student.lastCompletedAt ?? legacyCompletion;
       const streak = !wasCompleted && passed
         ? streakAfterCompletion(student.streak, lastCompletion, now)
         : student.streak;
@@ -142,6 +161,7 @@ export async function saveProgressAttempt(input: SaveInput) {
           studentId: input.studentId, attemptId: input.attemptId, type: "lesson", lessonId: input.lessonId,
           title: input.title, emoji: input.emoji, score: input.score, correct: input.correct,
           total: input.total, stars: input.stars,
+          earnedAchievementIds: newlyEarned.length > 0 ? JSON.stringify(newlyEarned) : null,
         },
       });
       return { kind: "saved" as const, event, row, passed, newBest, newStars, totalStars, streak, newlyEarned };

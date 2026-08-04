@@ -77,6 +77,7 @@ async function responseForExistingAttempt(studentId: string, event: {
   score: number;
   correct: number;
   total: number;
+  earnedAchievementIds?: string | null;
 }) {
   if (event.studentId !== studentId) {
     return NextResponse.json({ error: "attempt id already used" }, { status: 409 });
@@ -87,6 +88,7 @@ async function responseForExistingAttempt(studentId: string, event: {
     getCurrentRewardMission(studentId),
   ]);
   const sessionStars = event.score >= 90 ? 3 : event.score >= 70 ? 2 : event.score >= 50 ? 1 : 0;
+  const newlyEarned = parseAchievementIds(event.earnedAchievementIds);
   return NextResponse.json({
     ok: true,
     lessonId: event.lessonId,
@@ -97,11 +99,21 @@ async function responseForExistingAttempt(studentId: string, event: {
     attempts: progress?.attempts ?? 1,
     totalStars: student.totalStars,
     streak: student.streak,
-    newlyEarned: [],
+    newlyEarned,
     reward,
     passed: event.score >= 70,
     duplicate: true,
   });
+}
+
+function parseAchievementIds(value: string | null | undefined) {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 function findLessonAny(lessonId: string) {

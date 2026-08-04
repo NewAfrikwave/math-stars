@@ -183,6 +183,7 @@ model ActivityEvent {
   type      String   // lesson | daily | placement
   lessonId  String?
   attemptId String?  @unique // stable client id makes progress retries idempotent
+  earnedAchievementIds String? // JSON array returned again on an idempotent retry
   title     String   // human-readable label, e.g. "Count to 5"
   emoji     String   @default("📘")
   score     Int      @default(0) // percent
