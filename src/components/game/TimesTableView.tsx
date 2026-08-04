@@ -17,6 +17,9 @@ import {
   X,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
+import { Confetti } from "@/components/game/Confetti";
+import { StickerBurst } from "@/components/game/StickerBurst";
+import { AnimatedNumber, FloatingSparkles, springy } from "@/components/game/MotionKit";
 
 const TABLES = Array.from({ length: 11 }, (_, index) => index + 2);
 const FACTORS = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -75,12 +78,15 @@ export function TimesTableView() {
     <div className="relative min-h-screen overflow-hidden bg-[#3d2415] text-[#2d2318]">
       <Image src="/explorer-study-bg.webp" alt="A cozy explorer study" fill priority sizes="100vw" className="object-cover" />
       <div className="absolute inset-0 bg-[#271304]/20" />
+      <FloatingSparkles className="z-[1] opacity-70" tone="cream" />
+      <Confetti active={feedback === "correct"} />
+      <StickerBurst active={feedback === "correct"} />
 
       <header className="relative z-20 border-b border-[#ad9455]/50 bg-[#142d1d]/95 text-[#fff7d5] shadow-lg">
         <div className="mx-auto flex min-h-[78px] max-w-[1280px] items-center justify-between gap-3 px-4 sm:px-7">
           <button onClick={() => setView({ name: "home" })} className="flex min-h-11 items-center gap-2 rounded-full px-3 font-display font-black hover:bg-[#2b462e] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457]"><ArrowLeft className="h-5 w-5" />Back home</button>
           <div className="text-center"><p className="font-display text-xl font-black sm:text-2xl">Times Table Lab</p><p className="hidden text-xs font-bold text-[#e1ca84] sm:block">Every table from 2× through 12×</p></div>
-          <div className="flex items-center gap-2 rounded-full border border-[#b49a58]/50 bg-[#2b462e] px-4 py-2 font-display font-black"><Star className="h-5 w-5 fill-[#f8c53d] text-[#f8c53d]" />{score}</div>
+          <motion.div key={score} initial={{ scale: 0.82 }} animate={{ scale: 1 }} transition={springy} className="flex items-center gap-2 rounded-full border border-[#b49a58]/50 bg-[#2b462e] px-4 py-2 font-display font-black"><Star className="h-5 w-5 fill-[#f8c53d] text-[#f8c53d]" /><AnimatedNumber value={score} /></motion.div>
         </div>
       </header>
 
@@ -95,7 +101,7 @@ export function TimesTableView() {
           </div>
 
           <div className="mt-6 flex gap-2 overflow-x-auto pb-2 nice-scroll" aria-label="Choose a times table">
-            {TABLES.map((table) => <button key={table} onClick={() => selectTable(table)} className={`flex h-14 min-w-14 items-center justify-center rounded-2xl border-2 font-display text-lg font-black transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d] ${selected === table ? "border-[#24482d] bg-[#315f3a] text-white shadow-md" : "border-[#c49d5d] bg-[#fff5d8] text-[#654a2b]"}`} aria-pressed={selected === table}>{table}×</button>)}
+            {TABLES.map((table) => <motion.button key={table} whileHover={{ y: -4, scale: 1.04 }} whileTap={{ scale: 0.92 }} animate={selected === table ? { y: -3, scale: 1.06 } : { y: 0, scale: 1 }} transition={springy} onClick={() => selectTable(table)} className={`relative flex h-14 min-w-14 items-center justify-center overflow-hidden rounded-2xl border-2 font-display text-lg font-black focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d] ${selected === table ? "border-[#24482d] bg-[#315f3a] text-white shadow-md" : "border-[#c49d5d] bg-[#fff5d8] text-[#654a2b]"}`} aria-pressed={selected === table}>{selected === table && <motion.span layoutId="table-glow" className="absolute inset-0 bg-white/10" />}<span className="relative">{table}×</span></motion.button>)}
           </div>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -141,8 +147,8 @@ export function TimesTableView() {
                 <button type="submit" disabled={!answer} className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[#aa2f34] px-5 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] disabled:opacity-50">Check my answer<Check className="h-5 w-5" /></button>
               </form>
               <AnimatePresence mode="wait">
-                {feedback === "correct" && <motion.div key="correct" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="mt-5 rounded-2xl bg-[#dcebd1] p-4 font-display text-xl font-black text-[#2e6234]"><Check className="mr-2 inline h-6 w-6" />Brilliant! {selected} × {factor} = {selected * factor}</motion.div>}
-                {feedback === "retry" && <motion.div key="retry" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="mt-5 rounded-2xl bg-[#f4dccb] p-4 font-display text-lg font-black text-[#8b322d]"><RotateCcw className="mr-2 inline h-5 w-5" />Almost. Count by {selected}s and try again.</motion.div>}
+                {feedback === "correct" && <motion.div key="correct" initial={{ opacity: 0, scale: 0.7, rotate: -3 }} animate={{ opacity: 1, scale: [0.7, 1.08, 1], rotate: 0 }} transition={springy} className="mt-5 rounded-2xl bg-[#dcebd1] p-4 font-display text-xl font-black text-[#2e6234]"><Check className="mr-2 inline h-6 w-6" />Brilliant! {selected} × {factor} = {selected * factor}</motion.div>}
+                {feedback === "retry" && <motion.div key="retry" initial={{ opacity: 0 }} animate={{ opacity: 1, x: [0, -8, 8, -5, 5, 0] }} transition={{ duration: 0.45 }} className="mt-5 rounded-2xl bg-[#f4dccb] p-4 font-display text-lg font-black text-[#8b322d]"><RotateCcw className="mr-2 inline h-5 w-5" />Almost. Count by {selected}s and try again.</motion.div>}
               </AnimatePresence>
               <p className="mt-4 text-sm font-bold text-[#776040]">Score: {score} correct from {questions} tries</p>
             </motion.div>

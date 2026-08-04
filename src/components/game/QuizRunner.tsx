@@ -28,6 +28,7 @@ import { useSoundEffects } from "@/hooks/use-sound-effects";
 import { useTTS } from "@/hooks/use-tts";
 import { useGameStore } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
+import { AnimatedNumber, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
 
 export interface QuizRunnerProps {
   title: string;
@@ -145,7 +146,7 @@ export function QuizRunner({
           </div>
           <div className="flex items-center gap-1.5 rounded-2xl border border-[#eee2d2] bg-white px-3 py-2 shadow-sm dark:bg-card">
             <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-            <span className="font-display font-bold tabular-nums">{correctCount}</span>
+            <motion.span key={correctCount} initial={{ scale: 0.65, rotate: -12 }} animate={{ scale: 1, rotate: 0 }} transition={springy} className="font-display font-bold tabular-nums"><AnimatedNumber value={correctCount} /></motion.span>
           </div>
           <div className="hidden w-48 sm:block">
             <div className="mb-1 flex justify-between text-xs font-semibold text-muted-foreground">
@@ -172,7 +173,7 @@ export function QuizRunner({
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
-            transition={{ duration: 0.22 }}
+            transition={springy}
             className="overflow-hidden rounded-[28px] border border-[#eadfce] bg-white shadow-[0_18px_55px_rgba(83,61,35,0.09)] dark:bg-card lg:grid lg:min-h-[610px] lg:grid-cols-[0.86fr_1.5fr]"
           >
             <section className="border-b border-[#eadfce] bg-[#fffaf2] p-6 dark:bg-muted/20 lg:border-b-0 lg:border-r lg:p-8">
@@ -199,9 +200,9 @@ export function QuizRunner({
                 </div>
               )}
 
-              <ol className="mt-8 space-y-5">
+              <motion.ol variants={staggerContainer} initial="hidden" animate="visible" className="mt-8 space-y-5">
                 {steps.map((step, stepIndex) => (
-                  <li key={step.title} className="flex gap-3">
+                  <motion.li variants={staggerItem} key={step.title} className="flex gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dfead7] font-display text-sm font-bold text-[#285f3b]">
                       {stepIndex + 1}
                     </span>
@@ -209,9 +210,9 @@ export function QuizRunner({
                       <p className="font-display text-lg font-bold text-[#285f3b] dark:text-emerald-300">{step.title}</p>
                       <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
                     </div>
-                  </li>
+                  </motion.li>
                 ))}
-              </ol>
+              </motion.ol>
             </section>
 
             <section className="flex min-w-0 flex-col p-5 sm:p-7 lg:p-9">
