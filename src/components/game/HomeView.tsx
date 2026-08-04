@@ -156,7 +156,7 @@ export function HomeView() {
           </motion.div>
 
           <motion.div variants={staggerContainer} className="relative z-10 mt-4 grid gap-3 lg:pr-[210px]">
-            {reward && (
+            {reward ? (
               <motion.div
                 variants={staggerItem}
                 className={`rounded-2xl border-2 p-4 shadow-sm ${reward.status === "earned" ? "border-[#e0a929] bg-[#fff0a6]" : "border-[#9b6ab2] bg-[#f4e5ff]"}`}
@@ -179,6 +179,21 @@ export function HomeView() {
                 </div>
                 <div className="mt-3 h-3 overflow-hidden rounded-full border border-[#b993c8] bg-white/70">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${reward.percent}%` }} className="h-full rounded-full bg-gradient-to-r from-[#8f5aa4] to-[#e1a82d]" />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                variants={staggerItem}
+                className="rounded-2xl border-2 border-dashed border-[#9b6ab2] bg-[#f4e5ff]/90 p-4 shadow-sm"
+                role="status"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/75 text-[#765184] shadow-sm" aria-hidden="true"><Gift className="h-7 w-7" /></span>
+                  <div>
+                    <p className="font-display text-sm font-black uppercase tracking-[0.1em] text-[#674076]">My reward mission</p>
+                    <p className="mt-0.5 font-display text-lg font-black text-[#38233f]">No reward set for {studentName} yet</p>
+                    <p className="text-sm font-bold text-[#68516e]">A grown-up can choose one in the Parent area.</p>
+                  </div>
                 </div>
               </motion.div>
             )}
