@@ -68,3 +68,62 @@ describe("profile deletion state", () => {
     expect(state.view).toEqual({ name: "parent" });
   });
 });
+
+describe("lesson mastery state", () => {
+  test("saves a low-scoring attempt without completing or unlocking the lesson", () => {
+    useGameStore.setState({
+      currentProfileId: "active",
+      progress: {
+        "mult-concept": {
+          lessonId: "mult-concept",
+          status: "available",
+          stars: 0,
+          bestScore: 0,
+          attempts: 0,
+          lastScore: 0,
+          completedAt: null,
+        },
+      },
+      totalStars: 0,
+      streak: 0,
+      earnedAchievements: [],
+      reward: null,
+    });
+
+    useGameStore.getState().recordResult("mult-concept", 2, 6, {
+      totalStars: 0,
+      streak: 0,
+      newlyEarned: [],
+      reward: null,
+    });
+
+    const state = useGameStore.getState();
+    expect(state.progress["mult-concept"].status).toBe("in-progress");
+    expect(state.progress["mult-concept"].attempts).toBe(1);
+    expect(state.streak).toBe(0);
+  });
+});
+
+describe("daily challenge state", () => {
+  test("reconciles the confirmed result into the learner and profile summary", () => {
+    useGameStore.setState({
+      profiles: [
+        { id: "active", name: "Fefe", avatar: "fox", level: "grade3", totalStars: 12, streak: 4 },
+        { id: "other", name: "Brielle", avatar: "owl", level: "preschool", totalStars: 4, streak: 1 },
+      ],
+      currentProfileId: "active",
+      streak: 4,
+      dailyDoneDate: null,
+      dailyScore: null,
+    });
+
+    useGameStore.getState().recordDailyResult({ dateKey: "2026-08-04", score: 80, streak: 5 });
+
+    const state = useGameStore.getState();
+    expect(state.dailyDoneDate).toBe("2026-08-04");
+    expect(state.dailyScore).toBe(80);
+    expect(state.streak).toBe(5);
+    expect(state.profiles.find((profile) => profile.id === "active")?.streak).toBe(5);
+    expect(state.profiles.find((profile) => profile.id === "other")?.streak).toBe(1);
+  });
+});

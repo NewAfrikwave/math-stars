@@ -25,6 +25,7 @@ import { DomainCelebration } from "@/components/game/DomainCelebration";
 import { Mascot } from "@/components/game/Mascot";
 import { Star, Trophy, Home, Bot, Loader2, Repeat, Download, Heart } from "lucide-react";
 import { useState } from "react";
+import type { RewardMission } from "@/lib/rewards";
 
 // Load a single profile's full state from the server (with the profile header).
 async function loadProfileState(
@@ -39,13 +40,15 @@ async function loadProfileState(
     earnedAchievements: string[];
     dailyDoneDate: string | null;
     dailyScore: number | null;
+    reward?: RewardMission | null;
   }) => void,
-  cancelled: boolean
+  signal?: AbortSignal,
 ) {
   try {
-    const res = await fetch("/api/state", { headers: { "x-profile-id": profileId } });
+    const res = await fetch("/api/state", { headers: { "x-profile-id": profileId }, signal });
+    if (!res.ok) throw new Error("Could not load learner progress");
     const data = await res.json();
-    if (cancelled || !data) return;
+    if (signal?.aborted || !data) return;
     hydrate({
       studentName: data.studentName ?? "Star Learner",
       level: data.level ?? null,
@@ -56,9 +59,10 @@ async function loadProfileState(
       earnedAchievements: data.earnedAchievements ?? [],
       dailyDoneDate: data.dailyDoneDate ?? null,
       dailyScore: data.dailyScore ?? null,
+      reward: data.reward ?? null,
     });
   } catch {
-    /* offline — keep defaults */
+    /* A later profile request or a temporary offline state owns the UI. */
   }
 }
 
@@ -132,7 +136,6 @@ export default function Page() {
         const useId = saved && list.some((p) => p.id === saved) ? saved : null;
         if (useId) {
           setCurrentProfile(useId);
-          loadProfileState(useId, hydrate, cancelled);
         } else {
           // no profile selected → show landing/picker
           hydrate({
@@ -145,6 +148,7 @@ export default function Page() {
             earnedAchievements: [],
             dailyDoneDate: null,
             dailyScore: null,
+            reward: null,
           });
         }
       })
@@ -159,6 +163,7 @@ export default function Page() {
           earnedAchievements: [],
           dailyDoneDate: null,
           dailyScore: null,
+          reward: null,
         });
       });
     return () => {
@@ -169,10 +174,12 @@ export default function Page() {
   // When the current profile changes, load its state and remember it.
   useEffect(() => {
     if (!currentProfileId) return;
+    const controller = new AbortController();
     if (typeof window !== "undefined") {
       localStorage.setItem("mathstars-profile", currentProfileId);
     }
-    loadProfileState(currentProfileId, hydrate, false);
+    loadProfileState(currentProfileId, hydrate, controller.signal);
+    return () => controller.abort();
   }, [currentProfileId, hydrate]);
 
   // Show the landing/profile-picker page when no profile is selected, or when

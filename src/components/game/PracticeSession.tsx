@@ -7,8 +7,8 @@ import { generateProblems } from "@/lib/generators";
 import { useGameStore, profileFetch } from "@/store/useGameStore";
 import { QuizRunner } from "@/components/game/QuizRunner";
 import { Mascot } from "@/components/game/Mascot";
-import { SpeakButton } from "@/components/game/SpeakButton";
 import { cn } from "@/lib/utils";
+import type { RewardMission } from "@/lib/rewards";
 
 export function PracticeSession({
   lessonId,
@@ -21,6 +21,7 @@ export function PracticeSession({
   const setView = useGameStore((s) => s.setView);
   const recordResult = useGameStore((s) => s.recordResult);
   const soundOn = useGameStore((s) => s.soundOn);
+  const [attemptId] = useState(() => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   const [problems] = useState<Problem[]>(() =>
     found
@@ -78,18 +79,35 @@ export function PracticeSession({
         soundOn={soundOn}
         preschool={lessonId.startsWith("ps-") || lessonId.startsWith("g1-")}
         onExit={() => setView({ name: "lesson", lessonId })}
-        onFinish={({ correct, total }) => {
-          const { stars, score } = recordResult(lessonId, correct, total);
-          profileFetch("/api/progress", {
+        onFinish={async ({ correct, total }) => {
+          const response = await profileFetch("/api/progress", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lessonId, correct, total, difficulty }),
-          }).catch(() => {});
+            body: JSON.stringify({ lessonId, correct, total, difficulty, attemptId }),
+          });
+          const saved = await response.json().catch(() => null) as {
+            error?: string;
+            sessionStars?: number;
+            score?: number;
+            totalStars?: number;
+            streak?: number;
+            newlyEarned?: string[];
+            reward?: RewardMission | null;
+          } | null;
+          if (!response.ok || !saved || typeof saved.totalStars !== "number") {
+            throw new Error(saved?.error ?? "Your progress could not be saved. Check your connection and try again.");
+          }
+          const { stars, score } = recordResult(lessonId, correct, total, {
+            totalStars: saved.totalStars,
+            streak: saved.streak ?? 0,
+            newlyEarned: saved.newlyEarned ?? [],
+            reward: saved.reward ?? null,
+          });
           setView({
             name: "results",
             lessonId,
-            score,
-            stars,
+            score: saved.score ?? score,
+            stars: saved.sessionStars ?? stars,
             correct,
             total,
           });

@@ -20,6 +20,7 @@ import * as G1 from "@/lib/grade1";
 import * as G2 from "@/lib/grade2";
 import * as G4 from "@/lib/grade4";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import type { RewardMission } from "@/lib/rewards";
 
 const DEFAULT_STUDENT_ID = "me";
 
@@ -64,6 +65,7 @@ interface GameState {
   // progress map: lessonId -> state
   progress: Record<string, LessonProgressState>;
   earnedAchievements: string[];
+  reward: RewardMission | null;
 
   // daily challenge: dateKey of today's attempt (null = not done today)
   dailyDoneDate: string | null;
@@ -87,6 +89,7 @@ interface GameState {
   setLevel: (level: Level) => void;
   setProfiles: (profiles: ProfileSummary[]) => void;
   setSiteSettings: (settings: SiteSettingsState | null) => void;
+  setReward: (reward: RewardMission | null) => void;
   setCurrentProfile: (id: string | null) => void;
   createProfile: (name: string, level: Level, avatar: "fox" | "owl") => Promise<ProfileSummary | null>;
   deleteProfile: (id: string, parentPin: string) => Promise<boolean>;
@@ -100,13 +103,19 @@ interface GameState {
     earnedAchievements: string[];
     dailyDoneDate: string | null;
     dailyScore: number | null;
+    reward?: RewardMission | null;
   }) => void;
-  recordResult: (lessonId: string, correct: number, total: number) => {
+  recordResult: (lessonId: string, correct: number, total: number, saved?: {
+    totalStars: number;
+    streak: number;
+    newlyEarned: string[];
+    reward: RewardMission | null;
+  }) => {
     stars: number;
     score: number;
     newlyEarned: string[];
   };
-  recordDailyResult: (correct: number, total: number) => { score: number };
+  recordDailyResult: (saved: { dateKey: string; score: number; streak: number }) => void;
   resetProgress: () => void;
   clearDomainCelebration: () => void;
 }
@@ -246,6 +255,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   currentProfileId: null,
   progress: initialProgress(),
   earnedAchievements: [],
+  reward: null,
   dailyDoneDate: null,
   dailyScore: null,
   view: { name: "landing" },
@@ -277,7 +287,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setSiteSettings: (s) => set({ siteSettings: s }),
 
-  setCurrentProfile: (id) => set({ currentProfileId: id, view: { name: "home" } }),
+  setReward: (reward) => set({ reward }),
+
+  setCurrentProfile: (id) => set({
+    currentProfileId: id,
+    view: { name: id ? "home" : "landing" },
+    ...(id ? { hydrated: false, reward: null } : {}),
+  }),
 
   createProfile: async (name, level, avatar) => {
     try {
@@ -328,6 +344,7 @@ export const useGameStore = create<GameState>((set, get) => ({
               streak: 0,
               progress: initialProgress(),
               earnedAchievements: [],
+              reward: null,
               dailyDoneDate: null,
               dailyScore: null,
               lastEarnedAchievements: [],
@@ -351,12 +368,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       soundOn: data.soundOn,
       progress: data.progress,
       earnedAchievements: data.earnedAchievements,
+      reward: data.reward ?? null,
       dailyDoneDate: data.dailyDoneDate,
       dailyScore: data.dailyScore,
       hydrated: true,
     }),
 
-  recordResult: (lessonId, correct, total) => {
+  recordResult: (lessonId, correct, total, saved) => {
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
     const stars = starsForScore(score);
     const state = get();
@@ -370,16 +388,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       completedAt: null,
     };
     const wasCompleted = prev.status === "completed";
+    const passed = score >= 70;
     const newBest = Math.max(prev.bestScore, score);
     const newStars = Math.max(prev.stars, stars);
     const newProgress: LessonProgressState = {
       ...prev,
-      status: "completed",
+      status: wasCompleted || passed ? "completed" : "in-progress",
       stars: newStars,
       bestScore: newBest,
       attempts: prev.attempts + 1,
       lastScore: score,
-      completedAt: new Date().toISOString(),
+      completedAt: wasCompleted ? prev.completedAt : passed ? new Date().toISOString() : null,
     };
     const progress = { ...state.progress, [lessonId]: newProgress };
     recomputeStatuses(progress);
@@ -435,7 +454,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         newlyEarned.push(a.id);
       }
     }
-    const earnedAchievements = [...state.earnedAchievements, ...newlyEarned];
+    const confirmedNew = saved?.newlyEarned ?? newlyEarned;
+    const earnedAchievements = [...new Set([...state.earnedAchievements, ...confirmedNew])];
 
     // Detect domain completion: did finishing this lesson just complete a
     // whole domain? Compare before/after counts for the lesson's domain.
@@ -457,11 +477,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     set({
       progress,
-      totalStars,
+      totalStars: saved?.totalStars ?? totalStars,
+      profiles: state.profiles.map((profile) => profile.id === state.currentProfileId
+        ? { ...profile, totalStars: saved?.totalStars ?? totalStars, streak: saved?.streak ?? profile.streak, lastPlayedAt: new Date().toISOString() }
+        : profile),
       earnedAchievements,
-      lastEarnedAchievements: newlyEarned,
+      lastEarnedAchievements: confirmedNew,
       domainCompleted,
-      streak: wasCompleted ? state.streak : Math.max(state.streak, 1),
+      streak: saved?.streak ?? (wasCompleted || !passed ? state.streak : Math.max(state.streak, 1)),
+      reward: saved?.reward ?? state.reward,
     });
 
     return { stars, score, newlyEarned };
@@ -469,11 +493,16 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   clearDomainCelebration: () => set({ domainCompleted: null }),
 
-  recordDailyResult: (correct, total) => {
-    const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const today = new Date().toISOString().slice(0, 10);
-    set({ dailyDoneDate: today, dailyScore: score, streak: Math.max(get().streak, 1) });
-    return { score };
+  recordDailyResult: (saved) => {
+    const state = get();
+    set({
+      dailyDoneDate: saved.dateKey,
+      dailyScore: saved.score,
+      streak: saved.streak,
+      profiles: state.profiles.map((profile) => profile.id === state.currentProfileId
+        ? { ...profile, streak: saved.streak, lastPlayedAt: new Date().toISOString() }
+        : profile),
+    });
   },
 
   resetProgress: () => {
@@ -483,6 +512,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       totalStars: 0,
       streak: 0,
       earnedAchievements: [],
+      reward: null,
       dailyDoneDate: null,
       dailyScore: null,
       view: { name: "home" },

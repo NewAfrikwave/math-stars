@@ -12,9 +12,12 @@ import {
   ShieldCheck,
   Loader2,
   Trash2,
+  Gift,
+  CheckCircle2,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
+import { domainsForLevel, REWARD_PRESETS, type RewardMission, type RewardTargetType } from "@/lib/rewards";
 
 interface ProfileSummaryData {
   id: string;
@@ -44,6 +47,8 @@ interface ActivityItem {
 export function ParentView() {
   const setView = useGameStore((s) => s.setView);
   const deleteProfile = useGameStore((s) => s.deleteProfile);
+  const currentProfileId = useGameStore((s) => s.currentProfileId);
+  const setActiveReward = useGameStore((s) => s.setReward);
   const [stage, setStage] = useState<"loading" | "pin" | "dashboard" | "setup">("loading");
   const [pinInput, setPinInput] = useState("");
   const [profiles, setProfiles] = useState<ProfileSummaryData[]>([]);
@@ -53,6 +58,14 @@ export function ParentView() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [siteOwner, setSiteOwner] = useState(false);
   const [familyAccount, setFamilyAccount] = useState(false);
+  const [reward, setReward] = useState<RewardMission | null>(null);
+  const [rewardLoading, setRewardLoading] = useState(false);
+  const [rewardTitle, setRewardTitle] = useState<string>(REWARD_PRESETS[0].title);
+  const [rewardEmoji, setRewardEmoji] = useState(REWARD_PRESETS[0].emoji as string);
+  const [rewardDescription, setRewardDescription] = useState("");
+  const [rewardTarget, setRewardTarget] = useState<RewardTargetType>("lessons");
+  const [rewardTargetValue, setRewardTargetValue] = useState(5);
+  const [rewardDomainId, setRewardDomainId] = useState("");
 
   // First, check whether a PIN is set (via the summary endpoint).
   useEffect(() => {
@@ -97,6 +110,16 @@ export function ParentView() {
     }
   };
 
+  const loadReward = async (profileId: string) => {
+    try {
+      const res = await fetch("/api/rewards", { headers: { "x-profile-id": profileId } });
+      const data = await res.json();
+      setReward(data.reward ?? null);
+    } catch {
+      setReward(null);
+    }
+  };
+
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   const verifyPin = async () => {
@@ -113,6 +136,7 @@ export function ParentView() {
       if (list[0]) {
         setSelectedProfileId(list[0].id);
         loadActivity(list[0].id);
+        loadReward(list[0].id);
       }
       setStage("dashboard");
     } catch {
@@ -140,6 +164,7 @@ export function ParentView() {
       if (list?.[0]) {
         setSelectedProfileId(list[0].id);
         loadActivity(list[0].id);
+        loadReward(list[0].id);
       }
       setStage("dashboard");
     } else {
@@ -150,7 +175,55 @@ export function ParentView() {
 
   const pickProfileActivity = (id: string) => {
     setSelectedProfileId(id);
+    setRewardDomainId("");
     loadActivity(id);
+    loadReward(id);
+  };
+
+  const saveReward = async () => {
+    if (!selectedProfileId || !rewardTitle.trim()) return;
+    const selected = profiles.find((profile) => profile.id === selectedProfileId);
+    const defaultDomainId = domainsForLevel(selected?.level ?? "grade3")[0]?.id ?? "";
+    setRewardLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-profile-id": selectedProfileId, "x-parent-pin": pinInput },
+        body: JSON.stringify({
+          action: "create",
+          title: rewardTitle,
+          emoji: rewardEmoji,
+          description: rewardDescription,
+          targetType: rewardTarget,
+          targetValue: rewardTargetValue,
+          domainId: rewardDomainId || defaultDomainId,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not save reward");
+      setReward(data.reward ?? null);
+      if (selectedProfileId === currentProfileId) setActiveReward(data.reward ?? null);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save reward");
+    }
+    setRewardLoading(false);
+  };
+
+  const closeReward = async (action: "claim" | "archive") => {
+    if (!selectedProfileId || !reward) return;
+    setRewardLoading(true);
+    const response = await fetch("/api/rewards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-profile-id": selectedProfileId, "x-parent-pin": pinInput },
+      body: JSON.stringify({ action, rewardId: reward.id }),
+    });
+    if (response.ok) {
+      setReward(null);
+      if (selectedProfileId === currentProfileId) setActiveReward(null);
+    }
+    else setError("Could not update this reward. Please try again.");
+    setRewardLoading(false);
   };
 
   const removeProfile = async (profile: ProfileSummaryData) => {
@@ -173,6 +246,8 @@ export function ParentView() {
       setSelectedProfileId(nextId);
       if (nextId) loadActivity(nextId);
       else setActivity([]);
+      if (nextId) loadReward(nextId);
+      else setReward(null);
     }
     setDeletingId(null);
   };
@@ -328,6 +403,90 @@ export function ParentView() {
           })}
         </div>
       )}
+
+      {selectedProfileId && (() => {
+        const selected = profiles.find((profile) => profile.id === selectedProfileId);
+        const domains = domainsForLevel(selected?.level ?? "grade3");
+        const selectedDomain = rewardDomainId || domains[0]?.id || "";
+        return (
+          <Card className="mt-6 overflow-hidden p-0">
+            <div className="bg-gradient-to-r from-fuchsia-600 to-amber-500 p-5 text-white">
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20"><Gift className="h-7 w-7" /></span>
+                <div>
+                  <h2 className="font-display text-xl font-bold">Real-world rewards</h2>
+                  <p className="text-sm text-white/90">Give {selected?.name ?? "your learner"} a goal they can see and work toward.</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-5">
+              {reward ? (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/30">
+                  <div className="flex items-start gap-3">
+                    <span className="text-4xl" aria-hidden="true">{reward.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-lg font-bold">{reward.title}</p>
+                      {reward.description && <p className="text-sm text-muted-foreground">{reward.description}</p>}
+                      <p className="mt-1 text-sm font-semibold">
+                        {reward.status === "earned" ? "Goal complete. This reward is ready!" : `${reward.currentValue} of ${reward.targetValue} ${reward.targetType === "topic" ? "topic lessons" : reward.targetType}`}
+                      </p>
+                    </div>
+                    {reward.status === "earned" && <CheckCircle2 className="h-7 w-7 text-emerald-600" />}
+                  </div>
+                  <Progress value={reward.percent} className="mt-3 h-3" />
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {reward.status === "earned" && <Button onClick={() => closeReward("claim")} disabled={rewardLoading}>Mark reward given</Button>}
+                    <Button variant="outline" onClick={() => closeReward("archive")} disabled={rewardLoading}>Replace this reward</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div>
+                    <p className="mb-2 text-sm font-bold">Choose a reward</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {REWARD_PRESETS.map((preset) => (
+                        <button key={preset.title} type="button" onClick={() => { setRewardTitle(preset.title); setRewardEmoji(preset.emoji); }} className={cn("rounded-xl border p-3 text-left text-sm font-semibold transition-colors", rewardTitle === preset.title ? "border-violet-500 bg-violet-50 dark:bg-violet-950/30" : "border-border hover:bg-muted/50")}>
+                          <span className="mr-2 text-xl">{preset.emoji}</span>{preset.title}
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => { setRewardTitle(""); setRewardEmoji("🎁"); }} className="rounded-xl border border-dashed border-border p-3 text-left text-sm font-semibold hover:bg-muted/50"><span className="mr-2 text-xl">🎁</span>Custom reward</button>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[90px_1fr]">
+                      <Input aria-label="Reward emoji" value={rewardEmoji} onChange={(event) => setRewardEmoji(event.target.value)} maxLength={8} className="text-center text-xl" />
+                      <Input aria-label="Reward title" value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} maxLength={60} placeholder="What will they earn?" />
+                    </div>
+                    <Input className="mt-2" value={rewardDescription} onChange={(event) => setRewardDescription(event.target.value)} maxLength={160} placeholder="Optional note, such as Saturday after lunch" />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-sm font-bold">Choose the goal</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["lessons", "stars", "topic"] as RewardTargetType[]).map((target) => (
+                        <button key={target} type="button" onClick={() => setRewardTarget(target)} className={cn("rounded-xl border px-2 py-3 text-sm font-bold capitalize", rewardTarget === target ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300" : "border-border")}>
+                          {target === "topic" ? "Finish a topic" : target === "lessons" ? "Complete lessons" : "Earn stars"}
+                        </button>
+                      ))}
+                    </div>
+                    {rewardTarget === "topic" ? (
+                      <select value={selectedDomain} onChange={(event) => setRewardDomainId(event.target.value)} className="mt-3 h-11 w-full rounded-lg border border-border bg-card px-3 text-sm font-semibold">
+                        {domains.map((domain) => <option key={domain.id} value={domain.id}>{domain.title}</option>)}
+                      </select>
+                    ) : (
+                      <div className="mt-3 flex items-center gap-3">
+                        <label htmlFor="reward-target-value" className="text-sm font-semibold">How many {rewardTarget}?</label>
+                        <Input id="reward-target-value" type="number" min={1} max={100} value={rewardTargetValue} onChange={(event) => setRewardTargetValue(Number(event.target.value))} className="w-24" />
+                      </div>
+                    )}
+                  </div>
+                  <Button onClick={saveReward} disabled={rewardLoading || !rewardTitle.trim()} className="w-full gap-2">
+                    {rewardLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />} Set reward mission for {selected?.name}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">New goals begin from today. Past stars and lessons do not count toward a new reward.</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Activity timeline */}
       <Card className="mt-6 p-4">

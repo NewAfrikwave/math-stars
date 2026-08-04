@@ -40,6 +40,7 @@ model Student {
   totalStars Int     @default(0)
   streak    Int      @default(0)
   lastPlayedAt DateTime?
+  lastCompletedAt DateTime? // last new passed lesson, used for streaks
   parentPin String?  // salted scrypt hash of optional parent PIN
   soundOn   Boolean  @default(true) // learner sound preference
   createdAt DateTime @default(now())
@@ -52,8 +53,34 @@ model Student {
   tutorMessages TutorMessage[]
   dailyChallenges DailyChallenge[]
   activityEvents ActivityEvent[]
+  rewardGoals RewardGoal[]
 
   @@index([familyId])
+}
+
+// A real-world reward chosen by a parent. Progress is derived from saved
+// learning records so it cannot drift or be lost when a device changes.
+model RewardGoal {
+  id          String   @id @default(cuid())
+  studentId   String
+  title       String
+  emoji       String   @default("🎁")
+  description String?
+  targetType  String   // lessons | stars | topic
+  targetValue Int
+  startValue  Int      @default(0)
+  domainId    String?
+  currentKey  String?  @unique // student id while current; null after claim/archive
+  status      String   @default("active") // active | earned | claimed | archived
+  earnedAt    DateTime?
+  claimedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([createdAt])
 }
 
 // Privacy-safe browser/device presence. We intentionally store categories,
@@ -155,6 +182,8 @@ model ActivityEvent {
   studentId String
   type      String   // lesson | daily | placement
   lessonId  String?
+  attemptId String?  @unique // stable client id makes progress retries idempotent
+  earnedAchievementIds String? // JSON array returned again on an idempotent retry
   title     String   // human-readable label, e.g. "Count to 5"
   emoji     String   @default("📘")
   score     Int      @default(0) // percent
