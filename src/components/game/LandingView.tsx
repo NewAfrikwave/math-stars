@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -53,6 +53,8 @@ export function LandingView() {
   const [avatar, setAvatar] = useState<"fox" | "owl">("fox");
   const [creating, setCreating] = useState(false);
   const [pickingId, setPickingId] = useState<string | null>(null);
+  const selectionTimerRef = useRef<number | null>(null);
+  const selectionInProgressRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const orderedProfiles = useMemo(
     () => [...profiles].sort((a, b) => {
@@ -63,13 +65,32 @@ export function LandingView() {
     [profiles]
   );
 
+  useEffect(() => () => {
+    if (selectionTimerRef.current !== null) window.clearTimeout(selectionTimerRef.current);
+  }, []);
+
+  const cancelPendingSelection = () => {
+    if (selectionTimerRef.current !== null) {
+      window.clearTimeout(selectionTimerRef.current);
+      selectionTimerRef.current = null;
+    }
+    selectionInProgressRef.current = false;
+    setPickingId(null);
+  };
+
   const pick = (id: string) => {
+    if (selectionInProgressRef.current) return;
+    selectionInProgressRef.current = true;
     setPickingId(id);
     if (reduceMotion) setCurrentProfile(id);
-    else window.setTimeout(() => setCurrentProfile(id), 480);
+    else selectionTimerRef.current = window.setTimeout(() => {
+      selectionTimerRef.current = null;
+      setCurrentProfile(id);
+    }, 480);
   };
 
   const openParentArea = () => {
+    cancelPendingSelection();
     const profileId = orderedProfiles[0]?.id;
     if (profileId) setCurrentProfile(profileId);
     setView({ name: "parent" });
@@ -126,7 +147,7 @@ export function LandingView() {
           <button
             type="button"
             onClick={openParentArea}
-            disabled={profiles.length === 0}
+            disabled={profiles.length === 0 || pickingId !== null}
             className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#6f5a34]/25 bg-[#fff8e8]/90 px-4 text-sm font-bold text-[#344026] shadow-sm backdrop-blur-sm transition hover:bg-white focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             <LockKeyhole className="h-4 w-4" aria-hidden="true" />
@@ -152,6 +173,7 @@ export function LandingView() {
                   isLastPlayed={index === 0}
                   isPicking={pickingId === profile.id}
                   dimmed={!!pickingId && pickingId !== profile.id}
+                  disabled={pickingId !== null}
                   onPick={() => pick(profile.id)}
                 />
               ))}
@@ -175,6 +197,7 @@ export function LandingView() {
             <button
               type="button"
               onClick={() => setAdding(true)}
+              disabled={pickingId !== null}
               className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#334b2b]/20 bg-[#fff8e8]/95 px-5 font-display text-base font-bold text-[#344026] shadow-md transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none"
             >
               <Plus className="h-5 w-5" aria-hidden="true" /> Add learner
@@ -182,6 +205,7 @@ export function LandingView() {
             <button
               type="button"
               onClick={readPrompt}
+              disabled={pickingId !== null}
               className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#334b2b]/20 bg-[#fff8e8]/95 px-5 text-sm font-bold text-[#344026] shadow-md transition hover:bg-white focus-visible:outline-none"
             >
               <Volume2 className="h-4 w-4" aria-hidden="true" /> Read aloud
@@ -282,7 +306,7 @@ export function LandingView() {
   );
 }
 
-function ProfileDoor({ profile, index, isLastPlayed, isPicking, dimmed, onPick }: { profile: ProfileSummary; index: number; isLastPlayed: boolean; isPicking: boolean; dimmed: boolean; onPick: () => void }) {
+function ProfileDoor({ profile, index, isLastPlayed, isPicking, dimmed, disabled, onPick }: { profile: ProfileSummary; index: number; isLastPlayed: boolean; isPicking: boolean; dimmed: boolean; disabled: boolean; onPick: () => void }) {
   const isForest = profile.avatar !== "owl";
   const playedLabel = formatLastPlayed(profile.lastPlayedAt);
 
@@ -323,8 +347,9 @@ function ProfileDoor({ profile, index, isLastPlayed, isPicking, dimmed, onPick }
       <motion.button
         type="button"
         onClick={onPick}
+        disabled={disabled}
         className={cn(
-          "mt-5 inline-flex h-12 min-w-48 items-center justify-center gap-2 rounded-full px-7 font-display text-lg font-bold text-white shadow-lg transition hover:-translate-y-0.5 focus-visible:outline-none",
+          "mt-5 inline-flex h-12 min-w-48 items-center justify-center gap-2 rounded-full px-7 font-display text-lg font-bold text-white shadow-lg transition hover:-translate-y-0.5 focus-visible:outline-none disabled:cursor-wait disabled:hover:translate-y-0",
           isForest ? "bg-[#526c2e] hover:bg-[#405623]" : "bg-[#66498f] hover:bg-[#513a73]"
         )}
         aria-label={`${isLastPlayed ? "Continue as" : "Start as"} ${profile.name}`}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useReducedMotion } from "framer-motion";
 
 const COLORS = [
   "#f43f5e",
@@ -16,8 +17,9 @@ const COLORS = [
 // (e.g. true for ~1.5–3s). Pieces are generated once per activation via
 // useMemo and animate falling via CSS; they unmount when active goes false.
 export function Confetti({ active }: { active: boolean }) {
+  const reduceMotion = useReducedMotion();
   const pieces = useMemo(() => {
-    if (!active) return [];
+    if (!active || reduceMotion) return [];
     return Array.from({ length: 70 }).map((_, i) => ({
       id: i,
       left: Math.random() * 100,
@@ -26,7 +28,7 @@ export function Confetti({ active }: { active: boolean }) {
       color: COLORS[i % COLORS.length],
       rotate: Math.random() * 360,
     }));
-  }, [active]);
+  }, [active, reduceMotion]);
 
   if (pieces.length === 0) return null;
 

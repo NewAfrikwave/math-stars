@@ -255,6 +255,10 @@ input[type="number"] {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    display: none !important;
+    animation: none !important;
+  }
   *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
