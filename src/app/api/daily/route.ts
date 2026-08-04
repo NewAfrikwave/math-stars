@@ -21,46 +21,66 @@ export async function POST(req: Request) {
   let result;
   try {
     result = await db.$transaction(async (tx) => {
-    const existing = await tx.dailyChallenge.findUnique({
-      where: { studentId_dateKey: { studentId: requestedStudent.id, dateKey } },
-    });
-    if (existing) return { alreadyDone: true as const, score: existing.score, streak: requestedStudent.streak };
+      const student = await tx.student.findUniqueOrThrow({ where: { id: requestedStudent.id } });
+      const existing = await tx.dailyChallenge.findUnique({
+        where: { studentId_dateKey: { studentId: requestedStudent.id, dateKey } },
+      });
+      if (existing) {
+        return {
+          alreadyDone: true as const,
+          score: existing.score,
+          correct: existing.correct,
+          total: existing.total,
+          streak: student.streak,
+          dateKey,
+        };
+      }
 
-    const student = await tx.student.findUniqueOrThrow({ where: { id: requestedStudent.id } });
-    const [latestLesson, latestDaily] = await Promise.all([
-      tx.lessonProgress.findFirst({
-        where: { studentId: student.id, completedAt: { not: null } },
-        orderBy: { completedAt: "desc" },
-        select: { completedAt: true },
-      }),
-      tx.dailyChallenge.findFirst({
-        where: { studentId: student.id },
-        orderBy: { completedAt: "desc" },
-        select: { completedAt: true },
-      }),
-    ]);
-    const legacyCompletion = latestCompletionDate([latestLesson?.completedAt, latestDaily?.completedAt]);
-    const lastCompletion = student.lastCompletedAt ?? legacyCompletion;
-    const streak = streakAfterCompletion(student.streak, lastCompletion, now);
+      const [latestLesson, latestDaily] = await Promise.all([
+        tx.lessonProgress.findFirst({
+          where: { studentId: student.id, completedAt: { not: null } },
+          orderBy: { completedAt: "desc" },
+          select: { completedAt: true },
+        }),
+        tx.dailyChallenge.findFirst({
+          where: { studentId: student.id },
+          orderBy: { completedAt: "desc" },
+          select: { completedAt: true },
+        }),
+      ]);
+      const legacyCompletion = latestCompletionDate([latestLesson?.completedAt, latestDaily?.completedAt]);
+      const lastCompletion = student.lastCompletedAt ?? legacyCompletion;
+      const streak = streakAfterCompletion(student.streak, lastCompletion, now);
 
-    await tx.dailyChallenge.create({
-      data: { studentId: student.id, dateKey, score, correct, total, completedAt: now },
-    });
-    await tx.student.update({
-      where: { id: student.id },
-      data: { streak, lastPlayedAt: now, lastCompletedAt: now },
-    });
-    await tx.activityEvent.create({
-      data: { studentId: student.id, type: "daily", title: "Daily Challenge", emoji: "⚡", score, correct, total },
-    });
-    return { alreadyDone: false as const, score, streak };
+      await tx.dailyChallenge.create({
+        data: { studentId: student.id, dateKey, score, correct, total, completedAt: now },
+      });
+      await tx.student.update({
+        where: { id: student.id },
+        data: { streak, lastPlayedAt: now, lastCompletedAt: now },
+      });
+      await tx.activityEvent.create({
+        data: { studentId: student.id, type: "daily", title: "Daily Challenge", emoji: "⚡", score, correct, total },
+      });
+      return { alreadyDone: false as const, score, correct, total, streak, dateKey };
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const existing = await db.dailyChallenge.findUnique({
         where: { studentId_dateKey: { studentId: requestedStudent.id, dateKey } },
       });
-      if (existing) return NextResponse.json({ ok: true, alreadyDone: true, score: existing.score, streak: requestedStudent.streak });
+      const freshStudent = await db.student.findUnique({ where: { id: requestedStudent.id }, select: { streak: true } });
+      if (existing && freshStudent) {
+        return NextResponse.json({
+          ok: true,
+          alreadyDone: true,
+          score: existing.score,
+          correct: existing.correct,
+          total: existing.total,
+          streak: freshStudent.streak,
+          dateKey,
+        });
+      }
     }
     throw error;
   }

@@ -17,6 +17,7 @@ import { QuizRunner } from "@/components/game/QuizRunner";
 import { Mascot } from "@/components/game/Mascot";
 import { Confetti } from "@/components/game/Confetti";
 import { cn } from "@/lib/utils";
+import { saveDailyChallenge } from "@/lib/daily-client";
 
 // Daily challenge: 5 mixed questions drawn from completed lessons.
 // One attempt per calendar day. Feeds the streak and badges.
@@ -73,15 +74,10 @@ export function DailyChallengeView() {
         soundOn={soundOn}
         preschool={level === "preschool" || level === "grade1"}
         onExit={() => setRunning(false)}
-        onFinish={({ correct, total }) => {
-          const { score } = recordDailyResult(correct, total);
-          // persist to server
-          profileFetch("/api/daily", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ correct, total }),
-          }).catch(() => {});
-          setJustFinished({ score, correct, total });
+        onFinish={async ({ correct, total }) => {
+          const saved = await saveDailyChallenge(profileFetch, correct, total);
+          recordDailyResult(saved);
+          setJustFinished({ score: saved.score, correct: saved.correct, total: saved.total });
           setRunning(false);
         }}
       />

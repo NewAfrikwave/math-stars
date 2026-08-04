@@ -115,7 +115,7 @@ interface GameState {
     score: number;
     newlyEarned: string[];
   };
-  recordDailyResult: (correct: number, total: number) => { score: number };
+  recordDailyResult: (saved: { dateKey: string; score: number; streak: number }) => void;
   resetProgress: () => void;
   clearDomainCelebration: () => void;
 }
@@ -493,11 +493,16 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   clearDomainCelebration: () => set({ domainCompleted: null }),
 
-  recordDailyResult: (correct, total) => {
-    const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const today = new Date().toISOString().slice(0, 10);
-    set({ dailyDoneDate: today, dailyScore: score, streak: Math.max(get().streak, 1) });
-    return { score };
+  recordDailyResult: (saved) => {
+    const state = get();
+    set({
+      dailyDoneDate: saved.dateKey,
+      dailyScore: saved.score,
+      streak: saved.streak,
+      profiles: state.profiles.map((profile) => profile.id === state.currentProfileId
+        ? { ...profile, streak: saved.streak, lastPlayedAt: new Date().toISOString() }
+        : profile),
+    });
   },
 
   resetProgress: () => {

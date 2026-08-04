@@ -8,14 +8,15 @@ import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
 import { getCurrentRewardMission } from "@/lib/reward-server";
 import { saveProgressAttempt } from "@/lib/progress-save";
+import { progressAttemptId } from "@/lib/attempt-id";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body.lessonId !== "string") {
     return NextResponse.json({ error: "lessonId is required" }, { status: 400 });
   }
-  const attemptId = typeof body.attemptId === "string" ? body.attemptId.trim() : "";
-  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(attemptId)) {
+  const attemptId = progressAttemptId(body.attemptId);
+  if (!attemptId) {
     return NextResponse.json({ error: "valid attemptId is required" }, { status: 400 });
   }
 

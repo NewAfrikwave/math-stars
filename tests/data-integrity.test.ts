@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { latestCompletionDate, streakAfterCompletion } from "../src/lib/progress-save";
+import { progressAttemptId } from "../src/lib/attempt-id";
 
 describe("launch data integrity", () => {
   test("a failed attempt does not consume the date used by a later passing streak", () => {
@@ -23,5 +24,11 @@ describe("launch data integrity", () => {
 
     expect(failedPlayToday.getTime()).toBeGreaterThan(baseline!.getTime());
     expect(streakAfterCompletion(4, baseline, passingAttemptToday)).toBe(5);
+  });
+
+  test("keeps old cached clients saving while preserving new-client retry ids", () => {
+    expect(progressAttemptId(undefined, () => "generated-id")).toBe("legacy-generated-id");
+    expect(progressAttemptId("stable_attempt_1234", () => "unused")).toBe("stable_attempt_1234");
+    expect(progressAttemptId("too-short", () => "unused")).toBeNull();
   });
 });
