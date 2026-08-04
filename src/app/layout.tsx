@@ -7,6 +7,7 @@ import { AccessGate } from "@/components/AccessGate";
 import { cookies } from "next/headers";
 import { readSessionValue, SESSION_COOKIE } from "@/lib/auth";
 import { activeSessionFromValue } from "@/lib/session-access";
+import { MotionPreferences } from "@/components/MotionPreferences";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -102,10 +103,12 @@ export default async function RootLayout({
       <body
         className="antialiased bg-background text-foreground"
       >
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:p-3 focus:text-black">Skip to main content</a>
-        <AccessGate authenticated={authenticated} staleSession={staleSession}>{children}</AccessGate>
-        <Toaster />
-        <ServiceWorkerRegister authenticated={authenticated} />
+        <MotionPreferences>
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:p-3 focus:text-black">Skip to main content</a>
+          <AccessGate authenticated={authenticated} staleSession={staleSession}>{children}</AccessGate>
+          <Toaster />
+          <ServiceWorkerRegister authenticated={authenticated} />
+        </MotionPreferences>
       </body>
     </html>
   );

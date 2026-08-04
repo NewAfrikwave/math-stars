@@ -22,6 +22,7 @@ import { ProblemVisualRenderer } from "@/components/visuals/ProblemVisualRendere
 import type { Difficulty, TeachBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { findLessonAny, useGameStore } from "@/store/useGameStore";
+import { FloatingSparkles, MascotMotion, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
 
 export function LessonView({ lessonId }: { lessonId: string }) {
   const found = findLessonAny(lessonId);
@@ -70,13 +71,14 @@ export function LessonView({ lessonId }: { lessonId: string }) {
           )}
         </div>
 
-        <section className="overflow-hidden rounded-[30px] border border-[#eadfce] bg-white shadow-[0_18px_55px_rgba(83,61,35,0.09)] dark:bg-card">
-          <div className="border-b border-[#eadfce] bg-[#f5f0e6] px-6 py-6 sm:px-8">
+        <motion.section initial={{ opacity: 0, y: 18, scale: 0.99 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={springy} className="overflow-hidden rounded-[30px] border border-[#eadfce] bg-white shadow-[0_18px_55px_rgba(83,61,35,0.09)] dark:bg-card">
+          <div className="relative overflow-hidden border-b border-[#eadfce] bg-[#f5f0e6] px-6 py-6 sm:px-8">
+            <FloatingSparkles className="opacity-40" />
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-4xl shadow-sm" aria-hidden="true">
+                <motion.div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-4xl shadow-sm" aria-hidden="true" animate={{ y: [0, -4, 0], rotate: [0, -3, 3, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}>
                   {lesson.emoji}
-                </div>
+                </motion.div>
                 <div>
                   <Badge className="mb-1.5 bg-[#dfead7] text-[#285f3b] hover:bg-[#dfead7]">{domain.title}</Badge>
                   <h1 className="font-display text-2xl font-bold text-[#285f3b] sm:text-4xl dark:text-emerald-300">{lesson.title}</h1>
@@ -100,23 +102,23 @@ export function LessonView({ lessonId }: { lessonId: string }) {
                 <BookOpen className="h-5 w-5" />
                 <p className="font-display text-lg font-bold">Today’s learning path</p>
               </div>
-              <ol className="mt-6 space-y-6">
+              <motion.ol className="mt-6 space-y-6" variants={staggerContainer} initial="hidden" animate="visible">
                 {lesson.teach.map((block, index) => (
-                  <li key={index} className="flex gap-3">
+                  <motion.li key={index} variants={staggerItem} className="flex gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#dfead7] font-display text-sm font-bold text-[#285f3b]">{index + 1}</span>
                     <div>
                       <p className="font-display font-bold text-[#285f3b] dark:text-emerald-300">{blockTitle(block)}</p>
                       <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{blockSummary(block)}</p>
                     </div>
-                  </li>
+                  </motion.li>
                 ))}
-              </ol>
+              </motion.ol>
 
               <div className="mt-8 rounded-3xl border border-[#e7dbc9] bg-white p-4 dark:bg-card">
                 <div className="flex items-center gap-3">
-                  <div className="relative h-20 w-16 shrink-0 overflow-hidden">
+                  <MascotMotion mood="encourage"><div className="relative h-20 w-16 shrink-0 overflow-hidden">
                     <Image src="/pip-explorer.webp" alt="Pip the math guide" fill sizes="64px" className="object-contain object-top" />
-                  </div>
+                  </div></MascotMotion>
                   <div>
                     <p className="font-display font-bold text-[#285f3b] dark:text-emerald-300">Pip’s study tip</p>
                     <p className="mt-1 text-sm text-muted-foreground">Say each step out loud. Explaining math helps it stick.</p>
@@ -136,7 +138,7 @@ export function LessonView({ lessonId }: { lessonId: string }) {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         <motion.section
           initial={{ opacity: 0, y: 12 }}
@@ -207,7 +209,8 @@ function TeachBlockView({ block, index }: { block: TeachBlock; index: number }) 
     <motion.article
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ ...springy, delay: index * 0.07 }}
+      whileHover={{ y: -2 }}
       className={cn(
         "rounded-3xl border p-5 sm:p-6",
         block.kind === "tip" ? "border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20" : "border-[#e8dfd2] bg-[#fffdf8] dark:bg-background/30",

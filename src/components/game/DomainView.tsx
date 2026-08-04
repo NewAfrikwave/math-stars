@@ -20,6 +20,7 @@ import { findG4Domain } from "@/lib/grade4";
 import { useGameStore } from "@/store/useGameStore";
 import { Mascot } from "@/components/game/Mascot";
 import { cn } from "@/lib/utils";
+import { FloatingSparkles, MascotMotion, ProgressTrail, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
 
 export function DomainView({ domainId }: { domainId: string }) {
   const domain = findDomain(domainId) ?? findPsDomain(domainId) ?? findG1Domain(domainId) ?? findG2Domain(domainId) ?? findG4Domain(domainId);
@@ -46,18 +47,20 @@ export function DomainView({ domainId }: { domainId: string }) {
       </Button>
 
       {/* Domain header */}
-      <div className={cn("relative overflow-hidden rounded-3xl bg-gradient-to-br p-6 text-white shadow-lg", domain.color)}>
-        <div className="absolute -right-6 -top-6 text-[100px] opacity-20">{domain.emoji}</div>
+      <motion.div initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={springy} className={cn("relative overflow-hidden rounded-3xl bg-gradient-to-br p-6 text-white shadow-lg", domain.color)}>
+        <FloatingSparkles className="opacity-60" />
+        <motion.div aria-hidden="true" className="absolute -right-6 -top-6 text-[100px] opacity-20" animate={{ y: [0, -8, 0], rotate: [-3, 4, -3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>{domain.emoji}</motion.div>
         <div className="relative flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/25 text-4xl backdrop-blur">
+          <motion.div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/25 text-4xl backdrop-blur" animate={{ y: [0, -4, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} whileHover={{ scale: 1.08, rotate: 8 }}>
             {domain.emoji}
-          </div>
+          </motion.div>
           <div className="flex-1">
             <h1 className="font-display text-2xl font-bold sm:text-3xl">{domain.title}</h1>
             <p className="text-sm text-white/90">{domain.description}</p>
             <p className="mt-1 text-xs font-semibold text-white/80">
               {lessonsDone} of {domain.lessons.length} lessons complete
             </p>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/25"><ProgressTrail value={domain.lessons.length ? lessonsDone / domain.lessons.length * 100 : 0} className="h-full rounded-full bg-white" /></div>
           </div>
           {lessonsDone < domain.lessons.length && (
             <button
@@ -69,7 +72,7 @@ export function DomainView({ domainId }: { domainId: string }) {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Mobile test-out button */}
       {lessonsDone < domain.lessons.length && (
@@ -85,19 +88,17 @@ export function DomainView({ domainId }: { domainId: string }) {
       <div className="relative mt-6">
         {/* vertical connector line */}
         <div className="absolute left-[27px] top-2 bottom-2 w-1 rounded bg-border" />
-        <div className="space-y-3">
-          {domain.lessons.map((lesson, i) => {
+        <motion.div className="space-y-3" variants={staggerContainer} initial="hidden" animate="visible">
+          {domain.lessons.map((lesson) => {
             const p = progress[lesson.id];
             const status = p?.status ?? "locked";
             const stars = p?.stars ?? 0;
             return (
               <motion.div
                 key={lesson.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
+                variants={staggerItem}
               >
-                <button
+                <motion.button
                   disabled={status === "locked"}
                   onClick={() => setView({ name: "lesson", lessonId: lesson.id })}
                   className={cn(
@@ -106,6 +107,8 @@ export function DomainView({ domainId }: { domainId: string }) {
                       ? "cursor-not-allowed border-border opacity-60"
                       : "border-border hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                   )}
+                  whileHover={status === "locked" ? undefined : { x: 5, y: -2, scale: 1.01 }}
+                  whileTap={status === "locked" ? undefined : { scale: 0.985 }}
                 >
                   {/* status node */}
                   <div
@@ -161,16 +164,16 @@ export function DomainView({ domainId }: { domainId: string }) {
                       </span>
                     )}
                   </div>
-                </button>
+                </motion.button>
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
 
       {/* Mascot tip */}
       <Card className="mt-6 flex items-center gap-3 p-4">
-        <Mascot size={48} />
+        <MascotMotion mood="encourage"><Mascot size={48} /></MascotMotion>
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">Pip says:</span> Finish a lesson to unlock the next one!
           You can replay any lesson to earn more stars. ⭐

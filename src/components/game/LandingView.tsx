@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   LockKeyhole,
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import type { Level } from "@/lib/types";
 import { useGameStore, type ProfileSummary } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
+import { FloatingSparkles, springy } from "@/components/game/MotionKit";
 
 const levelOptions: Array<{ value: Level; label: string; ages: string }> = [
   { value: "preschool", label: "Preschool", ages: "Ages 3–5" },
@@ -51,6 +52,8 @@ export function LandingView() {
   const [level, setLevel] = useState<Level>("grade3");
   const [avatar, setAvatar] = useState<"fox" | "owl">("fox");
   const [creating, setCreating] = useState(false);
+  const [pickingId, setPickingId] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
   const orderedProfiles = useMemo(
     () => [...profiles].sort((a, b) => {
       const bTime = b.lastPlayedAt ? new Date(b.lastPlayedAt).getTime() : 0;
@@ -60,7 +63,11 @@ export function LandingView() {
     [profiles]
   );
 
-  const pick = (id: string) => setCurrentProfile(id);
+  const pick = (id: string) => {
+    setPickingId(id);
+    if (reduceMotion) setCurrentProfile(id);
+    else window.setTimeout(() => setCurrentProfile(id), 480);
+  };
 
   const openParentArea = () => {
     const profileId = orderedProfiles[0]?.id;
@@ -93,18 +100,19 @@ export function LandingView() {
 
   return (
     <main id="main-content" className="relative min-h-screen overflow-x-hidden bg-[#ead4a6] text-[#2d351f]">
-      <Image
+      <motion.div className="fixed inset-0" initial={{ scale: 1.035 }} animate={{ scale: 1 }} transition={{ duration: 1.8, ease: "easeOut" }}><Image
         src="/character-doorways-bg.webp"
         alt=""
         fill
         priority
         sizes="100vw"
-        className="fixed inset-0 object-cover object-center"
-      />
+        className="object-cover object-center"
+      /></motion.div>
       <div className="fixed inset-0 bg-[#3c2815]/5" aria-hidden="true" />
+      <FloatingSparkles className="fixed z-[1]" tone="cream" />
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-4 pb-6 pt-4 sm:px-8 lg:px-12">
-        <header className="flex items-center justify-between gap-4">
+        <motion.header initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={springy} className="flex items-center justify-between gap-4">
           <div className="inline-flex items-center rounded-2xl bg-[#fff8e8]/90 px-3 py-1.5 shadow-sm backdrop-blur-sm">
             <Image
               src="/brand/math-stars-logo.png"
@@ -124,14 +132,14 @@ export function LandingView() {
             <LockKeyhole className="h-4 w-4" aria-hidden="true" />
             Parent area
           </button>
-        </header>
+        </motion.header>
 
-        <section className="mx-auto mt-3 w-full max-w-5xl text-center sm:mt-1">
+        <motion.section initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...springy, delay: 0.12 }} className="mx-auto mt-3 w-full max-w-5xl text-center sm:mt-1">
           <h1 className="font-display text-4xl font-bold leading-none text-[#2c4a2f] drop-shadow-[0_1px_0_rgba(255,255,255,0.85)] sm:text-5xl lg:text-6xl">
             Choose your adventure
           </h1>
           <p className="mt-2 font-display text-lg font-semibold text-[#5f4728] sm:text-2xl">Who&apos;s learning today?</p>
-        </section>
+        </motion.section>
 
         {orderedProfiles.length > 0 ? (
           <section aria-label="Learner profiles" className="mx-auto mt-4 grid w-full max-w-[940px] flex-1 content-center gap-4 pb-3 sm:grid-cols-2 sm:gap-10 lg:mt-2 lg:gap-20">
@@ -142,6 +150,8 @@ export function LandingView() {
                   profile={profile}
                   index={index}
                   isLastPlayed={index === 0}
+                  isPicking={pickingId === profile.id}
+                  dimmed={!!pickingId && pickingId !== profile.id}
                   onPick={() => pick(profile.id)}
                 />
               ))}
@@ -272,7 +282,7 @@ export function LandingView() {
   );
 }
 
-function ProfileDoor({ profile, index, isLastPlayed, onPick }: { profile: ProfileSummary; index: number; isLastPlayed: boolean; onPick: () => void }) {
+function ProfileDoor({ profile, index, isLastPlayed, isPicking, dimmed, onPick }: { profile: ProfileSummary; index: number; isLastPlayed: boolean; isPicking: boolean; dimmed: boolean; onPick: () => void }) {
   const isForest = profile.avatar !== "owl";
   const playedLabel = formatLastPlayed(profile.lastPlayedAt);
 
@@ -280,26 +290,27 @@ function ProfileDoor({ profile, index, isLastPlayed, onPick }: { profile: Profil
     <motion.article
       layout
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: dimmed ? 0.42 : 1, y: isPicking ? -12 : 0, scale: isPicking ? 1.035 : 1 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ delay: index * 0.06 }}
+      whileHover={{ y: -7, scale: 1.015 }}
       className={cn(
         "relative mx-auto flex min-h-[430px] w-full max-w-[390px] flex-col items-center justify-center overflow-hidden rounded-t-[9rem] rounded-b-[2rem] border-2 p-5 text-center shadow-[0_20px_55px_rgba(34,23,13,0.28)] backdrop-blur-[2px] sm:min-h-[500px]",
         isForest ? "border-[#d8b85b] bg-[#fff3cd]/86 text-[#31432a]" : "border-[#a69acf] bg-[#eee9ff]/88 text-[#342c59]"
       )}
     >
       {isLastPlayed && (
-        <span className={cn("absolute top-5 rounded-full px-3 py-1 text-xs font-bold shadow-sm", isForest ? "bg-[#4f6a2f] text-white" : "bg-[#5b477f] text-white")}>
+        <motion.span animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 2.2, repeat: Infinity }} className={cn("absolute top-5 rounded-full px-3 py-1 text-xs font-bold shadow-sm", isForest ? "bg-[#4f6a2f] text-white" : "bg-[#5b477f] text-white")}>
           Last played
-        </span>
+        </motion.span>
       )}
-      <Image
+      <motion.div animate={isPicking ? { y: [0, -16, 0], rotate: [0, -5, 5, 0] } : { y: [0, -5, 0] }} transition={isPicking ? { duration: 0.45 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}><Image
         src={isForest ? "/learner-fox.webp" : "/learner-owl.webp"}
         alt=""
         width={520}
         height={520}
         className={cn("mt-8 h-28 w-28 rounded-full border-4 object-cover shadow-lg sm:h-36 sm:w-36", isForest ? "border-[#d8b85b]" : "border-[#8c78bb]")}
-      />
+      /></motion.div>
       <h2 className="mt-4 max-w-full truncate font-display text-3xl font-bold sm:text-4xl">{profile.name}</h2>
       <p className="mt-1 font-display text-lg font-semibold">{levelLabel(profile.level)}</p>
       <p className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold">
@@ -309,7 +320,7 @@ function ProfileDoor({ profile, index, isLastPlayed, onPick }: { profile: Profil
         {profile.totalStars === 0 ? "New journey" : `${profile.streak} day streak`}
       </p>
       {playedLabel && <p className="mt-2 text-xs font-semibold opacity-75">{playedLabel}</p>}
-      <button
+      <motion.button
         type="button"
         onClick={onPick}
         className={cn(
@@ -317,10 +328,12 @@ function ProfileDoor({ profile, index, isLastPlayed, onPick }: { profile: Profil
           isForest ? "bg-[#526c2e] hover:bg-[#405623]" : "bg-[#66498f] hover:bg-[#513a73]"
         )}
         aria-label={`${isLastPlayed ? "Continue as" : "Start as"} ${profile.name}`}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
       >
-        {isLastPlayed ? "Continue" : "Start"}
-        <ArrowRight className="h-5 w-5" aria-hidden="true" />
-      </button>
+        {isPicking ? "Opening adventure…" : isLastPlayed ? "Continue" : "Start"}
+        <motion.span animate={isPicking ? { x: [0, 5, 0] } : undefined}><ArrowRight className="h-5 w-5" aria-hidden="true" /></motion.span>
+      </motion.button>
     </motion.article>
   );
 }

@@ -21,8 +21,10 @@ import { GRADE4_LESSON_IDS, findG4Lesson } from "@/lib/grade4";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { useGameStore } from "@/store/useGameStore";
 import { Confetti } from "@/components/game/Confetti";
+import { StickerBurst } from "@/components/game/StickerBurst";
 import { Mascot } from "@/components/game/Mascot";
 import { cn } from "@/lib/utils";
+import { AnimatedNumber, FloatingSparkles, MascotMotion, springy } from "@/components/game/MotionKit";
 
 export function ResultsView({
   lessonId,
@@ -82,15 +84,17 @@ export function ResultsView({
           : "Keep going! Every try makes your brain stronger. 🌱";
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6">
+    <div className="relative mx-auto w-full max-w-2xl overflow-hidden px-4 pb-28 pt-6">
       <Confetti active={showConfetti} />
+      <StickerBurst active={showConfetti} />
+      <FloatingSparkles tone="rainbow" />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="text-center"
       >
-        <Mascot size={80} className="mx-auto animate-bob" />
+        <MascotMotion mood={score >= 70 ? "celebrate" : "encourage"}><Mascot size={80} className="mx-auto" /></MascotMotion>
         <h1 className="mt-2 font-display text-3xl font-bold">Lesson Complete!</h1>
         <p className="mt-1 text-muted-foreground">{found.lesson.title}</p>
       </motion.div>
@@ -99,7 +103,7 @@ export function ResultsView({
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
+        transition={{ ...springy, delay: 0.15 }}
       >
         <Card className="mt-5 p-6 text-center">
           <div className="flex justify-center gap-2">
@@ -121,7 +125,7 @@ export function ResultsView({
               </motion.div>
             ))}
           </div>
-          <p className="mt-4 font-display text-5xl font-bold tabular-nums">{score}%</p>
+          <p className="mt-4 font-display text-5xl font-bold tabular-nums"><AnimatedNumber value={score} suffix="%" /></p>
           <p className="mt-1 text-sm text-muted-foreground">
             You got <span className="font-bold text-foreground">{correct}</span> out of{" "}
             <span className="font-bold text-foreground">{total}</span> correct
