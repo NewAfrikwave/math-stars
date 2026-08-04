@@ -30,6 +30,7 @@ import { useTTS } from "@/hooks/use-tts";
 import { useGameStore } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
 import { AnimatedNumber, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
+import { correctAnswerPraise } from "@/lib/celebrations";
 
 export interface QuizRunnerProps {
   title: string;
@@ -61,7 +62,7 @@ export function QuizRunner({
   const [finishError, setFinishError] = useState<string | null>(null);
   const siteSettings = useGameStore((s) => s.siteSettings);
   const sfx = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
-  const { speak, stop } = useTTS();
+  const { speak, speakImmediately, stop } = useTTS();
 
   const problem = problems[index];
   useEffect(() => {
@@ -103,10 +104,7 @@ export function QuizRunner({
       setCelebrate(true);
       sfx.playCorrect();
       if (soundOn) {
-        const olderPhrases = ["Excellent thinking!", "Math star! You got it!", "Brilliant work!", "You nailed it!"];
-        const youngerPhrases = ["Hooray! You got it!", "Great job, math star!", "Amazing work!", "You did it!"];
-        const phrases = preschool ? youngerPhrases : olderPhrases;
-        speak(phrases[(index + correctCount) % phrases.length], { speed: preschool ? 0.86 : 0.96 });
+        speakImmediately(correctAnswerPraise(preschool, index, correctCount), { speed: preschool ? 0.86 : 0.96 });
       }
       window.setTimeout(() => setCelebrate(false), 1500);
     } else {

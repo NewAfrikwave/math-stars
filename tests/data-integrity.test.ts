@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { latestCompletionDate, streakAfterCompletion } from "../src/lib/progress-save";
 import { progressAttemptId } from "../src/lib/attempt-id";
+import { correctAnswerPraise } from "../src/lib/celebrations";
 
 describe("launch data integrity", () => {
   test("a failed attempt does not consume the date used by a later passing streak", () => {
@@ -30,5 +31,11 @@ describe("launch data integrity", () => {
     expect(progressAttemptId(undefined, () => "generated-id")).toBe("legacy-generated-id");
     expect(progressAttemptId("stable_attempt_1234", () => "unused")).toBe("stable_attempt_1234");
     expect(progressAttemptId("too-short", () => "unused")).toBeNull();
+  });
+
+  test("provides spoken correct-answer praise for younger and older learners", () => {
+    expect(correctAnswerPraise(true, 0, 0)).toBe("Hooray! You got it!");
+    expect(correctAnswerPraise(false, 0, 0)).toBe("Excellent thinking!");
+    expect(correctAnswerPraise(false, 1, 1)).toBe("Brilliant work!");
   });
 });
