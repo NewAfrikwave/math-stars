@@ -44,6 +44,14 @@ interface ActivityItem {
   createdAt: string;
 }
 
+function parentGradeLabel(level: string) {
+  if (level === "preschool") return "Preschool";
+  if (level === "grade1") return "1st Grade";
+  if (level === "grade2") return "2nd Grade";
+  if (level === "grade4") return "4th Grade";
+  return "3rd Grade";
+}
+
 export function ParentView() {
   const setView = useGameStore((s) => s.setView);
   const deleteProfile = useGameStore((s) => s.deleteProfile);
@@ -335,8 +343,9 @@ export function ParentView() {
           {profiles.map((p) => {
             const pct = p.totalLessons > 0 ? Math.round((p.completedLessons / p.totalLessons) * 100) : 0;
             const isPs = p.level === "preschool";
+            const isSelected = selectedProfileId === p.id;
             return (
-              <Card key={p.id} className="overflow-hidden p-0">
+              <Card key={p.id} className={cn("overflow-hidden p-0 transition", isSelected && "ring-4 ring-fuchsia-400 ring-offset-2")}>
                 <div className={cn("flex items-center gap-3 p-4", isPs ? "bg-rose-50 dark:bg-rose-950/20" : "bg-violet-50 dark:bg-violet-950/20")}>
                   <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl text-2xl", isPs ? "bg-rose-200 dark:bg-rose-900/50" : "bg-violet-200 dark:bg-violet-900/50")}>
                     {isPs ? "🧸" : "🎓"}
@@ -344,7 +353,7 @@ export function ParentView() {
                   <div className="flex-1">
                     <p className="font-display text-lg font-bold">{p.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {isPs ? "Preschool" : "3rd Grade"} · {p.completedLessons}/{p.totalLessons} lessons
+                      {parentGradeLabel(p.level)} · {p.completedLessons}/{p.totalLessons} lessons
                     </p>
                   </div>
                   <div className="flex gap-3 text-center">
@@ -385,7 +394,18 @@ export function ParentView() {
                       );
                     })}
                   </div>
-                  <div className="mt-4 flex justify-end border-t border-border pt-3">
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+                    <Button
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => pickProfileActivity(p.id)}
+                      aria-pressed={isSelected}
+                      className="gap-1.5"
+                    >
+                      <Gift className="h-4 w-4" />
+                      {isSelected ? `Managing ${p.name}` : `Manage ${p.name}'s reward`}
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -415,7 +435,7 @@ export function ParentView() {
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20"><Gift className="h-7 w-7" /></span>
                 <div>
                   <h2 className="font-display text-xl font-bold">Real-world rewards</h2>
-                  <p className="text-sm text-white/90">Give {selected?.name ?? "your learner"} a goal they can see and work toward.</p>
+                  <p className="text-sm text-white/90">Managing {selected?.name ?? "your learner"} · {parentGradeLabel(selected?.level ?? "grade3")}</p>
                 </div>
               </div>
             </div>
