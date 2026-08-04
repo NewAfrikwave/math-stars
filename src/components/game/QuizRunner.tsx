@@ -106,7 +106,7 @@ export function QuizRunner({
       if (soundOn) {
         speakImmediately(correctAnswerPraise(preschool, index, correctCount), { speed: preschool ? 0.86 : 0.96 });
       }
-      window.setTimeout(() => setCelebrate(false), 1500);
+      window.setTimeout(() => setCelebrate(false), 2800);
     } else {
       sfx.playWrong();
     }
@@ -259,20 +259,40 @@ export function QuizRunner({
                     animate={{ opacity: 1, y: 0 }}
                     role="status"
                     className={cn(
-                      "mt-5 rounded-2xl border p-4",
+                      "mt-5 overflow-hidden rounded-2xl border p-4",
                       isCorrect
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+                        ? "border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-amber-50 to-rose-50 text-emerald-950 shadow-lg dark:border-emerald-800 dark:from-emerald-950/50 dark:via-amber-950/30 dark:to-rose-950/30 dark:text-emerald-100"
                         : "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100",
                     )}
                   >
-                    <div className="flex items-center gap-2 font-display text-lg font-bold">
-                      {isCorrect ? <PartyPopper className="h-5 w-5" /> : <Heart className="h-5 w-5" />}
-                      {isCorrect ? "You got it!" : "Good try. Let’s learn from it."}
-                    </div>
-                    <p className="mt-1 text-sm leading-relaxed">
-                      {!isCorrect && <span className="font-bold">The answer is {formatAnswer(problem)}. </span>}
-                      {problem.explanation}
-                    </p>
+                    {isCorrect ? (
+                      <div className="flex items-center gap-4">
+                        <motion.div
+                          animate={{ y: [0, -10, 0, -5, 0], rotate: [0, -5, 5, -2, 0], scale: [1, 1.08, 1] }}
+                          transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.7 }}
+                          className="relative h-24 w-20 shrink-0 sm:h-28 sm:w-24"
+                        >
+                          <Image src="/pip-explorer.webp" alt="Pip cheers for your correct answer" fill sizes="96px" className="object-contain object-top drop-shadow-md" />
+                        </motion.div>
+                        <div>
+                          <p className="flex items-center gap-2 font-display text-2xl font-black text-emerald-800 dark:text-emerald-200 sm:text-3xl">
+                            <PartyPopper className="h-7 w-7 text-rose-500" /> You got it!
+                          </p>
+                          <p className="mt-1 font-display text-lg font-black text-[#8f3b55] dark:text-rose-200">Pip is cheering for you!</p>
+                          <p className="mt-1 text-sm font-semibold leading-relaxed">{problem.explanation}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 font-display text-lg font-bold">
+                          <Heart className="h-5 w-5" /> Good try. Let’s learn from it.
+                        </div>
+                        <p className="mt-1 text-sm leading-relaxed">
+                          <span className="font-bold">The answer is {formatAnswer(problem)}. </span>
+                          {problem.explanation}
+                        </p>
+                      </>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
