@@ -47,10 +47,15 @@ export function useSoundEffects(enabled: boolean): SoundEffects {
 
   const playCorrect = useCallback(() => {
     if (!enabledRef.current) return;
-    // Happy ascending C-E-G arpeggio
-    tone(523.25, 0, 0.15); // C5
-    tone(659.25, 0.1, 0.15); // E5
-    tone(783.99, 0.2, 0.25); // G5
+    const play = () => {
+      // Happy ascending C-E-G arpeggio
+      tone(523.25, 0, 0.15); // C5
+      tone(659.25, 0.1, 0.15); // E5
+      tone(783.99, 0.2, 0.25); // G5
+    };
+    const audioContext = getCtx();
+    if (audioContext?.state === "suspended") void audioContext.resume().then(play).catch(() => {});
+    else play();
   }, []);
 
   const playWrong = useCallback(() => {

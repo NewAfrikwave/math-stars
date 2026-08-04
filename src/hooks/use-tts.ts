@@ -57,6 +57,8 @@ interface UseTTSResult {
   error: string | null;
   /** Speak the given text. Cancels any currently playing speech. */
   speak: (text: string, opts?: { speed?: number }) => void;
+  /** Speak immediately with the device voice. Use inside a user gesture. */
+  speakImmediately: (text: string, opts?: { speed?: number }) => void;
   /** Stop any current playback. */
   stop: () => void;
 }
@@ -204,5 +206,41 @@ export function useTTS(): UseTTSResult {
     [id]
   );
 
-  return { speaking, loading, error, speak, stop };
+  const speakImmediately = useCallback(
+    (text: string, opts?: { speed?: number }) => {
+      const clean = speakableText(text);
+      if (!clean || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      const request = ++speechRequest;
+      const audio = getAudio();
+      audio.pause();
+      audio.currentTime = 0;
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = "en-US";
+      utterance.rate = Math.min(1.25, Math.max(0.65, opts?.speed ?? 0.92));
+      utterance.pitch = 1.08;
+      const voices = window.speechSynthesis.getVoices();
+      utterance.voice =
+        voices.find((voice) => voice.lang === "en-US" && /natural|samantha|google|aria/i.test(voice.name)) ??
+        voices.find((voice) => voice.lang.startsWith("en")) ??
+        null;
+      utterance.onstart = () => {
+        if (request === speechRequest) updateSpeechState({ ownerId: id, speaking: true, loading: false, error: null });
+      };
+      utterance.onend = () => {
+        if (request === speechRequest) updateSpeechState({ ownerId: null, speaking: false, loading: false, error: null });
+      };
+      utterance.onerror = (event) => {
+        if (request === speechRequest && event.error !== "canceled") {
+          updateSpeechState({ ownerId: id, speaking: false, loading: false, error: "Your device could not play the celebration." });
+        }
+      };
+      updateSpeechState({ ownerId: id, speaking: false, loading: false, error: null });
+      window.speechSynthesis.speak(utterance);
+    },
+    [id]
+  );
+
+  return { speaking, loading, error, speak, speakImmediately, stop };
 }
