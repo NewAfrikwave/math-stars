@@ -9,6 +9,7 @@ import { GRADE4_CURRICULUM } from "@/lib/grade4";
 import { domainsForLevel } from "@/lib/rewards";
 import { hashPin, pinFrom, verifyPin } from "@/lib/pin";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { arcadeLevel, summarizeArcadeSkills, type ArcadeSkillSummary } from "@/lib/arcade";
 
 const ALL_DOMAINS = [...CURRICULUM, ...PRESCHOOL_CURRICULUM, ...GRADE1_CURRICULUM, ...GRADE2_CURRICULUM, ...GRADE4_CURRICULUM];
 
@@ -43,11 +44,16 @@ export async function GET(req: Request) {
     const summaries: Array<{
       id: string; name: string; avatar: string; level: string; totalStars: number;
       streak: number; completedLessons: number; totalLessons: number; avgScore: number;
+      arcadeCoins: number; arcadeWins: number; arcadeBestScore: number;
+      arcadeSkills: ArcadeSkillSummary[];
       domains: Record<string, { completed: number; total: number }>;
     }> = [];
     for (const p of all) {
       const profileDomains = domainsForLevel(p.level);
-      const rows = await db.lessonProgress.findMany({ where: { studentId: p.id } });
+      const [rows, arcadeRuns] = await Promise.all([
+        db.lessonProgress.findMany({ where: { studentId: p.id } }),
+        db.arcadeRun.findMany({ where: { studentId: p.id, status: "completed" }, select: { gameKey: true, correctCount: true, total: true } }),
+      ]);
       const completed = rows.filter((r) => r.status === "completed");
       const avg =
         completed.length > 0
@@ -70,6 +76,10 @@ export async function GET(req: Request) {
         completedLessons: completed.length,
         totalLessons: profileDomains.reduce((s, d) => s + d.lessons.length, 0),
         avgScore: avg,
+        arcadeCoins: p.arcadeCoins,
+        arcadeWins: arcadeRuns.length,
+        arcadeBestScore: arcadeRuns.reduce((best, run) => Math.max(best, Math.round((run.correctCount / Math.max(1, run.total)) * 100)), 0),
+        arcadeSkills: summarizeArcadeSkills(arcadeRuns, arcadeLevel(p.level)),
         domains,
       });
     }
@@ -78,10 +88,13 @@ export async function GET(req: Request) {
 
   const student = await getStudentForRequest(req);
 
-  const rows = await db.lessonProgress.findMany({
-    where: { studentId: student.id },
-    orderBy: { updatedAt: "desc" },
-  });
+  const [rows, arcadeRuns] = await Promise.all([
+    db.lessonProgress.findMany({
+      where: { studentId: student.id },
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.arcadeRun.findMany({ where: { studentId: student.id, status: "completed" }, orderBy: { completedAt: "desc" } }),
+  ]);
 
   const lessons = rows.map((r) => {
     const found = ALL_DOMAINS.flatMap((d) => d.lessons).find((l) => l.id === r.lessonId);
@@ -154,6 +167,14 @@ export async function GET(req: Request) {
     lessons,
     dailyHistory: daily.map((d) => ({ dateKey: d.dateKey, score: d.score, correct: d.correct, total: d.total })),
     totalAttempts: rows.reduce((s, r) => s + r.attempts, 0),
+    arcade: {
+      coins: student.arcadeCoins,
+      companion: student.arcadeCompanion,
+      wins: arcadeRuns.length,
+      bestScore: arcadeRuns.reduce((best, run) => Math.max(best, Math.round((run.correctCount / Math.max(1, run.total)) * 100)), 0),
+      correctAnswers: arcadeRuns.reduce((sum, run) => sum + run.correctCount, 0),
+      totalAnswers: arcadeRuns.reduce((sum, run) => sum + run.total, 0),
+    },
   });
 }
 

@@ -29,6 +29,20 @@ interface ProfileSummaryData {
   completedLessons: number;
   totalLessons: number;
   avgScore: number;
+  arcadeCoins: number;
+  arcadeWins: number;
+  arcadeBestScore: number;
+  arcadeSkills: Array<{
+    gameKey: string;
+    title: string;
+    emoji: string;
+    skill: string;
+    plays: number;
+    correctAnswers: number;
+    totalAnswers: number;
+    accuracy: number;
+    bestScore: number;
+  }>;
   domains: Record<string, { completed: number; total: number }>;
 }
 
@@ -41,6 +55,7 @@ interface ActivityItem {
   correct: number;
   total: number;
   stars: number;
+  coins: number;
   createdAt: string;
 }
 
@@ -236,7 +251,7 @@ export function ParentView() {
 
   const removeProfile = async (profile: ProfileSummaryData) => {
     const confirmation = window.prompt(
-      `Deleting ${profile.name} permanently removes their lessons, stars, tutor history, and activity. Type DELETE ${profile.name} to continue.`
+      `Deleting ${profile.name} permanently removes their lessons, stars, arcade coins, tutor history, and activity. Type DELETE ${profile.name} to continue.`
     );
     if (confirmation !== `DELETE ${profile.name}`) return;
     setDeletingId(profile.id);
@@ -377,6 +392,41 @@ export function ParentView() {
                     <span className="font-bold">{pct}%</span>
                   </div>
                   <Progress value={pct} className="h-2" />
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-fuchsia-200 bg-fuchsia-50 p-3 text-xs font-bold text-fuchsia-900 dark:border-fuchsia-900 dark:bg-fuchsia-950/30 dark:text-fuchsia-200">
+                    <span className="text-lg" aria-hidden="true">🎮</span>
+                    <span>{p.arcadeWins} arcade rounds</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{p.arcadeCoins} coins</span>
+                    <span aria-hidden="true">·</span>
+                    <span>best {p.arcadeBestScore}%</span>
+                  </div>
+                  <div className="mt-3 rounded-xl border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold">Arcade skill report</p>
+                      <p className="text-[10px] text-muted-foreground">Accuracy across finished rounds</p>
+                    </div>
+                    {p.arcadeWins === 0 ? (
+                      <p className="mt-2 text-xs text-muted-foreground">No finished arcade rounds yet. Skill results will appear here after the first game.</p>
+                    ) : (
+                      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                        {(p.arcadeSkills ?? []).filter((skill) => skill.plays > 0).map((skill) => (
+                          <div key={skill.gameKey} className="rounded-lg bg-muted/50 p-2.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-xs font-bold"><span aria-hidden="true">{skill.emoji}</span> {skill.skill}</p>
+                                <p className="text-[10px] text-muted-foreground">{skill.title} · {skill.plays} {skill.plays === 1 ? "round" : "rounds"}</p>
+                              </div>
+                              <span className={cn("text-sm font-black", skill.accuracy >= 80 ? "text-emerald-600" : skill.accuracy >= 60 ? "text-amber-600" : "text-rose-600")}>{skill.accuracy}%</span>
+                            </div>
+                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-fuchsia-500" style={{ width: `${skill.accuracy}%` }} />
+                            </div>
+                            <p className="mt-1 text-[10px] text-muted-foreground">{skill.correctAnswers}/{skill.totalAnswers} correct · best {skill.bestScore}%</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {/* Domain breakdown bars */}
                   <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {Object.entries(p.domains).map(([id, d]) => {
@@ -479,10 +529,10 @@ export function ParentView() {
                   </div>
                   <div>
                     <p className="mb-2 text-sm font-bold">Choose the goal</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["lessons", "stars", "topic"] as RewardTargetType[]).map((target) => (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      {(["lessons", "stars", "topic", "arcade-wins", "coins"] as RewardTargetType[]).map((target) => (
                         <button key={target} type="button" onClick={() => setRewardTarget(target)} className={cn("rounded-xl border px-2 py-3 text-sm font-bold capitalize", rewardTarget === target ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300" : "border-border")}>
-                          {target === "topic" ? "Finish a topic" : target === "lessons" ? "Complete lessons" : "Earn stars"}
+                          {target === "topic" ? "Finish a topic" : target === "lessons" ? "Complete lessons" : target === "stars" ? "Earn stars" : target === "arcade-wins" ? "Finish arcade rounds" : "Earn arcade coins"}
                         </button>
                       ))}
                     </div>
@@ -500,7 +550,7 @@ export function ParentView() {
                   <Button onClick={saveReward} disabled={rewardLoading || !rewardTitle.trim()} className="w-full gap-2">
                     {rewardLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />} Set reward mission for {selected?.name}
                   </Button>
-                  <p className="text-xs text-muted-foreground">New goals begin from today. Past stars and lessons do not count toward a new reward.</p>
+                  <p className="text-xs text-muted-foreground">New goals begin from today. Past lessons, stars, arcade rounds, and coins do not count toward a new reward.</p>
                 </div>
               )}
             </div>
@@ -544,7 +594,7 @@ export function ParentView() {
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{a.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {a.type === "daily" ? "Daily challenge" : a.type === "placement" ? "Placement test" : "Lesson"} · {a.correct}/{a.total} correct
+                      {a.type === "daily" ? "Daily challenge" : a.type === "placement" ? "Placement test" : a.type === "arcade" ? "Math arcade" : "Lesson"} · {a.correct}/{a.total} correct{a.coins > 0 ? ` · +${a.coins} coins` : ""}
                     </p>
                   </div>
                   <div className="text-right">

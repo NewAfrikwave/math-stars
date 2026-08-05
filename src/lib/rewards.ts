@@ -5,7 +5,7 @@ import { GRADE1_CURRICULUM } from "@/lib/grade1";
 import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
 
-export type RewardTargetType = "lessons" | "stars" | "topic";
+export type RewardTargetType = "lessons" | "stars" | "topic" | "arcade-wins" | "coins";
 
 export interface RewardMission {
   id: string;
@@ -52,7 +52,7 @@ export function topicGoalBaseline(domainLessonIds: string[], completedLessonIds:
 
 export function rewardMission(
   reward: RewardGoal,
-  input: { totalStars: number; completedLessonIds: string[]; level: string },
+  input: { totalStars: number; completedLessonIds: string[]; level: string; arcadeCoins?: number; arcadeWins?: number },
 ): RewardMission {
   const completed = new Set(input.completedLessonIds);
   const domain = reward.domainId
@@ -63,6 +63,10 @@ export function rewardMission(
   let targetValue = Math.max(1, reward.targetValue);
   if (reward.targetType === "stars") {
     currentValue = Math.max(0, input.totalStars - reward.startValue);
+  } else if (reward.targetType === "coins") {
+    currentValue = Math.max(0, (input.arcadeCoins ?? 0) - reward.startValue);
+  } else if (reward.targetType === "arcade-wins") {
+    currentValue = Math.max(0, (input.arcadeWins ?? 0) - reward.startValue);
   } else if (reward.targetType === "topic" && domain) {
     const completedInDomain = domain.lessons.filter((lesson) => completed.has(lesson.id)).length;
     currentValue = Math.max(0, completedInDomain - reward.startValue);

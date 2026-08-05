@@ -46,6 +46,31 @@ describe("parent-set reward missions", () => {
     expect(mission.status).toBe("earned");
   });
 
+  test("counts only arcade coins earned after a reward is created", () => {
+    const mission = rewardMission(goal({ targetType: "coins", targetValue: 25, startValue: 40 }), {
+      totalStars: 0,
+      completedLessonIds: [],
+      level: "grade3",
+      arcadeCoins: 65,
+      arcadeWins: 0,
+    });
+    expect(mission.currentValue).toBe(25);
+    expect(mission.status).toBe("earned");
+  });
+
+  test("counts only arcade rounds finished after a reward is created", () => {
+    const mission = rewardMission(goal({ targetType: "arcade-wins", targetValue: 3, startValue: 4 }), {
+      totalStars: 0,
+      completedLessonIds: [],
+      level: "grade3",
+      arcadeCoins: 0,
+      arcadeWins: 6,
+    });
+    expect(mission.currentValue).toBe(2);
+    expect(mission.remaining).toBe(1);
+    expect(mission.status).toBe("active");
+  });
+
   test("excludes topic lessons completed before the reward was created", () => {
     const domain = domainsForLevel("preschool")[0];
     const completedLessonIds = domain.lessons.slice(0, 3).map((lesson) => lesson.id);

@@ -24,6 +24,13 @@ describe("launch data integrity", () => {
     expect(schema).toContain("attemptId String?  @unique");
   });
 
+  test("arcade rounds have one active game slot and one idempotent attempt id", () => {
+    const schema = readFileSync(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
+    expect(schema).toContain("attemptId    String   @unique");
+    expect(schema).toContain("activeKey    String?  @unique");
+    expect(schema).toContain("arcadeRuns ArcadeRun[]");
+  });
+
   test("backfills an existing learner from saved completions, not a failed play timestamp", () => {
     const completedYesterday = new Date("2026-08-03T15:00:00Z");
     const failedPlayToday = new Date("2026-08-04T09:00:00Z");

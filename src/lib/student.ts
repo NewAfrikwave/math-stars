@@ -72,6 +72,8 @@ export async function listStudents(req: Request) {
       avatar: true,
       level: true,
       totalStars: true,
+      arcadeCoins: true,
+      arcadeCompanion: true,
       streak: true,
       createdAt: true,
       lastPlayedAt: true,

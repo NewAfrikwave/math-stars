@@ -27,6 +27,7 @@ export async function GET(req: Request) {
       correct: e.correct,
       total: e.total,
       stars: e.stars,
+      coins: e.coins,
       createdAt: e.createdAt.toISOString(),
     })),
   });
