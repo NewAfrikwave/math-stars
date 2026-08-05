@@ -26,6 +26,7 @@ import { Mascot } from "@/components/game/Mascot";
 import { Star, Trophy, Home, Bot, Loader2, Repeat, Download, Heart } from "lucide-react";
 import { useState } from "react";
 import type { RewardMission } from "@/lib/rewards";
+import type { LessonCheckpointState } from "@/lib/types";
 
 // Load a single profile's full state from the server (with the profile header).
 async function loadProfileState(
@@ -41,6 +42,7 @@ async function loadProfileState(
     dailyDoneDate: string | null;
     dailyScore: number | null;
     reward?: RewardMission | null;
+    activeCheckpoint?: LessonCheckpointState | null;
   }) => void,
   signal?: AbortSignal,
 ) {
@@ -60,6 +62,7 @@ async function loadProfileState(
       dailyDoneDate: data.dailyDoneDate ?? null,
       dailyScore: data.dailyScore ?? null,
       reward: data.reward ?? null,
+      activeCheckpoint: data.activeCheckpoint ?? null,
     });
   } catch {
     /* A later profile request or a temporary offline state owns the UI. */
@@ -149,6 +152,7 @@ export default function Page() {
             dailyDoneDate: null,
             dailyScore: null,
             reward: null,
+            activeCheckpoint: null,
           });
         }
       })
@@ -164,6 +168,7 @@ export default function Page() {
           dailyDoneDate: null,
           dailyScore: null,
           reward: null,
+          activeCheckpoint: null,
         });
       });
     return () => {

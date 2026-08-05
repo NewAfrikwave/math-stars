@@ -165,3 +165,40 @@ describe("daily challenge state", () => {
     expect(state.profiles.find((profile) => profile.id === "other")?.streak).toBe(1);
   });
 });
+
+describe("checkpoint hydration state", () => {
+  test("only marks a server-hydrated checkpoint as eligible for automatic resume", () => {
+    const checkpoint = {
+      lessonId: "mult-concept",
+      attemptId: "attempt-123456789",
+      problems: [{
+        id: "problem-1",
+        lessonId: "mult-concept",
+        prompt: "What is 2 + 2?",
+        answerType: "number" as const,
+        answer: 4,
+      }],
+      nextIndex: 1,
+      correctCount: 1,
+      total: 1,
+      updatedAt: "2026-08-05T00:00:00.000Z",
+    };
+
+    useGameStore.getState().hydrate({
+      studentName: "Feodora",
+      level: "grade3",
+      totalStars: 0,
+      streak: 0,
+      soundOn: true,
+      progress: {},
+      earnedAchievements: [],
+      dailyDoneDate: null,
+      dailyScore: null,
+      activeCheckpoint: checkpoint,
+    });
+    expect(useGameStore.getState().activeCheckpointHydrated).toBe(true);
+
+    useGameStore.getState().setActiveCheckpoint(checkpoint);
+    expect(useGameStore.getState().activeCheckpointHydrated).toBe(false);
+  });
+});

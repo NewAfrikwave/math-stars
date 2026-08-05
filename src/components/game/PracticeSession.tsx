@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { Problem, Difficulty } from "@/lib/types";
+import type { Problem, Difficulty, LessonCheckpointState } from "@/lib/types";
 import { findLessonAny } from "@/store/useGameStore";
 import { generateProblems } from "@/lib/generators";
 import { useGameStore, profileFetch } from "@/store/useGameStore";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { RewardMission } from "@/lib/rewards";
 import { Calculator } from "lucide-react";
 import { PracticeToolsDialog, type PracticeTool } from "@/components/game/PracticeToolsDialog";
+import { checkpointClientOutcome, persistedAttemptScore } from "@/lib/checkpoint-client";
 
 export function PracticeSession({
   lessonId,
@@ -23,6 +24,15 @@ export function PracticeSession({
   const setView = useGameStore((s) => s.setView);
   const recordResult = useGameStore((s) => s.recordResult);
   const soundOn = useGameStore((s) => s.soundOn);
+  const activeCheckpoint = useGameStore((s) => s.activeCheckpoint);
+  const activeCheckpointHydrated = useGameStore((s) => s.activeCheckpointHydrated);
+  const setActiveCheckpoint = useGameStore((s) => s.setActiveCheckpoint);
+  // Snapshot only the checkpoint that existed when this practice screen
+  // opened. Saving the final answer updates the global store, but must not
+  // make the current screen think it is a newly resumed finished session.
+  const [checkpoint] = useState(() => activeCheckpoint?.lessonId === lessonId ? activeCheckpoint : null);
+  const [resumedAfterHydration] = useState(() => Boolean(checkpoint && activeCheckpointHydrated));
+  const effectiveDifficulty = checkpoint?.difficulty ?? difficulty;
   const [practiceTool, setPracticeTool] = useState<PracticeTool>("pip");
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -32,11 +42,14 @@ export function PracticeSession({
     setPracticeTool(tool);
     setToolsOpen(true);
   };
-  const [attemptId] = useState(() => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const createAttemptId = () => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const [attemptId, setAttemptId] = useState(() => checkpoint?.attemptId ?? createAttemptId());
 
   const [problems] = useState<Problem[]>(() =>
-    found
-      ? generateProblems(found.lesson, found.lesson.practiceCount, { difficulty })
+    checkpoint?.problems.length
+      ? checkpoint.problems
+      : found
+      ? generateProblems(found.lesson, found.lesson.practiceCount, { difficulty: effectiveDifficulty })
       : []
   );
 
@@ -54,7 +67,114 @@ export function PracticeSession({
     );
   }
 
-  const difficultyLabel = difficulty === "easy" ? " · Easy" : difficulty === "challenge" ? " · Challenge" : "";
+  const difficultyLabel = effectiveDifficulty === "easy" ? " · Easy" : effectiveDifficulty === "challenge" ? " · Challenge" : "";
+
+  const finishAttempt = async ({ correct, total }: { correct: number; total: number }) => {
+    const response = await profileFetch("/api/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonId, correct, total, difficulty: effectiveDifficulty, attemptId }),
+    });
+    const saved = await response.json().catch(() => null) as {
+      error?: string;
+      correct?: number;
+      total?: number;
+      sessionStars?: number;
+      score?: number;
+      totalStars?: number;
+      streak?: number;
+      newlyEarned?: string[];
+      reward?: RewardMission | null;
+    } | null;
+    if (!response.ok || !saved || typeof saved.totalStars !== "number") {
+      throw new Error(saved?.error ?? "Your progress could not be saved. Check your connection and try again.");
+    }
+
+    // A duplicate response carries the exact result persisted by the device
+    // that completed first. Never combine it with this device's stale score.
+    const { correct: persistedCorrect, total: persistedTotal } = persistedAttemptScore(saved, { correct, total });
+    const { stars, score } = recordResult(lessonId, persistedCorrect, persistedTotal, {
+      totalStars: saved.totalStars,
+      streak: saved.streak ?? 0,
+      newlyEarned: saved.newlyEarned ?? [],
+      reward: saved.reward ?? null,
+    });
+    setView({
+      name: "results",
+      lessonId,
+      score: saved.score ?? score,
+      stars: saved.sessionStars ?? stars,
+      correct: persistedCorrect,
+      total: persistedTotal,
+    });
+  };
+
+  const saveCheckpoint = async ({ nextIndex, correct }: { nextIndex: number; correct: number }) => {
+    const response = await profileFetch("/api/progress/checkpoint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lessonId,
+        attemptId,
+        difficulty: effectiveDifficulty,
+        problems,
+        nextIndex,
+        correctCount: correct,
+      }),
+    });
+    const saved = await response.json().catch(() => null) as {
+      error?: string;
+      completed?: boolean;
+      advancedElsewhere?: boolean;
+      attemptId?: string;
+      nextIndex?: number;
+      correctCount?: number;
+      updatedAt?: string;
+    } | null;
+    if (!response.ok || (!saved?.completed && !saved?.updatedAt)) {
+      throw new Error(saved?.error ?? "Your place could not be saved. Check your connection and try again.");
+    }
+    const outcome = checkpointClientOutcome(saved);
+    if (outcome === "completed") {
+      setActiveCheckpoint(null);
+      await finishAttempt({ correct, total: problems.length });
+      return outcome;
+    }
+    const nextCheckpoint: LessonCheckpointState = {
+      lessonId,
+      attemptId: saved.attemptId ?? attemptId,
+      difficulty: effectiveDifficulty,
+      problems,
+      nextIndex: saved.nextIndex ?? nextIndex,
+      correctCount: saved.correctCount ?? correct,
+      total: problems.length,
+      updatedAt: saved.updatedAt!,
+    };
+    setActiveCheckpoint(nextCheckpoint);
+    if (saved.advancedElsewhere) {
+      // Another tab or device has a newer answer. Return to the dashboard so
+      // the learner resumes the persisted question instead of repeating work.
+      setView({ name: "home" });
+    }
+    return outcome;
+  };
+
+  const clearCheckpoint = async () => {
+    const response = await profileFetch("/api/progress/checkpoint", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonId }),
+    });
+    if (!response.ok) throw new Error("The lesson could not restart. Check your connection and try again.");
+    setActiveCheckpoint(null);
+  };
+
+  const restartPractice = async () => {
+    await clearCheckpoint();
+    // A final save may have committed even if its response was lost. A new
+    // attempt id keeps a deliberate restart from receiving that old result.
+    setAttemptId(createAttemptId());
+  };
 
   return (
     <div className="relative">
@@ -94,42 +214,15 @@ export function PracticeSession({
         title={`${found.lesson.title}${difficultyLabel}`}
         emoji={found.lesson.emoji}
         problems={problems}
+        initialIndex={checkpoint?.nextIndex ?? 0}
+        initialCorrectCount={checkpoint?.correctCount ?? 0}
+        resumeReadyToFinish={Boolean(resumedAfterHydration && checkpoint && checkpoint.nextIndex >= problems.length)}
+        onCheckpoint={saveCheckpoint}
+        onRestart={restartPractice}
         soundOn={soundOn}
         preschool={lessonId.startsWith("ps-") || lessonId.startsWith("g1-")}
         onExit={() => setView({ name: "lesson", lessonId })}
-        onFinish={async ({ correct, total }) => {
-          const response = await profileFetch("/api/progress", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lessonId, correct, total, difficulty, attemptId }),
-          });
-          const saved = await response.json().catch(() => null) as {
-            error?: string;
-            sessionStars?: number;
-            score?: number;
-            totalStars?: number;
-            streak?: number;
-            newlyEarned?: string[];
-            reward?: RewardMission | null;
-          } | null;
-          if (!response.ok || !saved || typeof saved.totalStars !== "number") {
-            throw new Error(saved?.error ?? "Your progress could not be saved. Check your connection and try again.");
-          }
-          const { stars, score } = recordResult(lessonId, correct, total, {
-            totalStars: saved.totalStars,
-            streak: saved.streak ?? 0,
-            newlyEarned: saved.newlyEarned ?? [],
-            reward: saved.reward ?? null,
-          });
-          setView({
-            name: "results",
-            lessonId,
-            score: saved.score ?? score,
-            stars: saved.sessionStars ?? stars,
-            correct,
-            total,
-          });
-        }}
+        onFinish={finishAttempt}
       />
       <PracticeToolsDialog key={`${practiceTool}-${toolsOpen}`} open={toolsOpen} initialTool={practiceTool} lessonId={lessonId} onClose={closeTools} returnFocusRef={toolsTriggerRef} />
     </div>

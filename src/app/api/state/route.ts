@@ -8,6 +8,7 @@ import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS, isLessonAvailable as isG2LessonAv
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS, isLessonAvailable as isG4LessonAvailable } from "@/lib/grade4";
 import type { LessonProgressState, LessonStatus, Level } from "@/lib/types";
 import { getCurrentRewardMission } from "@/lib/reward-server";
+import { restoreCheckpoint } from "@/lib/lesson-checkpoint";
 
 // GET /api/state — load the learner's full saved state.
 // On first run this creates the default student and seeds availability
@@ -20,6 +21,12 @@ export async function GET(req: Request) {
   });
 
   const progress = toProgressMap(rows);
+
+  const checkpointRow = await db.lessonCheckpoint.findFirst({
+    where: { studentId: student.id },
+    orderBy: { updatedAt: "desc" },
+  });
+  const activeCheckpoint = checkpointRow ? restoreCheckpoint(checkpointRow) : null;
 
   // Ensure every lesson has an entry; availability is per-domain (first lesson
   // of each domain is open; later lessons unlock when their prerequisite is done).
@@ -114,6 +121,7 @@ export async function GET(req: Request) {
     dailyDoneDate: todayDaily?.dateKey ?? null,
     dailyScore: todayDaily?.score ?? null,
     reward,
+    activeCheckpoint,
     domainCount: CURRICULUM.length + PRESCHOOL_CURRICULUM.length + GRADE1_CURRICULUM.length + GRADE2_CURRICULUM.length + GRADE4_CURRICULUM.length,
     lessonCount: ALL_LESSONS.length + PRESCHOOL_LESSON_IDS.length + GRADE1_LESSON_IDS.length + GRADE2_LESSON_IDS.length + GRADE4_LESSON_IDS.length,
   });

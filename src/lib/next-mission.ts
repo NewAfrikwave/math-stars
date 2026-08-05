@@ -9,10 +9,19 @@ export interface NextMission {
 export function chooseNextMission(
   curriculum: Domain[],
   progress: Record<string, LessonProgressState>,
+  checkpointLessonId?: string,
 ): NextMission {
   const lessons = curriculum.flatMap((domain) =>
     domain.lessons.map((lesson) => ({ lesson, domain })),
   );
+
+  // A saved practice set is the most precise source of "where you left off."
+  // It also wins when the learner is replaying a lesson they already mastered;
+  // mastery remains completed while the dashboard still resumes the replay.
+  const checkpointLesson = checkpointLessonId
+    ? lessons.find(({ lesson }) => lesson.id === checkpointLessonId)
+    : undefined;
+  if (checkpointLesson) return { ...checkpointLesson, returning: true };
 
   // A partially completed mission always wins, even when another domain has
   // an earlier available lesson. This makes the first dashboard card a true
