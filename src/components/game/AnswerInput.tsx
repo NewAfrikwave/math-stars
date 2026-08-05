@@ -112,7 +112,7 @@ function NumberInput({ problem, submitted, onAnswerChange, onSubmit }: TypedAnsw
       )}
       <Button
         size="lg"
-        onClick={onSubmit}
+        onClick={() => onSubmit()}
         disabled={submitted || val === ""}
         className="h-14 gap-2 px-7 text-base"
       >
@@ -262,7 +262,7 @@ function FractionInput({ problem, submitted, onAnswerChange, onSubmit }: AnswerI
           className="h-12 w-28 text-center font-display text-xl font-semibold"
         />
       </div>
-      <Button size="lg" onClick={onSubmit} disabled={submitted || num === "" || den === ""} className="h-12 gap-2 px-7">
+      <Button size="lg" onClick={() => onSubmit()} disabled={submitted || num === "" || den === ""} className="h-12 gap-2 px-7">
         <Check className="h-5 w-5" /> Check
       </Button>
     </div>
@@ -310,7 +310,7 @@ function TimeInput({ problem, submitted, onAnswerChange, onSubmit }: AnswerInput
           className="h-12 w-20 border-0 p-0 text-center font-display text-2xl font-bold focus-visible:ring-0"
         />
       </div>
-      <Button size="lg" onClick={onSubmit} disabled={submitted || hh === "" || mm === ""} className="h-14 gap-2 px-7">
+      <Button size="lg" onClick={() => onSubmit()} disabled={submitted || hh === "" || mm === ""} className="h-14 gap-2 px-7">
         <Check className="h-5 w-5" /> Check
       </Button>
     </div>

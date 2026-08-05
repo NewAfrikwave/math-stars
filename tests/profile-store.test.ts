@@ -102,6 +102,44 @@ describe("lesson mastery state", () => {
     expect(state.progress["mult-concept"].attempts).toBe(1);
     expect(state.streak).toBe(0);
   });
+
+  test("records five of six typed answers as 83 percent and completes the lesson", () => {
+    useGameStore.setState({
+      currentProfileId: "active",
+      profiles: [
+        { id: "active", name: "Feodora", avatar: "owl", level: "grade3", totalStars: 0, streak: 0 },
+      ],
+      progress: {
+        "mult-concept": {
+          lessonId: "mult-concept",
+          status: "available",
+          stars: 0,
+          bestScore: 0,
+          attempts: 0,
+          lastScore: 0,
+          completedAt: null,
+        },
+      },
+      totalStars: 0,
+      streak: 0,
+      earnedAchievements: [],
+      reward: null,
+    });
+
+    const result = useGameStore.getState().recordResult("mult-concept", 5, 6, {
+      totalStars: 2,
+      streak: 1,
+      newlyEarned: [],
+      reward: null,
+    });
+
+    const state = useGameStore.getState();
+    expect(result.score).toBe(83);
+    expect(result.stars).toBe(2);
+    expect(state.progress["mult-concept"].status).toBe("completed");
+    expect(state.progress["mult-concept"].lastScore).toBe(83);
+    expect(state.profiles[0].totalStars).toBe(2);
+  });
 });
 
 describe("daily challenge state", () => {

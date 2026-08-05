@@ -4,12 +4,18 @@ import { db } from "@/lib/db";
 import { getStudentForRequest } from "@/lib/student";
 import { logError } from "@/lib/settings";
 import { findLesson } from "@/lib/curriculum";
+import { findPsLesson } from "@/lib/preschool";
+import { findG1Lesson } from "@/lib/grade1";
+import { findG2Lesson } from "@/lib/grade2";
+import { findG4Lesson } from "@/lib/grade4";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { tutorFallback } from "@/lib/tutor-fallback";
+import { tutorSystemPrompt } from "@/lib/tutor-context";
 
 // POST /api/tutor
 // Body: { message: string, lessonId?: string }
 // Returns: { reply: string }
-// Uses the LLM skill to act as a warm, patient 3rd-grade math tutor.
+// Uses the LLM skill to act as a warm, patient, grade-aware math tutor.
 export async function POST(req: Request) {
   const attempt = rateLimit(clientKey(req, "tutor"), 20, 10 * 60 * 1000);
   if (!attempt.allowed) return NextResponse.json({ error: "Please take a short break before asking again." }, { status: 429, headers: { "Retry-After": String(attempt.retryAfter) } });
@@ -28,23 +34,16 @@ export async function POST(req: Request) {
 
   // Build a context-aware system prompt.
   let lessonContext = "";
+  let lessonForFallback: { title: string; subtitle?: string } | undefined;
   if (lessonId) {
-    const found = findLesson(lessonId);
+    const found = findLesson(lessonId) ?? findPsLesson(lessonId) ?? findG1Lesson(lessonId) ?? findG2Lesson(lessonId) ?? findG4Lesson(lessonId);
     if (found) {
+      lessonForFallback = { title: found.lesson.title, subtitle: found.lesson.subtitle };
       lessonContext = `\n\nThe learner is currently working on the lesson "${found.lesson.title}" (${found.lesson.subtitle}), part of the "${found.domain.title}" unit. Give hints and explanations that match this topic. Use small numbers and friendly examples.`;
     }
   }
 
-  const systemPrompt = `You are "Pip", a cheerful, patient math tutor for an 8-year-old in US 3rd grade.
-Rules:
-- Always be warm, encouraging, and use simple words a child understands.
-- Use short sentences. Use emojis occasionally (one or two per reply) to stay friendly.
-- When the child is stuck on a problem, do NOT just blurt out the answer. Instead, give a hint or ask a guiding question, then let them try. Only confirm the answer after they attempt it.
-- Use concrete, fun examples: cookies, balloons, puppies, stars, pizza.
-- If they seem frustrated, reassure them that mistakes help our brains grow.
-- Keep replies under 90 words unless they specifically ask for a longer explanation.
-- Never ask for or repeat a child's full name, address, school, phone number, email, passwords, or other identifying information.
-- If a question is not about math, gently steer back to math in a friendly way.${lessonContext}`;
+  const systemPrompt = tutorSystemPrompt(student.level, lessonContext);
 
   // Load recent conversation for memory (last 6 turns).
   const recent = await db.tutorMessage.findMany({
@@ -97,10 +96,11 @@ Rules:
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
     await logError("/api/tutor", "POST", msg);
-    return NextResponse.json(
-      { reply: "I'm having trouble thinking right now. Try again in a moment!" },
-      { status: 200 }
-    );
+    const reply = tutorFallback(message, lessonForFallback);
+    await db.tutorMessage.create({
+      data: { studentId: student.id, role: "assistant", content: reply, context: lessonId ?? null },
+    }).catch(() => {});
+    return NextResponse.json({ reply, fallback: true });
   }
 }
 

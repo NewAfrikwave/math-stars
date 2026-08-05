@@ -1,12 +1,15 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 const STICKERS = ["⭐", "✨", "🎉", "🌟", "💫", "🎊", "🏆", "🎈"];
 
 // A burst of stickers that fly outward from the center when `active` is true.
 // Used to amplify the confetti on correct answers.
 export function StickerBurst({ active }: { active: boolean }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return null;
+
   return (
     <AnimatePresence>
       {active && (
