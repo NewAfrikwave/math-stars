@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { AnimatedNumber, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
 import { correctAnswerPraise } from "@/lib/celebrations";
 import { resolveSubmittedAnswer } from "@/lib/answer-submit";
+import { pipCelebrationMotion } from "@/lib/celebration-motion";
 
 export interface QuizRunnerProps {
   title: string;
@@ -67,6 +68,8 @@ export function QuizRunner({
   const studentName = useGameStore((s) => s.studentName);
   const sfx = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
   const { speak, speakImmediately, stop } = useTTS();
+  const reducedMotion = useReducedMotion();
+  const pipMotion = pipCelebrationMotion(Boolean(reducedMotion));
 
   const problem = problems[index];
   useEffect(() => {
@@ -279,8 +282,8 @@ export function QuizRunner({
                     {isCorrect ? (
                       <div className="flex items-center gap-4">
                         <motion.div
-                          animate={{ y: [0, -10, 0, -5, 0], rotate: [0, -5, 5, -2, 0], scale: [1, 1.08, 1] }}
-                          transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.7 }}
+                          animate={pipMotion.animate}
+                          transition={pipMotion.transition}
                           className="relative h-24 w-20 shrink-0 sm:h-28 sm:w-24"
                         >
                           <Image src="/pip-explorer.webp" alt="Pip cheers for your correct answer" fill sizes="96px" className="object-contain object-top drop-shadow-md" />

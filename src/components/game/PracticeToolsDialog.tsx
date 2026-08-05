@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Calculator, Loader2, Send, ShieldQuestion, X } from "lucide-react";
+import { type RefObject, useState } from "react";
+import { Calculator, Loader2, Send, ShieldQuestion } from "lucide-react";
 import { profileFetch, useGameStore } from "@/store/useGameStore";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export type PracticeTool = "pip" | "tables";
 
@@ -11,11 +12,13 @@ export function PracticeToolsDialog({
   initialTool,
   lessonId,
   onClose,
+  returnFocusRef,
 }: {
   open: boolean;
   initialTool: PracticeTool;
   lessonId: string;
   onClose: () => void;
+  returnFocusRef: RefObject<HTMLButtonElement | null>;
 }) {
   const studentName = useGameStore((state) => state.studentName);
   const [tool, setTool] = useState<PracticeTool>(initialTool);
@@ -23,17 +26,6 @@ export function PracticeToolsDialog({
   const [question, setQuestion] = useState("");
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, open]);
-
-  if (!open) return null;
 
   const askPip = async (suggested?: string) => {
     const message = (suggested ?? question).trim();
@@ -58,14 +50,19 @@ export function PracticeToolsDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#160b04]/70 p-3" role="dialog" aria-modal="true" aria-label="Practice learning tools">
-      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border-4 border-[#6d4824] bg-[#fff4d2] p-4 shadow-2xl sm:p-6">
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent
+        className="z-[101] block max-h-[92vh] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-[28px] border-4 border-[#6d4824] bg-[#fff4d2] p-4 shadow-2xl sm:p-6"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocusRef.current?.focus();
+        }}
+      >
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-display text-2xl font-black text-[#24482d]">Learning tools</p>
-            <p className="text-sm font-semibold text-[#725d40]">Get help without losing your place in the lesson.</p>
+            <DialogTitle className="font-display text-2xl font-black text-[#24482d]">Learning tools</DialogTitle>
+            <DialogDescription className="text-sm font-semibold text-[#725d40]">Get help without losing your place in the lesson.</DialogDescription>
           </div>
-          <button onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ead6a8] hover:bg-[#ddc48f]" aria-label="Close learning tools"><X /></button>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-[#ead6a8] p-2">
@@ -99,7 +96,7 @@ export function PracticeToolsDialog({
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

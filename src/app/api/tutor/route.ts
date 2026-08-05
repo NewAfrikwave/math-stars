@@ -10,11 +10,12 @@ import { findG2Lesson } from "@/lib/grade2";
 import { findG4Lesson } from "@/lib/grade4";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { tutorFallback } from "@/lib/tutor-fallback";
+import { tutorSystemPrompt } from "@/lib/tutor-context";
 
 // POST /api/tutor
 // Body: { message: string, lessonId?: string }
 // Returns: { reply: string }
-// Uses the LLM skill to act as a warm, patient 3rd-grade math tutor.
+// Uses the LLM skill to act as a warm, patient, grade-aware math tutor.
 export async function POST(req: Request) {
   const attempt = rateLimit(clientKey(req, "tutor"), 20, 10 * 60 * 1000);
   if (!attempt.allowed) return NextResponse.json({ error: "Please take a short break before asking again." }, { status: 429, headers: { "Retry-After": String(attempt.retryAfter) } });
@@ -42,16 +43,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const systemPrompt = `You are "Pip", a cheerful, patient math tutor for an 8-year-old in US 3rd grade.
-Rules:
-- Always be warm, encouraging, and use simple words a child understands.
-- Use short sentences. Use emojis occasionally (one or two per reply) to stay friendly.
-- When the child is stuck on a problem, do NOT just blurt out the answer. Instead, give a hint or ask a guiding question, then let them try. Only confirm the answer after they attempt it.
-- Use concrete, fun examples: cookies, balloons, puppies, stars, pizza.
-- If they seem frustrated, reassure them that mistakes help our brains grow.
-- Keep replies under 90 words unless they specifically ask for a longer explanation.
-- Never ask for or repeat a child's full name, address, school, phone number, email, passwords, or other identifying information.
-- If a question is not about math, gently steer back to math in a friendly way.${lessonContext}`;
+  const systemPrompt = tutorSystemPrompt(student.level, lessonContext);
 
   // Load recent conversation for memory (last 6 turns).
   const recent = await db.tutorMessage.findMany({

@@ -6,6 +6,8 @@ import { correctAnswerPraise } from "../src/lib/celebrations";
 import { resolveSubmittedAnswer } from "../src/lib/answer-submit";
 import type { NumberProblem, MultipleChoiceProblem } from "../src/lib/types";
 import { tutorFallback } from "../src/lib/tutor-fallback";
+import { tutorLearnerContext, tutorSystemPrompt } from "../src/lib/tutor-context";
+import { pipCelebrationMotion } from "../src/lib/celebration-motion";
 
 describe("launch data integrity", () => {
   test("a failed attempt does not consume the date used by a later passing streak", () => {
@@ -69,5 +71,36 @@ describe("launch data integrity", () => {
   test("Pip has a useful local response when the tutor provider is unavailable", () => {
     expect(tutorFallback("What is 5 times 2?")).toContain("5 × 2");
     expect(tutorFallback("Help me with fractions")).toContain("pizza");
+  });
+
+  test("Pip receives distinct, age-appropriate instructions for every learner level", () => {
+    const levels = ["preschool", "grade1", "grade2", "grade3", "grade4"] as const;
+    const contexts = levels.map((level) => tutorLearnerContext(level));
+
+    expect(new Set(contexts).size).toBe(levels.length);
+    expect(contexts[0]).toContain("preschool");
+    expect(contexts[1]).toContain("1st-grade");
+    expect(contexts[2]).toContain("2nd-grade");
+    expect(contexts[3]).toContain("3rd-grade");
+    expect(contexts[4]).toContain("4th-grade");
+    for (const level of levels) {
+      expect(tutorSystemPrompt(level, "\nLesson context")).toContain(tutorLearnerContext(level));
+      expect(tutorSystemPrompt(level, "\nLesson context")).toContain("Lesson context");
+    }
+  });
+
+  test("the learning-tools modal uses a focus-trapping dialog and restores its opener", () => {
+    const source = readFileSync(new URL("../src/components/game/PracticeToolsDialog.tsx", import.meta.url), "utf8");
+    expect(source).toContain("<Dialog open={open}");
+    expect(source).toContain("onCloseAutoFocus");
+    expect(source).toContain("returnFocusRef.current?.focus()");
+  });
+
+  test("Pip stays still when the learner requests reduced motion", () => {
+    const reduced = pipCelebrationMotion(true);
+    const animated = pipCelebrationMotion(false);
+    expect(reduced.animate).toEqual({ y: 0, rotate: 0, scale: 1 });
+    expect("repeat" in reduced.transition).toBe(false);
+    expect(animated.transition.repeat).toBe(Infinity);
   });
 });
