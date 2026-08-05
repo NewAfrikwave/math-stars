@@ -38,6 +38,9 @@ model Student {
   avatar    String   @default("fox")
   level     String   @default("grade3") // preschool | grade3
   totalStars Int     @default(0)
+  arcadeCoins Int    @default(0)
+  arcadeCompanion String @default("pip")
+  arcadeLastBonusDate String?
   streak    Int      @default(0)
   lastPlayedAt DateTime?
   lastCompletedAt DateTime? // last new passed lesson, used for streaks
@@ -54,9 +57,38 @@ model Student {
   tutorMessages TutorMessage[]
   dailyChallenges DailyChallenge[]
   activityEvents ActivityEvent[]
+  arcadeRuns ArcadeRun[]
   rewardGoals RewardGoal[]
 
   @@index([familyId])
+}
+
+// A server-generated arcade round. Keeping the questions and next unanswered
+// index here lets a learner resume the same game on another device and makes
+// completion safe to retry without awarding coins twice.
+model ArcadeRun {
+  id           String   @id @default(cuid())
+  studentId    String
+  attemptId    String   @unique
+  gameKey      String   // star-sprint | treasure-match | rocket-builder
+  activeKey    String?  @unique // studentId:gameKey while unfinished
+  level        String
+  questionsJson String
+  answersJson  String   @default("[]")
+  nextIndex    Int      @default(0)
+  correctCount Int      @default(0)
+  total        Int
+  status       String   @default("active") // active | completed | abandoned
+  coinsEarned  Int      @default(0)
+  dailyBonus   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  completedAt  DateTime?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@index([studentId, status])
 }
 
 // The learner's exact place inside an unfinished practice set. Problems are
@@ -213,6 +245,7 @@ model ActivityEvent {
   correct   Int      @default(0)
   total     Int      @default(0)
   stars     Int      @default(0) // stars earned (lesson only)
+  coins     Int      @default(0) // coins earned (arcade only)
   createdAt DateTime @default(now())
 
   student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)

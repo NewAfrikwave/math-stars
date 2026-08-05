@@ -21,6 +21,7 @@ import { AdminView } from "@/components/game/AdminView";
 import { InstallGuide } from "@/components/game/InstallGuide";
 import { LandingView } from "@/components/game/LandingView";
 import { TimesTableView } from "@/components/game/TimesTableView";
+import { ArcadeView } from "@/components/game/ArcadeView";
 import { DomainCelebration } from "@/components/game/DomainCelebration";
 import { Mascot } from "@/components/game/Mascot";
 import { Star, Trophy, Home, Bot, Loader2, Repeat, Download, Heart } from "lucide-react";
@@ -88,7 +89,7 @@ export default function Page() {
   const setSiteSettings = useGameStore((s) => s.setSiteSettings);
   const siteSettings = useGameStore((s) => s.siteSettings);
   const [installOpen, setInstallOpen] = useState(false);
-  const immersiveView = view.name === "home" || view.name === "times-tables";
+  const immersiveView = view.name === "home" || view.name === "times-tables" || view.name === "arcade";
 
   useEffect(() => {
     const openInstall = () => setInstallOpen(true);
@@ -352,6 +353,8 @@ function renderView(
       return <HomeView />;
     case "times-tables":
       return <TimesTableView />;
+    case "arcade":
+      return <ArcadeView />;
     case "domain":
       return <DomainView domainId={view.domainId} />;
     case "lesson":

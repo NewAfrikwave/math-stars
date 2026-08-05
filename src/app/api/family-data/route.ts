@@ -18,12 +18,13 @@ export async function GET(req: Request) {
   const scope = familyScope(session);
   const familyStudents = await db.student.findMany({ where: scope, select: { id: true } });
   const studentIds = familyStudents.map((student) => student.id);
-  const [students, progress, achievements, dailyChallenges, activityEvents, tutorMessages, rewardGoals] = await Promise.all([
-    db.student.findMany({ where: scope, select: { id: true, name: true, avatar: true, level: true, totalStars: true, streak: true, soundOn: true, lastPlayedAt: true, lastCompletedAt: true, createdAt: true, updatedAt: true } }),
+  const [students, progress, achievements, dailyChallenges, activityEvents, arcadeRuns, tutorMessages, rewardGoals] = await Promise.all([
+    db.student.findMany({ where: scope, select: { id: true, name: true, avatar: true, level: true, totalStars: true, arcadeCoins: true, arcadeCompanion: true, streak: true, soundOn: true, lastPlayedAt: true, lastCompletedAt: true, createdAt: true, updatedAt: true } }),
     db.lessonProgress.findMany({ where: { studentId: { in: studentIds } } }),
     db.achievement.findMany({ where: { studentId: { in: studentIds } } }),
     db.dailyChallenge.findMany({ where: { studentId: { in: studentIds } } }),
     db.activityEvent.findMany({ where: { studentId: { in: studentIds } } }),
+    db.arcadeRun.findMany({ where: { studentId: { in: studentIds } } }),
     db.tutorMessage.findMany({ where: { studentId: { in: studentIds } } }),
     db.rewardGoal.findMany({ where: { studentId: { in: studentIds } } }),
   ]);
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
     where: { id: session.familyId },
     select: { displayName: true, email: true, createdAt: true },
   }) : null;
-  return NextResponse.json({ exportedAt: new Date().toISOString(), account, students, progress, achievements, dailyChallenges, activityEvents, tutorMessages, rewardGoals });
+  return NextResponse.json({ exportedAt: new Date().toISOString(), account, students, progress, achievements, dailyChallenges, activityEvents, arcadeRuns, tutorMessages, rewardGoals });
 }
 
 export async function DELETE(req: Request) {
@@ -45,6 +46,7 @@ export async function DELETE(req: Request) {
   const studentIds = familyStudents.map((student) => student.id);
   await db.$transaction([
     db.rewardGoal.deleteMany({ where: { studentId: { in: studentIds } } }),
+    db.arcadeRun.deleteMany({ where: { studentId: { in: studentIds } } }),
     db.tutorMessage.deleteMany({ where: { studentId: { in: studentIds } } }),
     db.activityEvent.deleteMany({ where: { studentId: { in: studentIds } } }),
     db.dailyChallenge.deleteMany({ where: { studentId: { in: studentIds } } }),

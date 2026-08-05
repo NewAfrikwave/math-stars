@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Flame,
   Gift,
+  Gamepad2,
   Heart,
   Home,
   LockKeyhole,
@@ -198,6 +199,7 @@ export function HomeView() {
               </motion.div>
             )}
             <MissionLink icon={<Flame className="h-7 w-7" />} title="Warm-up: Daily Challenge" subtitle="Kickstart your brain with five quick questions." onClick={() => setView({ name: "daily" })} tone="red" />
+            <MissionLink icon={<Gamepad2 className="h-7 w-7" />} title="Play: Math Adventure Arcade" subtitle="Race, hunt for treasure, build rockets, and unlock new buddies." onClick={() => setView({ name: "arcade" })} tone="purple" />
             <MissionLink icon={<Calculator className="h-7 w-7" />} title="Explore: Times Table Lab, 2× to 12×" subtitle="Build speed and confidence with every table." onClick={() => setView({ name: "times-tables" })} tone="purple" />
           </motion.div>
 
@@ -256,6 +258,7 @@ export function HomeView() {
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <MoreButton icon={<Trophy />} label="My badges" onClick={() => setView({ name: "achievements" })} />
+              <MoreButton icon={<Gamepad2 />} label="Math arcade" onClick={() => setView({ name: "arcade" })} />
               <MoreButton icon={<Printer />} label="Worksheets" onClick={() => setView({ name: "worksheet" })} />
               <MoreButton icon={<UserRoundCog />} label="Grown-ups" onClick={() => setView({ name: "parent" })} />
               <MoreButton icon={<Heart />} label="Keep it free" onClick={() => setView({ name: "donations" })} />

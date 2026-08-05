@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   if (body.action === "create") {
     const targetType = body.targetType as RewardTargetType;
-    if (!(["lessons", "stars", "topic"] as string[]).includes(targetType)) {
+    if (!(["lessons", "stars", "topic", "arcade-wins", "coins"] as string[]).includes(targetType)) {
       return NextResponse.json({ error: "Choose a valid goal" }, { status: 400 });
     }
     const title = String(body.title ?? "").trim().slice(0, 60);
@@ -47,7 +47,16 @@ export async function POST(req: Request) {
     const description = String(body.description ?? "").trim().slice(0, 160) || null;
     const completed = await db.lessonProgress.count({ where: { studentId: student.id, status: "completed" } });
     let targetValue = Math.min(100, Math.max(1, Math.floor(Number(body.targetValue ?? 5))));
-    let startValue = targetType === "stars" ? student.totalStars : completed;
+    const arcadeWins = targetType === "arcade-wins"
+      ? await db.arcadeRun.count({ where: { studentId: student.id, status: "completed" } })
+      : 0;
+    let startValue = targetType === "stars"
+      ? student.totalStars
+      : targetType === "coins"
+        ? student.arcadeCoins
+        : targetType === "arcade-wins"
+          ? arcadeWins
+          : completed;
     let domainId: string | null = null;
 
     if (targetType === "topic") {
