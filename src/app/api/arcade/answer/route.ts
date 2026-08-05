@@ -5,6 +5,17 @@ import { ARCADE_GAMES, arcadeReward, parseArcadeAnswers, parseArcadeQuestions, p
 import { getCurrentRewardMission } from "@/lib/reward-server";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
+type ReconciledRun = {
+  attemptId: string;
+  gameKey: string;
+  nextIndex: number;
+  correctCount: number;
+  total: number;
+  status: string;
+  coinsEarned: number;
+  dailyBonus: number;
+};
+
 function completedPayload(run: { attemptId: string; gameKey: string; nextIndex: number; correctCount: number; total: number; coinsEarned: number; dailyBonus: number }) {
   return {
     attemptId: run.attemptId,
@@ -16,6 +27,19 @@ function completedPayload(run: { attemptId: string; gameKey: string; nextIndex: 
     score: Math.round((run.correctCount / Math.max(1, run.total)) * 100),
     coinsEarned: run.coinsEarned,
     dailyBonus: run.dailyBonus,
+  };
+}
+
+function reconciledPayload(run: ReconciledRun, questions: NonNullable<ReturnType<typeof parseArcadeQuestions>>) {
+  if (run.status === "completed") return completedPayload(run);
+  return {
+    attemptId: run.attemptId,
+    gameKey: run.gameKey,
+    status: "active" as const,
+    nextIndex: run.nextIndex,
+    correctCount: run.correctCount,
+    total: run.total,
+    question: run.nextIndex < questions.length ? publicQuestion(questions[run.nextIndex]) : null,
   };
 }
 
@@ -37,9 +61,9 @@ export async function POST(req: Request) {
   const questions = parseArcadeQuestions(current.questionsJson);
   if (!questions || questionIndex < 0 || questionIndex >= questions.length) return NextResponse.json({ error: "Round questions are invalid" }, { status: 409 });
   if (questionIndex < current.nextIndex) {
-    const latestQuestion = current.nextIndex < questions.length ? publicQuestion(questions[current.nextIndex]) : null;
     return NextResponse.json({
-      run: { attemptId: current.attemptId, gameKey: current.gameKey, status: current.status, nextIndex: current.nextIndex, correctCount: current.correctCount, total: current.total, question: latestQuestion },
+      run: reconciledPayload(current, questions),
+      coins: student.arcadeCoins,
       duplicate: true,
     });
   }
@@ -57,7 +81,18 @@ export async function POST(req: Request) {
       where: { id: current.id, studentId: student.id, status: "active", nextIndex: questionIndex },
       data: { nextIndex, correctCount, answersJson: JSON.stringify(answers) },
     });
-    if (updated.count !== 1) return NextResponse.json({ error: "This round advanced on another device. Reload it to continue." }, { status: 409 });
+    if (updated.count !== 1) {
+      const [latestRun, latestStudent] = await Promise.all([
+        db.arcadeRun.findUniqueOrThrow({ where: { id: current.id } }),
+        db.student.findUniqueOrThrow({ where: { id: student.id } }),
+      ]);
+      return NextResponse.json({
+        run: reconciledPayload(latestRun, questions),
+        coins: latestStudent.arcadeCoins,
+        ...(latestRun.status === "completed" ? { reward: await getCurrentRewardMission(student.id) } : {}),
+        duplicate: true,
+      });
+    }
     return NextResponse.json({
       correct,
       explanation: correct ? "Great move! Your place is saved." : `Good try. The answer was ${question.choices[question.answerIndex]}.`,

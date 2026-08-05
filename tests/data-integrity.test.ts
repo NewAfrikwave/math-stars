@@ -105,6 +105,31 @@ describe("launch data integrity", () => {
     expect(source).toContain("returnFocusRef.current?.focus()");
   });
 
+  test("the arcade initial load can recover from an API failure", () => {
+    const source = readFileSync(new URL("../src/components/game/ArcadeView.tsx", import.meta.url), "utf8");
+    expect(source).toContain("if (overviewLoading)");
+    expect(source).toContain("The arcade could not open");
+    expect(source).toContain("onClick={loadOverview}");
+  });
+
+  test("duplicate arcade answers reconcile without being graded as wrong", () => {
+    const viewSource = readFileSync(new URL("../src/components/game/ArcadeView.tsx", import.meta.url), "utf8");
+    const answerRouteSource = readFileSync(new URL("../src/app/api/arcade/answer/route.ts", import.meta.url), "utf8");
+    expect(viewSource).toContain("if (data.duplicate && data.run)");
+    expect(viewSource.indexOf("if (data.duplicate && data.run)")).toBeLessThan(viewSource.indexOf("correct: Boolean(data.correct)"));
+    expect(answerRouteSource).toContain("run: reconciledPayload(latestRun, questions)");
+    expect(answerRouteSource).not.toContain("This round advanced on another device. Reload it to continue.");
+  });
+
+  test("the arcade feedback dialog traps focus and restores a useful target", () => {
+    const source = readFileSync(new URL("../src/components/game/ArcadeView.tsx", import.meta.url), "utf8");
+    expect(source).toContain("<Dialog open={Boolean(feedback)}>");
+    expect(source).toContain("onOpenAutoFocus");
+    expect(source).toContain("onCloseAutoFocus");
+    expect(source).toContain("returnTarget?.isConnected");
+    expect(source).toContain("[data-arcade-focus-target]");
+  });
+
   test("Pip stays still when the learner requests reduced motion", () => {
     const reduced = pipCelebrationMotion(true);
     const animated = pipCelebrationMotion(false);

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Coins, Gamepad2, Loader2, Lock, RotateCcw, Sparkles, Trophy } from "lucide-react";
 import { ARCADE_GAMES, type ArcadeGameKey, type PublicArcadeQuestion } from "@/lib/arcade";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { profileFetch, useGameStore } from "@/store/useGameStore";
 
 interface ArcadeRunState {
@@ -44,9 +45,14 @@ export function ArcadeView() {
   const [run, setRun] = useState<ArcadeRunState | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [overviewLoading, setOverviewLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const feedbackActionRef = useRef<HTMLButtonElement>(null);
+  const feedbackReturnFocusRef = useRef<HTMLButtonElement | null>(null);
 
   const loadOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    setError(null);
     try {
       const response = await profileFetch("/api/arcade");
       const data = await response.json();
@@ -54,6 +60,8 @@ export function ArcadeView() {
       setOverview(data as ArcadeOverview);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load the arcade");
+    } finally {
+      setOverviewLoading(false);
     }
   }, []);
 
@@ -88,8 +96,9 @@ export function ArcadeView() {
     setBusy(false);
   };
 
-  const answer = async (choiceIndex: number) => {
+  const answer = async (choiceIndex: number, trigger: HTMLButtonElement) => {
     if (!run || !run.question || busy || feedback) return;
+    feedbackReturnFocusRef.current = trigger;
     setBusy(true);
     setError(null);
     try {
@@ -101,14 +110,13 @@ export function ArcadeView() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Your answer was not saved");
       if (data.reward) setReward(data.reward);
-      if (data.run?.status === "completed" && data.duplicate) {
+      if (data.duplicate && data.run) {
         if (typeof data.coins === "number") {
           setOverview((current) => current ? { ...current, coins: data.coins } : current);
         }
         setRun(data.run as ArcadeRunState);
         setFeedback(null);
-        setBusy(false);
-        await loadOverview();
+        if (data.run.status === "completed") await loadOverview();
         return;
       }
       setFeedback({
@@ -119,8 +127,9 @@ export function ArcadeView() {
       });
     } catch (answerError) {
       setError(answerError instanceof Error ? answerError.message : "Your answer was not saved");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const continueAfterFeedback = async () => {
@@ -146,7 +155,20 @@ export function ArcadeView() {
   };
 
   if (!overview) {
-    return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 bg-[#120b2f] text-white"><Loader2 className="h-10 w-10 animate-spin text-amber-300" /><p className="font-display font-bold">Opening the arcade…</p></div>;
+    if (overviewLoading) {
+      return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 bg-[#120b2f] text-white"><Loader2 className="h-10 w-10 animate-spin text-amber-300" /><p className="font-display font-bold">Opening the arcade…</p></div>;
+    }
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-[#120b2f] px-4 text-center text-white">
+        <div className="text-6xl" aria-hidden="true">🛠️</div>
+        <h1 className="font-display text-3xl font-black">The arcade could not open</h1>
+        <p className="max-w-md font-bold text-violet-200" role="alert">{error ?? "Please check your connection and try again."}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <button onClick={loadOverview} className="min-h-12 rounded-2xl bg-amber-300 px-6 font-display font-black text-[#321b5e]">Try again</button>
+          <button onClick={() => setView({ name: "home" })} className="min-h-12 rounded-2xl border-2 border-white/30 bg-white/10 px-6 font-display font-black">Back home</button>
+        </div>
+      </div>
+    );
   }
 
   if (run?.status === "completed") {
@@ -155,7 +177,7 @@ export function ArcadeView() {
       <div className="min-h-[calc(100vh-4rem)] bg-[radial-gradient(circle_at_top,#5632a8_0%,#1b1245_48%,#0d0922_100%)] px-4 py-8 text-white">
         <div className="mx-auto max-w-xl rounded-[36px] border-4 border-amber-300 bg-white/10 p-7 text-center shadow-2xl backdrop-blur">
           <motion.div initial={{ scale: 0, rotate: -15 }} animate={{ scale: 1, rotate: 0 }} className="text-8xl">🏆</motion.div>
-          <p className="mt-3 font-display text-4xl font-black">Round complete!</p>
+          <h1 data-arcade-focus-target tabIndex={-1} className="mt-3 font-display text-4xl font-black outline-none">Round complete!</h1>
           <p className="mt-2 text-lg font-bold text-violet-100">{studentName}, you got {run.correctCount} of {run.total} correct.</p>
           <div className="mx-auto mt-5 grid max-w-sm grid-cols-2 gap-3">
             <ResultChip label="Score" value={`${run.score ?? Math.round((run.correctCount / run.total) * 100)}%`} emoji="🎯" />
@@ -194,11 +216,11 @@ export function ArcadeView() {
             <AnimatePresence mode="wait">
               {run.question && <motion.div key={run.question.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="mt-5">
                 {run.question.visual && <div className="mb-4 text-center text-4xl tracking-[0.25em]" aria-hidden="true">{run.question.visual}</div>}
-                <h1 className="text-center font-display text-2xl font-black leading-tight sm:text-4xl">{run.question.prompt}</h1>
+                <h1 data-arcade-focus-target tabIndex={-1} className="text-center font-display text-2xl font-black leading-tight outline-none sm:text-4xl">{run.question.prompt}</h1>
                 {run.question.helper && <p className="mt-2 text-center text-sm font-bold text-violet-200">{run.question.helper}</p>}
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   {run.question.choices.map((choice, index) => (
-                    <motion.button key={`${run.question?.id}-${choice}`} whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }} onClick={() => answer(index)} disabled={busy || Boolean(feedback)} className="min-h-20 rounded-2xl border-4 border-white/30 bg-white px-4 font-display text-3xl font-black text-[#30205d] shadow-[0_6px_0_rgba(30,18,72,0.55)] disabled:opacity-60">{choice}</motion.button>
+                    <motion.button key={`${run.question?.id}-${choice}`} whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }} onClick={(event) => answer(index, event.currentTarget)} disabled={busy || Boolean(feedback)} className="min-h-20 rounded-2xl border-4 border-white/30 bg-white px-4 font-display text-3xl font-black text-[#30205d] shadow-[0_6px_0_rgba(30,18,72,0.55)] disabled:opacity-60">{choice}</motion.button>
                   ))}
                 </div>
               </motion.div>}
@@ -208,18 +230,34 @@ export function ArcadeView() {
           </div>
         </div>
 
-        <AnimatePresence>{feedback && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end justify-center bg-[#08051b]/70 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label="Answer feedback">
-            <motion.div initial={{ y: 50, scale: 0.94 }} animate={{ y: 0, scale: 1 }} className={`w-full max-w-md rounded-[30px] border-4 p-6 text-center shadow-2xl ${feedback.correct ? "border-emerald-300 bg-emerald-950" : "border-amber-300 bg-[#3f235f]"}`}>
-              <div className="text-6xl">{feedback.correct ? "🌟" : "💪"}</div>
-              <p className="mt-2 font-display text-3xl font-black">{feedback.correct ? "You got it!" : "Good try!"}</p>
-              <p className="mt-2 font-bold text-white/85">{feedback.explanation}</p>
-              <button onClick={continueAfterFeedback} className="mt-5 min-h-14 w-full rounded-2xl bg-amber-300 font-display text-lg font-black text-[#321b5e] shadow-[0_5px_0_#a56713] active:translate-y-1 active:shadow-none">
+        <Dialog open={Boolean(feedback)}>
+          {feedback && (
+            <DialogContent
+              showCloseButton={false}
+              className={`max-w-md rounded-[30px] border-4 p-6 text-center text-white shadow-2xl ${feedback.correct ? "border-emerald-300 bg-emerald-950" : "border-amber-300 bg-[#3f235f]"}`}
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                feedbackActionRef.current?.focus();
+              }}
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                const returnTarget = feedbackReturnFocusRef.current;
+                if (returnTarget?.isConnected) returnTarget.focus();
+                else document.querySelector<HTMLElement>("[data-arcade-focus-target]")?.focus();
+                feedbackReturnFocusRef.current = null;
+              }}
+              onEscapeKeyDown={(event) => event.preventDefault()}
+              onPointerDownOutside={(event) => event.preventDefault()}
+            >
+              <div className="text-6xl" aria-hidden="true">{feedback.correct ? "🌟" : "💪"}</div>
+              <DialogTitle className="mt-2 font-display text-3xl font-black">{feedback.correct ? "You got it!" : "Good try!"}</DialogTitle>
+              <DialogDescription className="mt-2 font-bold text-white/85">{feedback.explanation}</DialogDescription>
+              <button ref={feedbackActionRef} onClick={continueAfterFeedback} className="mt-2 min-h-14 w-full rounded-2xl bg-amber-300 font-display text-lg font-black text-[#321b5e] shadow-[0_5px_0_#a56713] active:translate-y-1 active:shadow-none">
                 {feedback.nextRun.status === "completed" ? "See my coins" : "Next challenge"}
               </button>
-            </motion.div>
-          </motion.div>
-        )}</AnimatePresence>
+            </DialogContent>
+          )}
+        </Dialog>
       </div>
     );
   }
