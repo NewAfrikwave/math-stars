@@ -164,6 +164,9 @@ export async function saveProgressAttempt(input: SaveInput) {
           earnedAchievementIds: newlyEarned.length > 0 ? JSON.stringify(newlyEarned) : null,
         },
       });
+      await tx.lessonCheckpoint.deleteMany({
+        where: { studentId: input.studentId, lessonId: input.lessonId },
+      });
       return { kind: "saved" as const, event, row, passed, newBest, newStars, totalStars, streak, newlyEarned };
     }, { maxWait: 5_000, timeout: 20_000 });
   } catch (error) {

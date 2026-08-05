@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   if (result.kind === "duplicate") {
+    await db.lessonCheckpoint.deleteMany({ where: { studentId: student.id, lessonId } });
     return responseForExistingAttempt(student.id, result.event);
   }
 

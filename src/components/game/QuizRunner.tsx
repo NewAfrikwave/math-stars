@@ -7,6 +7,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  CloudAlert,
+  CloudCheck,
   Heart,
   Lightbulb,
   Loader2,
@@ -33,6 +35,7 @@ import { AnimatedNumber, springy, staggerContainer, staggerItem } from "@/compon
 import { correctAnswerPraise } from "@/lib/celebrations";
 import { resolveSubmittedAnswer } from "@/lib/answer-submit";
 import { pipCelebrationMotion } from "@/lib/celebration-motion";
+import { retryOperation } from "@/lib/retry-operation";
 
 export interface QuizRunnerProps {
   title: string;
@@ -40,6 +43,11 @@ export interface QuizRunnerProps {
   problems: Problem[];
   onExit: () => void;
   onFinish: (result: { correct: number; total: number }) => void | Promise<void>;
+  onCheckpoint?: (result: { nextIndex: number; correct: number; total: number }) => void | Promise<void>;
+  onRestart?: () => void | Promise<void>;
+  initialIndex?: number;
+  initialCorrectCount?: number;
+  resumeReadyToFinish?: boolean;
   soundOn?: boolean;
   preschool?: boolean;
 }
@@ -50,19 +58,29 @@ export function QuizRunner({
   problems,
   onExit,
   onFinish,
+  onCheckpoint,
+  onRestart,
+  initialIndex = 0,
+  initialCorrectCount = 0,
+  resumeReadyToFinish = false,
   soundOn = true,
   preschool = false,
 }: QuizRunnerProps) {
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.min(initialIndex, Math.max(problems.length - 1, 0)));
   const [currentAnswer, setCurrentAnswer] = useState<unknown>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [correctCount, setCorrectCount] = useState(0);
-  const correctCountRef = useRef(0);
+  const [correctCount, setCorrectCount] = useState(initialCorrectCount);
+  const correctCountRef = useRef(initialCorrectCount);
   const [showHint, setShowHint] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [checkpointSaving, setCheckpointSaving] = useState(false);
+  const [checkpointError, setCheckpointError] = useState<string | null>(null);
+  const [checkpointSaved, setCheckpointSaved] = useState(initialIndex > 0);
+  const pendingCheckpoint = useRef<{ nextIndex: number; correct: number; total: number } | null>(null);
+  const resumedFinish = useRef(false);
   const [praiseText, setPraiseText] = useState("");
   const siteSettings = useGameStore((s) => s.siteSettings);
   const studentName = useGameStore((s) => s.studentName);
@@ -70,6 +88,17 @@ export function QuizRunner({
   const { speak, speakImmediately, stop } = useTTS();
   const reducedMotion = useReducedMotion();
   const pipMotion = pipCelebrationMotion(Boolean(reducedMotion));
+
+  useEffect(() => {
+    if (!resumeReadyToFinish || resumedFinish.current || problems.length === 0) return;
+    resumedFinish.current = true;
+    setFinishing(true);
+    Promise.resolve(onFinish({ correct: correctCountRef.current, total: problems.length })).catch((error) => {
+      setFinishError(error instanceof Error ? error.message : "Your progress could not be saved. Please try again.");
+      setFinishing(false);
+      resumedFinish.current = false;
+    });
+  }, [onFinish, problems.length, resumeReadyToFinish]);
 
   const problem = problems[index];
   useEffect(() => {
@@ -100,8 +129,38 @@ export function QuizRunner({
     .join(" ");
   const steps = getLearningSteps(problem, preschool);
 
-  const handleSubmit = (override?: unknown) => {
-    if (submitted) return;
+  const persistCheckpoint = async (payload: { nextIndex: number; correct: number; total: number }) => {
+    if (!onCheckpoint) return;
+    pendingCheckpoint.current = payload;
+    setCheckpointSaving(true);
+    setCheckpointError(null);
+    setCheckpointSaved(false);
+    try {
+      await retryOperation(() => Promise.resolve(onCheckpoint(payload)));
+      pendingCheckpoint.current = null;
+      setCheckpointSaved(true);
+    } catch (error) {
+      setCheckpointError(error instanceof Error ? error.message : "Your place could not be saved. Please try again.");
+      setCheckpointSaved(false);
+    } finally {
+      setCheckpointSaving(false);
+    }
+  };
+
+  const retryFinishedLesson = async () => {
+    if (finishing) return;
+    setFinishing(true);
+    setFinishError(null);
+    try {
+      await onFinish({ correct: correctCountRef.current, total: problems.length });
+    } catch (error) {
+      setFinishError(error instanceof Error ? error.message : "Your progress could not be saved. Please try again.");
+      setFinishing(false);
+    }
+  };
+
+  const handleSubmit = async (override?: unknown) => {
+    if (submitted || resumeReadyToFinish) return;
     const answer = resolveSubmittedAnswer(problem, currentAnswer, override);
     if (answer === null || answer === "" || answer === undefined) return;
     const ok = checkAnswer(problem, answer);
@@ -121,9 +180,11 @@ export function QuizRunner({
       setPraiseText("");
       sfx.playWrong();
     }
+    await persistCheckpoint({ nextIndex: index + 1, correct: correctCountRef.current, total: problems.length });
   };
 
   const handleNext = async () => {
+    if (checkpointSaving || checkpointError) return;
     if (isLast) {
       if (finishing) return;
       setFinishing(true);
@@ -143,7 +204,18 @@ export function QuizRunner({
     setPraiseText("");
   };
 
-  const restart = () => {
+  const restart = async () => {
+    if (checkpointSaving || finishing) return;
+    setCheckpointSaving(true);
+    setCheckpointError(null);
+    setCheckpointSaved(false);
+    try {
+      await onRestart?.();
+    } catch (error) {
+      setCheckpointError(error instanceof Error ? error.message : "The lesson could not restart. Please try again.");
+      setCheckpointSaving(false);
+      return;
+    }
     stop();
     setIndex(0);
     setCurrentAnswer(null);
@@ -155,6 +227,8 @@ export function QuizRunner({
     setCelebrate(false);
     setFinishing(false);
     setFinishError(null);
+    pendingCheckpoint.current = null;
+    setCheckpointSaving(false);
     // Force every answer control to remount, including when question 1 is
     // already visible. Typed, spoken, and selected answers must all clear.
     setSessionKey((value) => value + 1);
@@ -167,7 +241,7 @@ export function QuizRunner({
 
       <div className="border-b border-[#eadfce] bg-white/95 dark:bg-card">
         <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-4 sm:px-6">
-          <Button variant="ghost" size="sm" onClick={onExit} className="gap-1.5 rounded-full">
+          <Button variant="ghost" size="sm" onClick={onExit} disabled={finishing || checkpointSaving} className="gap-1.5 rounded-full">
             <ArrowLeft className="h-4 w-4" /> Exit
           </Button>
           <div className="min-w-0 flex-1 text-center">
@@ -259,7 +333,7 @@ export function QuizRunner({
                 </p>
                 <AnswerInput
                   problem={problem}
-                  submitted={submitted}
+                  submitted={submitted || resumeReadyToFinish}
                   onAnswerChange={setCurrentAnswer}
                   onSubmit={handleSubmit}
                   bigButtons={preschool}
@@ -326,8 +400,8 @@ export function QuizRunner({
                 ) : <span />}
 
                 {submitted && (
-                  <Button size="lg" onClick={handleNext} disabled={finishing} className="ml-auto gap-2 rounded-full bg-[#285f3b] px-7 hover:bg-[#1f4d30]">
-                    {finishing ? <><Loader2 className="h-5 w-5 animate-spin" /> Saving your progress…</>
+                  <Button size="lg" onClick={handleNext} disabled={finishing || checkpointSaving || Boolean(checkpointError)} className="ml-auto gap-2 rounded-full bg-[#285f3b] px-7 hover:bg-[#1f4d30]">
+                    {finishing || checkpointSaving ? <><Loader2 className="h-5 w-5 animate-spin" /> Saving your progress…</>
                       : isLast ? <><Sparkles className="h-5 w-5" /> Save and see results</>
                       : <>Next question <ChevronRight className="h-5 w-5" /></>}
                   </Button>
@@ -337,7 +411,29 @@ export function QuizRunner({
                 <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
                   <p>We have not marked this lesson complete yet.</p>
                   <p className="mt-1 font-normal">{finishError}</p>
-                  <p className="mt-1 font-normal">Your answers are still here. Tap “Save and see results” to try again.</p>
+                  <p className="mt-1 font-normal">Your answers are still here. Try saving again when your connection is ready.</p>
+                  {resumeReadyToFinish && (
+                    <Button variant="outline" size="sm" onClick={() => void retryFinishedLesson()} className="mt-3 gap-2 rounded-full border-amber-400">
+                      <RotateCcw className="h-4 w-4" /> Retry saving results
+                    </Button>
+                  )}
+                </div>
+              )}
+              {checkpointError && (
+                <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+                  <p>We could not update your lesson yet.</p>
+                  <p className="mt-1 font-normal">{checkpointError}</p>
+                  {pendingCheckpoint.current ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-2 rounded-full border-amber-400"
+                      disabled={checkpointSaving}
+                      onClick={() => { if (pendingCheckpoint.current) void persistCheckpoint(pendingCheckpoint.current); }}
+                    >
+                      {checkpointSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Retry saving
+                    </Button>
+                  ) : <p className="mt-2 font-normal">Tap Restart again when your connection is ready.</p>}
                 </div>
               )}
             </section>
@@ -355,10 +451,26 @@ export function QuizRunner({
             </div>
           </div>
           <div className="flex items-center justify-between gap-4 sm:justify-end">
+            {onCheckpoint && (
+              <div
+                role="status"
+                className={cn(
+                  "flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold",
+                  checkpointError
+                    ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                    : "bg-sky-50 text-sky-800 dark:bg-sky-950/30 dark:text-sky-200",
+                )}
+              >
+                {checkpointSaving ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : checkpointError ? <CloudAlert className="h-4 w-4" />
+                  : <CloudCheck className="h-4 w-4" />}
+                {checkpointSaving ? "Saving place…" : checkpointError ? "Save needs attention" : checkpointSaved ? "Place saved" : "Progress protection ready"}
+              </div>
+            )}
             <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
               <Mic2 className="h-4 w-4" /> Voice ready
             </div>
-            <button onClick={restart} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
+            <button onClick={() => void restart()} disabled={checkpointSaving || finishing} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50">
               <RotateCcw className="h-3.5 w-3.5" /> Restart
             </button>
           </div>

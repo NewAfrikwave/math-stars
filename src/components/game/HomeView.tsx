@@ -56,6 +56,7 @@ export function HomeView() {
   const totalStars = useGameStore((s) => s.totalStars);
   const streak = useGameStore((s) => s.streak);
   const reward = useGameStore((s) => s.reward);
+  const activeCheckpoint = useGameStore((s) => s.activeCheckpoint);
   const progress = useGameStore((s) => s.progress);
   const profiles = useGameStore((s) => s.profiles);
   const currentProfileId = useGameStore((s) => s.currentProfileId);
@@ -79,6 +80,12 @@ export function HomeView() {
   const activeAvatar = activeProfile?.avatar === "owl" ? "owl" : "fox";
   const missionTitle = nextMission.lesson.title;
   const missionDescription = nextMission.lesson.subtitle;
+  const canResumeExactQuestion = activeCheckpoint?.lessonId === nextMission.lesson.id;
+  const missionProgressLabel = canResumeExactQuestion
+    ? activeCheckpoint.nextIndex >= activeCheckpoint.total
+      ? "Your answers are safely saved. Your results are ready."
+      : `Question ${activeCheckpoint.nextIndex + 1} of ${activeCheckpoint.total} is ready`
+    : missionDescription;
 
   const scrollToJourney = () => document.getElementById("journey-board")?.scrollIntoView({ behavior: "smooth", block: "center" });
   const returnToWelcomePage = async () => {
@@ -139,8 +146,10 @@ export function HomeView() {
             <Image src="/equal-groups-baskets.webp" alt="Two baskets with three apples in each basket" width={760} height={507} className="mx-auto h-auto w-full max-w-[220px] drop-shadow-md" />
             <div className="text-center sm:text-left">
               <p className="font-display text-2xl font-black text-[#8f2429] sm:text-3xl">{missionTitle}</p>
-              <p className="mx-auto mt-2 max-w-sm text-base font-semibold leading-snug text-[#3d3224] sm:mx-0 sm:text-lg">{missionDescription}</p>
-              <button onClick={() => setView({ name: "lesson", lessonId: nextMission.lesson.id })} className="mt-5 inline-flex min-h-14 items-center justify-center gap-3 rounded-full border-2 border-[#7a2328] bg-[#aa2f34] px-7 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]">
+              <p className="mx-auto mt-2 max-w-sm text-base font-semibold leading-snug text-[#3d3224] sm:mx-0 sm:text-lg">{missionProgressLabel}</p>
+              <button onClick={() => setView(canResumeExactQuestion
+                ? { name: "practice", lessonId: nextMission.lesson.id, difficulty: activeCheckpoint.difficulty }
+                : { name: "lesson", lessonId: nextMission.lesson.id })} className="mt-5 inline-flex min-h-14 items-center justify-center gap-3 rounded-full border-2 border-[#7a2328] bg-[#aa2f34] px-7 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]">
                 {nextMission.returning ? "Continue mission" : "Begin mission"}<ArrowRight className="h-5 w-5" />
               </button>
             </div>

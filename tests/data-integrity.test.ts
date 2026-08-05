@@ -8,6 +8,8 @@ import type { NumberProblem, MultipleChoiceProblem } from "../src/lib/types";
 import { tutorFallback } from "../src/lib/tutor-fallback";
 import { tutorLearnerContext, tutorSystemPrompt } from "../src/lib/tutor-context";
 import { pipCelebrationMotion } from "../src/lib/celebration-motion";
+import { parseCheckpointInput, restoreCheckpoint } from "../src/lib/lesson-checkpoint";
+import { retryOperation } from "../src/lib/retry-operation";
 
 describe("launch data integrity", () => {
   test("a failed attempt does not consume the date used by a later passing streak", () => {
@@ -102,5 +104,63 @@ describe("launch data integrity", () => {
     expect(reduced.animate).toEqual({ y: 0, rotate: 0, scale: 1 });
     expect("repeat" in reduced.transition).toBe(false);
     expect(animated.transition.repeat).toBe(Infinity);
+  });
+
+  test("restores the exact generated questions and score from an unfinished lesson", () => {
+    const problems: NumberProblem[] = [
+      { id: "mult-concept-1", lessonId: "mult-concept", prompt: "What is 2 × 3?", answerType: "number", answer: 6 },
+      { id: "mult-concept-2", lessonId: "mult-concept", prompt: "What is 4 × 3?", answerType: "number", answer: 12 },
+    ];
+    const restored = restoreCheckpoint({
+      lessonId: "mult-concept",
+      attemptId: "attempt_resume_1234",
+      difficulty: "challenge",
+      problemsJson: JSON.stringify(problems),
+      nextIndex: 1,
+      correctCount: 1,
+      total: 2,
+      updatedAt: new Date("2026-08-05T04:00:00Z"),
+    });
+
+    expect(restored?.problems).toEqual(problems);
+    expect(restored?.nextIndex).toBe(1);
+    expect(restored?.correctCount).toBe(1);
+    expect(restored?.difficulty).toBe("challenge");
+  });
+
+  test("rejects checkpoints whose questions belong to another lesson", () => {
+    const invalid = parseCheckpointInput({
+      lessonId: "mult-concept",
+      attemptId: "attempt_resume_1234",
+      problems: [{ id: "other-1", lessonId: "fractions", prompt: "What is one half?", answerType: "number", answer: 1 }],
+      nextIndex: 1,
+      correctCount: 1,
+    });
+    expect(invalid).toBeNull();
+  });
+
+  test("completion clears the saved question checkpoint in the same transaction", () => {
+    const progressSource = readFileSync(new URL("../src/lib/progress-save.ts", import.meta.url), "utf8");
+    const schema = readFileSync(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
+    expect(progressSource).toContain("tx.lessonCheckpoint.deleteMany");
+    expect(schema).toContain("@@unique([studentId, lessonId])");
+    expect(schema).toContain("onDelete: Cascade");
+  });
+
+  test("automatically retries a temporary checkpoint save failure", async () => {
+    let attempts = 0;
+    const result = await retryOperation(async () => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("temporary connection problem");
+      return "saved";
+    }, 2, async () => {});
+    expect(result).toBe("saved");
+    expect(attempts).toBe(3);
+  });
+
+  test("does not auto-finish a newly saved final answer as if it were a fresh resume", () => {
+    const source = readFileSync(new URL("../src/components/game/PracticeSession.tsx", import.meta.url), "utf8");
+    expect(source).toContain("const [checkpoint] = useState");
+    expect(source).toContain("resumeReadyToFinish={Boolean(checkpoint");
   });
 });

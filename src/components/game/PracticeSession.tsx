@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { Problem, Difficulty } from "@/lib/types";
+import type { Problem, Difficulty, LessonCheckpointState } from "@/lib/types";
 import { findLessonAny } from "@/store/useGameStore";
 import { generateProblems } from "@/lib/generators";
 import { useGameStore, profileFetch } from "@/store/useGameStore";
@@ -23,6 +23,13 @@ export function PracticeSession({
   const setView = useGameStore((s) => s.setView);
   const recordResult = useGameStore((s) => s.recordResult);
   const soundOn = useGameStore((s) => s.soundOn);
+  const activeCheckpoint = useGameStore((s) => s.activeCheckpoint);
+  const setActiveCheckpoint = useGameStore((s) => s.setActiveCheckpoint);
+  // Snapshot only the checkpoint that existed when this practice screen
+  // opened. Saving the final answer updates the global store, but must not
+  // make the current screen think it is a newly resumed finished session.
+  const [checkpoint] = useState(() => activeCheckpoint?.lessonId === lessonId ? activeCheckpoint : null);
+  const effectiveDifficulty = checkpoint?.difficulty ?? difficulty;
   const [practiceTool, setPracticeTool] = useState<PracticeTool>("pip");
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -32,11 +39,13 @@ export function PracticeSession({
     setPracticeTool(tool);
     setToolsOpen(true);
   };
-  const [attemptId] = useState(() => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const [attemptId] = useState(() => checkpoint?.attemptId ?? globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   const [problems] = useState<Problem[]>(() =>
-    found
-      ? generateProblems(found.lesson, found.lesson.practiceCount, { difficulty })
+    checkpoint?.problems.length
+      ? checkpoint.problems
+      : found
+      ? generateProblems(found.lesson, found.lesson.practiceCount, { difficulty: effectiveDifficulty })
       : []
   );
 
@@ -54,7 +63,47 @@ export function PracticeSession({
     );
   }
 
-  const difficultyLabel = difficulty === "easy" ? " · Easy" : difficulty === "challenge" ? " · Challenge" : "";
+  const difficultyLabel = effectiveDifficulty === "easy" ? " · Easy" : effectiveDifficulty === "challenge" ? " · Challenge" : "";
+
+  const saveCheckpoint = async ({ nextIndex, correct }: { nextIndex: number; correct: number }) => {
+    const response = await profileFetch("/api/progress/checkpoint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lessonId,
+        attemptId,
+        difficulty: effectiveDifficulty,
+        problems,
+        nextIndex,
+        correctCount: correct,
+      }),
+    });
+    const saved = await response.json().catch(() => null) as { error?: string; updatedAt?: string } | null;
+    if (!response.ok || !saved?.updatedAt) {
+      throw new Error(saved?.error ?? "Your place could not be saved. Check your connection and try again.");
+    }
+    const nextCheckpoint: LessonCheckpointState = {
+      lessonId,
+      attemptId,
+      difficulty: effectiveDifficulty,
+      problems,
+      nextIndex,
+      correctCount: correct,
+      total: problems.length,
+      updatedAt: saved.updatedAt,
+    };
+    setActiveCheckpoint(nextCheckpoint);
+  };
+
+  const clearCheckpoint = async () => {
+    const response = await profileFetch("/api/progress/checkpoint", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonId }),
+    });
+    if (!response.ok) throw new Error("The lesson could not restart. Check your connection and try again.");
+    setActiveCheckpoint(null);
+  };
 
   return (
     <div className="relative">
@@ -94,6 +143,11 @@ export function PracticeSession({
         title={`${found.lesson.title}${difficultyLabel}`}
         emoji={found.lesson.emoji}
         problems={problems}
+        initialIndex={checkpoint?.nextIndex ?? 0}
+        initialCorrectCount={checkpoint?.correctCount ?? 0}
+        resumeReadyToFinish={Boolean(checkpoint && checkpoint.nextIndex >= problems.length)}
+        onCheckpoint={saveCheckpoint}
+        onRestart={clearCheckpoint}
         soundOn={soundOn}
         preschool={lessonId.startsWith("ps-") || lessonId.startsWith("g1-")}
         onExit={() => setView({ name: "lesson", lessonId })}
@@ -101,7 +155,7 @@ export function PracticeSession({
           const response = await profileFetch("/api/progress", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lessonId, correct, total, difficulty, attemptId }),
+            body: JSON.stringify({ lessonId, correct, total, difficulty: effectiveDifficulty, attemptId }),
           });
           const saved = await response.json().catch(() => null) as {
             error?: string;

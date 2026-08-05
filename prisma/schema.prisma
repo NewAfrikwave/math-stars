@@ -49,6 +49,7 @@ model Student {
   family      FamilyAccount? @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
   progress    LessonProgress[]
+  lessonCheckpoints LessonCheckpoint[]
   achievements Achievement[]
   tutorMessages TutorMessage[]
   dailyChallenges DailyChallenge[]
@@ -56,6 +57,28 @@ model Student {
   rewardGoals RewardGoal[]
 
   @@index([familyId])
+}
+
+// The learner's exact place inside an unfinished practice set. Problems are
+// stored as JSON because each set is generated randomly and must not change
+// when the child returns on another device.
+model LessonCheckpoint {
+  id           String   @id @default(cuid())
+  studentId    String
+  lessonId     String
+  attemptId    String
+  difficulty   String?
+  problemsJson String
+  nextIndex    Int      @default(0)
+  correctCount Int      @default(0)
+  total        Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId, updatedAt])
 }
 
 // A real-world reward chosen by a parent. Progress is derived from saved

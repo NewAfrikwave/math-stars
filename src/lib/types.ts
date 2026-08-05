@@ -192,6 +192,17 @@ export interface AchievementContext {
 
 export type Difficulty = "easy" | "challenge";
 
+export interface LessonCheckpointState {
+  lessonId: string;
+  attemptId: string;
+  difficulty?: Difficulty;
+  problems: Problem[];
+  nextIndex: number;
+  correctCount: number;
+  total: number;
+  updatedAt: string;
+}
+
 // Context passed to problem generators (difficulty scaling, etc.).
 export interface GenContext {
   difficulty?: Difficulty;
