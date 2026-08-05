@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -31,6 +31,7 @@ import { useGameStore } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
 import { AnimatedNumber, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
 import { correctAnswerPraise } from "@/lib/celebrations";
+import { resolveSubmittedAnswer } from "@/lib/answer-submit";
 
 export interface QuizRunnerProps {
   title: string;
@@ -55,12 +56,15 @@ export function QuizRunner({
   const [currentAnswer, setCurrentAnswer] = useState<unknown>(null);
   const [submitted, setSubmitted] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
+  const correctCountRef = useRef(0);
   const [showHint, setShowHint] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [praiseText, setPraiseText] = useState("");
   const siteSettings = useGameStore((s) => s.siteSettings);
+  const studentName = useGameStore((s) => s.studentName);
   const sfx = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
   const { speak, speakImmediately, stop } = useTTS();
 
@@ -95,19 +99,23 @@ export function QuizRunner({
 
   const handleSubmit = (override?: unknown) => {
     if (submitted) return;
-    const answer = override !== undefined ? override : currentAnswer;
+    const answer = resolveSubmittedAnswer(problem, currentAnswer, override);
     if (answer === null || answer === "" || answer === undefined) return;
     const ok = checkAnswer(problem, answer);
     setSubmitted(true);
     if (ok) {
-      setCorrectCount((count) => count + 1);
+      const praise = correctAnswerPraise(preschool, index, correctCountRef.current, studentName);
+      correctCountRef.current += 1;
+      setCorrectCount(correctCountRef.current);
+      setPraiseText(praise);
       setCelebrate(true);
       sfx.playCorrect();
       if (soundOn) {
-        speakImmediately(correctAnswerPraise(preschool, index, correctCount), { speed: preschool ? 0.86 : 0.96 });
+        speakImmediately(praise, { speed: preschool ? 0.86 : 0.96 });
       }
       window.setTimeout(() => setCelebrate(false), 2800);
     } else {
+      setPraiseText("");
       sfx.playWrong();
     }
   };
@@ -118,7 +126,7 @@ export function QuizRunner({
       setFinishing(true);
       setFinishError(null);
       try {
-        await onFinish({ correct: correctCount, total: problems.length });
+        await onFinish({ correct: correctCountRef.current, total: problems.length });
       } catch (error) {
         setFinishError(error instanceof Error ? error.message : "Your progress could not be saved. Please try again.");
         setFinishing(false);
@@ -129,6 +137,7 @@ export function QuizRunner({
     setCurrentAnswer(null);
     setSubmitted(false);
     setShowHint(false);
+    setPraiseText("");
   };
 
   const restart = () => {
@@ -138,6 +147,8 @@ export function QuizRunner({
     setSubmitted(false);
     setShowHint(false);
     setCorrectCount(0);
+    correctCountRef.current = 0;
+    setPraiseText("");
     setCelebrate(false);
     setFinishing(false);
     setFinishError(null);
@@ -275,10 +286,10 @@ export function QuizRunner({
                           <Image src="/pip-explorer.webp" alt="Pip cheers for your correct answer" fill sizes="96px" className="object-contain object-top drop-shadow-md" />
                         </motion.div>
                         <div>
-                          <p className="flex items-center gap-2 font-display text-2xl font-black text-emerald-800 dark:text-emerald-200 sm:text-3xl">
-                            <PartyPopper className="h-7 w-7 text-rose-500" /> You got it!
+                          <p className="flex items-start gap-2 font-display text-xl font-black leading-tight text-emerald-800 dark:text-emerald-200 sm:text-2xl">
+                            <PartyPopper className="mt-0.5 h-7 w-7 shrink-0 text-rose-500" /> {praiseText || "You got it!"}
                           </p>
-                          <p className="mt-1 font-display text-lg font-black text-[#8f3b55] dark:text-rose-200">Pip is cheering for you!</p>
+                          <p className="mt-1 font-display text-lg font-black text-[#8f3b55] dark:text-rose-200">Pip is celebrating your smart work!</p>
                           <p className="mt-1 text-sm font-semibold leading-relaxed">{problem.explanation}</p>
                         </div>
                       </div>

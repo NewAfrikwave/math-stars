@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { latestCompletionDate, streakAfterCompletion } from "../src/lib/progress-save";
 import { progressAttemptId } from "../src/lib/attempt-id";
 import { correctAnswerPraise } from "../src/lib/celebrations";
+import { resolveSubmittedAnswer } from "../src/lib/answer-submit";
+import type { NumberProblem, MultipleChoiceProblem } from "../src/lib/types";
+import { tutorFallback } from "../src/lib/tutor-fallback";
 
 describe("launch data integrity", () => {
   test("a failed attempt does not consume the date used by a later passing streak", () => {
@@ -34,8 +37,37 @@ describe("launch data integrity", () => {
   });
 
   test("provides spoken correct-answer praise for younger and older learners", () => {
-    expect(correctAnswerPraise(true, 0, 0)).toBe("Hooray! You got it!");
-    expect(correctAnswerPraise(false, 0, 0)).toBe("Excellent thinking!");
-    expect(correctAnswerPraise(false, 1, 1)).toBe("Brilliant work!");
+    expect(correctAnswerPraise(true, 0, 0, "Brielle")).toContain("Brielle");
+    expect(correctAnswerPraise(false, 0, 0, "Feodora")).toBe("Well done, Feodora! Your careful thinking paid off!");
+    expect(correctAnswerPraise(false, 1, 1, "Feodora")).toContain("Feodora");
+  });
+
+  test("never grades a typed answer using the Check button click event", () => {
+    const problem: NumberProblem = {
+      id: "typed",
+      lessonId: "mult-concept",
+      prompt: "What is 5 × 2?",
+      answerType: "number",
+      answer: 10,
+    };
+    const clickEvent = { type: "click", currentTarget: {} };
+    expect(resolveSubmittedAnswer(problem, 10, clickEvent)).toBe(10);
+  });
+
+  test("still accepts immediate multiple-choice answers", () => {
+    const problem: MultipleChoiceProblem = {
+      id: "choice",
+      lessonId: "mult-concept",
+      prompt: "Choose ten",
+      answerType: "multiple-choice",
+      choices: ["8", "10"],
+      correctIndex: 1,
+    };
+    expect(resolveSubmittedAnswer(problem, null, 1)).toBe(1);
+  });
+
+  test("Pip has a useful local response when the tutor provider is unavailable", () => {
+    expect(tutorFallback("What is 5 times 2?")).toContain("5 × 2");
+    expect(tutorFallback("Help me with fractions")).toContain("pizza");
   });
 });

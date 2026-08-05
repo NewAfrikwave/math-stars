@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { Problem, Difficulty } from "@/lib/types";
 import { findLessonAny } from "@/store/useGameStore";
 import { generateProblems } from "@/lib/generators";
@@ -9,6 +9,8 @@ import { QuizRunner } from "@/components/game/QuizRunner";
 import { Mascot } from "@/components/game/Mascot";
 import { cn } from "@/lib/utils";
 import type { RewardMission } from "@/lib/rewards";
+import { Calculator } from "lucide-react";
+import { PracticeToolsDialog, type PracticeTool } from "@/components/game/PracticeToolsDialog";
 
 export function PracticeSession({
   lessonId,
@@ -21,6 +23,13 @@ export function PracticeSession({
   const setView = useGameStore((s) => s.setView);
   const recordResult = useGameStore((s) => s.recordResult);
   const soundOn = useGameStore((s) => s.soundOn);
+  const [practiceTool, setPracticeTool] = useState<PracticeTool>("pip");
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const closeTools = useCallback(() => setToolsOpen(false), []);
+  const openTool = (tool: PracticeTool) => {
+    setPracticeTool(tool);
+    setToolsOpen(true);
+  };
   const [attemptId] = useState(() => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   const [problems] = useState<Problem[]>(() =>
@@ -47,16 +56,23 @@ export function PracticeSession({
 
   return (
     <div className="relative">
-      {/* Floating Ask Pip + difficulty badge */}
+      {/* Learning tools stay in a modal so the current answers are preserved. */}
       <div className="pointer-events-none fixed right-4 top-20 z-30 flex flex-col items-end gap-2">
         <button
-          onClick={() => setView({ name: "tutor", lessonId })}
+          onClick={() => openTool("pip")}
           title="Ask Pip for help"
           className={cn(
             "pointer-events-auto flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700 shadow-md transition-transform hover:scale-105 dark:bg-violet-950/40 dark:text-violet-300"
           )}
         >
           <Mascot size={18} /> Ask Pip
+        </button>
+        <button
+          onClick={() => openTool("tables")}
+          title="Open the times tables"
+          className="pointer-events-auto flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 shadow-md transition-transform hover:scale-105 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <Calculator className="h-4 w-4" /> Times Tables
         </button>
         {difficulty && (
           <span
@@ -113,6 +129,7 @@ export function PracticeSession({
           });
         }}
       />
+      <PracticeToolsDialog key={`${practiceTool}-${toolsOpen}`} open={toolsOpen} initialTool={practiceTool} lessonId={lessonId} onClose={closeTools} />
     </div>
   );
 }

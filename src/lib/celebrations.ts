@@ -1,18 +1,29 @@
 const YOUNGER_PRAISE = [
-  "Hooray! You got it!",
-  "Great job, math star!",
-  "Amazing work!",
-  "You did it!",
+  (name: string) => `Hooray, ${name}! You did it!`,
+  (name: string) => `Good job, ${name}! Your math brain is growing!`,
+  (name: string) => `Well done, ${name}! You found the answer!`,
+  (name: string) => `Amazing work, ${name}! Keep shining!`,
 ] as const;
 
 const OLDER_PRAISE = [
-  "Excellent thinking!",
-  "Math star! You got it!",
-  "Brilliant work!",
-  "You nailed it!",
+  (name: string) => `Well done, ${name}! Your careful thinking paid off!`,
+  (name: string) => `Good job, ${name}! You found the pattern!`,
+  (name: string) => `Excellent work, ${name}! That was strong math thinking!`,
+  (name: string) => `Brilliant, ${name}! You solved it with confidence!`,
 ] as const;
 
-export function correctAnswerPraise(youngerLearner: boolean, questionIndex: number, correctCount: number) {
+export function celebrationName(studentName: string) {
+  const firstName = studentName.trim().split(/\s+/)[0];
+  return firstName && firstName.toLowerCase() !== "star" ? firstName : "Math Star";
+}
+
+export function correctAnswerPraise(
+  youngerLearner: boolean,
+  questionIndex: number,
+  correctCount: number,
+  studentName = "Math Star",
+) {
   const phrases = youngerLearner ? YOUNGER_PRAISE : OLDER_PRAISE;
-  return phrases[(questionIndex + correctCount) % phrases.length];
+  const phrase = phrases[(questionIndex + correctCount) % phrases.length];
+  return phrase(celebrationName(studentName));
 }

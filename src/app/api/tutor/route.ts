@@ -4,7 +4,12 @@ import { db } from "@/lib/db";
 import { getStudentForRequest } from "@/lib/student";
 import { logError } from "@/lib/settings";
 import { findLesson } from "@/lib/curriculum";
+import { findPsLesson } from "@/lib/preschool";
+import { findG1Lesson } from "@/lib/grade1";
+import { findG2Lesson } from "@/lib/grade2";
+import { findG4Lesson } from "@/lib/grade4";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { tutorFallback } from "@/lib/tutor-fallback";
 
 // POST /api/tutor
 // Body: { message: string, lessonId?: string }
@@ -28,9 +33,11 @@ export async function POST(req: Request) {
 
   // Build a context-aware system prompt.
   let lessonContext = "";
+  let lessonForFallback: { title: string; subtitle?: string } | undefined;
   if (lessonId) {
-    const found = findLesson(lessonId);
+    const found = findLesson(lessonId) ?? findPsLesson(lessonId) ?? findG1Lesson(lessonId) ?? findG2Lesson(lessonId) ?? findG4Lesson(lessonId);
     if (found) {
+      lessonForFallback = { title: found.lesson.title, subtitle: found.lesson.subtitle };
       lessonContext = `\n\nThe learner is currently working on the lesson "${found.lesson.title}" (${found.lesson.subtitle}), part of the "${found.domain.title}" unit. Give hints and explanations that match this topic. Use small numbers and friendly examples.`;
     }
   }
@@ -97,10 +104,11 @@ Rules:
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
     await logError("/api/tutor", "POST", msg);
-    return NextResponse.json(
-      { reply: "I'm having trouble thinking right now. Try again in a moment!" },
-      { status: 200 }
-    );
+    const reply = tutorFallback(message, lessonForFallback);
+    await db.tutorMessage.create({
+      data: { studentId: student.id, role: "assistant", content: reply, context: lessonId ?? null },
+    }).catch(() => {});
+    return NextResponse.json({ reply, fallback: true });
   }
 }
 

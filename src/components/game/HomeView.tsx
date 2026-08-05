@@ -37,6 +37,7 @@ import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
 import { useGameStore, useOverallProgress } from "@/store/useGameStore";
 import { AnimatedNumber, FloatingSparkles, MascotMotion, ProgressTrail, springy, staggerContainer, staggerItem } from "@/components/game/MotionKit";
+import { chooseNextMission } from "@/lib/next-mission";
 
 const journeyIcons = [Calculator, BookOpen, Sparkles, Map, Medal];
 
@@ -71,17 +72,7 @@ export function HomeView() {
     : level === "grade4" ? GRADE4_CURRICULUM
     : CURRICULUM;
 
-  const nextMission = (() => {
-    for (const domain of curriculum) {
-      for (const lesson of domain.lessons) {
-        const state = progress[lesson.id];
-        if (!state || (state.status !== "completed" && state.status !== "locked")) {
-          return { lesson, domain, returning: state?.status === "in-progress" };
-        }
-      }
-    }
-    return { lesson: curriculum[0].lessons[0], domain: curriculum[0], returning: false };
-  })();
+  const nextMission = chooseNextMission(curriculum, progress);
 
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
   const activeProfile = profiles.find((profile) => profile.id === currentProfileId);
