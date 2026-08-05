@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   if (result.kind === "duplicate") {
-    await db.lessonCheckpoint.deleteMany({ where: { studentId: student.id, lessonId } });
+    await db.lessonCheckpoint.deleteMany({ where: { studentId: student.id, lessonId, attemptId } });
     return responseForExistingAttempt(student.id, result.event);
   }
 
@@ -70,6 +70,8 @@ export async function POST(req: Request) {
     reward,
     passed: result.passed,
     duplicate: false,
+    correct,
+    total,
   });
 }
 
@@ -105,6 +107,8 @@ async function responseForExistingAttempt(studentId: string, event: {
     reward,
     passed: event.score >= 70,
     duplicate: true,
+    correct: event.correct,
+    total: event.total,
   });
 }
 

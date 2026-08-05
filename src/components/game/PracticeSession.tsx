@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { RewardMission } from "@/lib/rewards";
 import { Calculator } from "lucide-react";
 import { PracticeToolsDialog, type PracticeTool } from "@/components/game/PracticeToolsDialog";
+import { checkpointClientOutcome, persistedAttemptScore } from "@/lib/checkpoint-client";
 
 export function PracticeSession({
   lessonId,
@@ -68,6 +69,46 @@ export function PracticeSession({
 
   const difficultyLabel = effectiveDifficulty === "easy" ? " · Easy" : effectiveDifficulty === "challenge" ? " · Challenge" : "";
 
+  const finishAttempt = async ({ correct, total }: { correct: number; total: number }) => {
+    const response = await profileFetch("/api/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonId, correct, total, difficulty: effectiveDifficulty, attemptId }),
+    });
+    const saved = await response.json().catch(() => null) as {
+      error?: string;
+      correct?: number;
+      total?: number;
+      sessionStars?: number;
+      score?: number;
+      totalStars?: number;
+      streak?: number;
+      newlyEarned?: string[];
+      reward?: RewardMission | null;
+    } | null;
+    if (!response.ok || !saved || typeof saved.totalStars !== "number") {
+      throw new Error(saved?.error ?? "Your progress could not be saved. Check your connection and try again.");
+    }
+
+    // A duplicate response carries the exact result persisted by the device
+    // that completed first. Never combine it with this device's stale score.
+    const { correct: persistedCorrect, total: persistedTotal } = persistedAttemptScore(saved, { correct, total });
+    const { stars, score } = recordResult(lessonId, persistedCorrect, persistedTotal, {
+      totalStars: saved.totalStars,
+      streak: saved.streak ?? 0,
+      newlyEarned: saved.newlyEarned ?? [],
+      reward: saved.reward ?? null,
+    });
+    setView({
+      name: "results",
+      lessonId,
+      score: saved.score ?? score,
+      stars: saved.sessionStars ?? stars,
+      correct: persistedCorrect,
+      total: persistedTotal,
+    });
+  };
+
   const saveCheckpoint = async ({ nextIndex, correct }: { nextIndex: number; correct: number }) => {
     const response = await profileFetch("/api/progress/checkpoint", {
       method: "POST",
@@ -93,9 +134,11 @@ export function PracticeSession({
     if (!response.ok || (!saved?.completed && !saved?.updatedAt)) {
       throw new Error(saved?.error ?? "Your place could not be saved. Check your connection and try again.");
     }
-    if (saved.completed) {
+    const outcome = checkpointClientOutcome(saved);
+    if (outcome === "completed") {
       setActiveCheckpoint(null);
-      return;
+      await finishAttempt({ correct, total: problems.length });
+      return outcome;
     }
     const nextCheckpoint: LessonCheckpointState = {
       lessonId,
@@ -113,6 +156,7 @@ export function PracticeSession({
       // the learner resumes the persisted question instead of repeating work.
       setView({ name: "home" });
     }
+    return outcome;
   };
 
   const clearCheckpoint = async () => {
@@ -178,39 +222,7 @@ export function PracticeSession({
         soundOn={soundOn}
         preschool={lessonId.startsWith("ps-") || lessonId.startsWith("g1-")}
         onExit={() => setView({ name: "lesson", lessonId })}
-        onFinish={async ({ correct, total }) => {
-          const response = await profileFetch("/api/progress", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lessonId, correct, total, difficulty: effectiveDifficulty, attemptId }),
-          });
-          const saved = await response.json().catch(() => null) as {
-            error?: string;
-            sessionStars?: number;
-            score?: number;
-            totalStars?: number;
-            streak?: number;
-            newlyEarned?: string[];
-            reward?: RewardMission | null;
-          } | null;
-          if (!response.ok || !saved || typeof saved.totalStars !== "number") {
-            throw new Error(saved?.error ?? "Your progress could not be saved. Check your connection and try again.");
-          }
-          const { stars, score } = recordResult(lessonId, correct, total, {
-            totalStars: saved.totalStars,
-            streak: saved.streak ?? 0,
-            newlyEarned: saved.newlyEarned ?? [],
-            reward: saved.reward ?? null,
-          });
-          setView({
-            name: "results",
-            lessonId,
-            score: saved.score ?? score,
-            stars: saved.sessionStars ?? stars,
-            correct,
-            total,
-          });
-        }}
+        onFinish={finishAttempt}
       />
       <PracticeToolsDialog key={`${practiceTool}-${toolsOpen}`} open={toolsOpen} initialTool={practiceTool} lessonId={lessonId} onClose={closeTools} returnFocusRef={toolsTriggerRef} />
     </div>

@@ -36,6 +36,7 @@ import { correctAnswerPraise } from "@/lib/celebrations";
 import { resolveSubmittedAnswer } from "@/lib/answer-submit";
 import { pipCelebrationMotion } from "@/lib/celebration-motion";
 import { retryOperation } from "@/lib/retry-operation";
+import { canContinueAfterCheckpoint, type CheckpointClientOutcome } from "@/lib/checkpoint-client";
 
 export interface QuizRunnerProps {
   title: string;
@@ -43,7 +44,7 @@ export interface QuizRunnerProps {
   problems: Problem[];
   onExit: () => void;
   onFinish: (result: { correct: number; total: number }) => void | Promise<void>;
-  onCheckpoint?: (result: { nextIndex: number; correct: number; total: number }) => void | Promise<void>;
+  onCheckpoint?: (result: { nextIndex: number; correct: number; total: number }) => CheckpointClientOutcome | void | Promise<CheckpointClientOutcome | void>;
   onRestart?: () => void | Promise<void>;
   initialIndex?: number;
   initialCorrectCount?: number;
@@ -136,8 +137,15 @@ export function QuizRunner({
     setCheckpointError(null);
     setCheckpointSaved(false);
     try {
-      await retryOperation(() => Promise.resolve(onCheckpoint(payload)));
+      const outcome = await retryOperation(() => Promise.resolve(onCheckpoint(payload)));
       pendingCheckpoint.current = null;
+      if (!canContinueAfterCheckpoint(outcome)) {
+        // The same attempt finished on another device. Keep this quiz locked
+        // while its owner reconciles and navigates to the persisted result.
+        setCheckpointSaved(false);
+        setFinishing(true);
+        return;
+      }
       setCheckpointSaved(true);
     } catch (error) {
       setCheckpointError(error instanceof Error ? error.message : "Your place could not be saved. Please try again.");

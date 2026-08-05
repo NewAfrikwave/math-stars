@@ -165,7 +165,7 @@ export async function saveProgressAttempt(input: SaveInput) {
         },
       });
       await tx.lessonCheckpoint.deleteMany({
-        where: { studentId: input.studentId, lessonId: input.lessonId },
+        where: { studentId: input.studentId, lessonId: input.lessonId, attemptId: input.attemptId },
       });
       return { kind: "saved" as const, event, row, passed, newBest, newStars, totalStars, streak, newlyEarned };
     }, { maxWait: 5_000, timeout: 20_000 });

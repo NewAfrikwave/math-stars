@@ -143,6 +143,7 @@ describe("launch data integrity", () => {
     const progressSource = readFileSync(new URL("../src/lib/progress-save.ts", import.meta.url), "utf8");
     const schema = readFileSync(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
     expect(progressSource).toContain("tx.lessonCheckpoint.deleteMany");
+    expect(progressSource).toContain("where: { studentId: input.studentId, lessonId: input.lessonId, attemptId: input.attemptId }");
     expect(schema).toContain("@@unique([studentId, lessonId])");
     expect(schema).toContain("onDelete: Cascade");
   });
