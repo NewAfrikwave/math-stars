@@ -73,7 +73,7 @@ export function HomeView() {
     : level === "grade4" ? GRADE4_CURRICULUM
     : CURRICULUM;
 
-  const nextMission = chooseNextMission(curriculum, progress);
+  const nextMission = chooseNextMission(curriculum, progress, activeCheckpoint?.lessonId);
 
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
   const activeProfile = profiles.find((profile) => profile.id === currentProfileId);

@@ -161,6 +161,7 @@ describe("launch data integrity", () => {
   test("does not auto-finish a newly saved final answer as if it were a fresh resume", () => {
     const source = readFileSync(new URL("../src/components/game/PracticeSession.tsx", import.meta.url), "utf8");
     expect(source).toContain("const [checkpoint] = useState");
-    expect(source).toContain("resumeReadyToFinish={Boolean(checkpoint");
+    expect(source).toContain("const [resumedAfterHydration] = useState");
+    expect(source).toContain("resumeReadyToFinish={Boolean(resumedAfterHydration && checkpoint");
   });
 });

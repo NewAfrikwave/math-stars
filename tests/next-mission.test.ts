@@ -39,4 +39,16 @@ describe("dashboard resume mission", () => {
     expect(selected.lesson.id).toBe("continue-this");
     expect(selected.returning).toBe(true);
   });
+
+  test("resumes a checkpoint from a completed lesson without changing mastery", () => {
+    const completed = progress("continue-this", "completed");
+    const selected = chooseNextMission(curriculum, {
+      "available-first": progress("available-first", "available"),
+      "continue-this": completed,
+    }, "continue-this");
+
+    expect(selected.lesson.id).toBe("continue-this");
+    expect(selected.returning).toBe(true);
+    expect(completed.status).toBe("completed");
+  });
 });

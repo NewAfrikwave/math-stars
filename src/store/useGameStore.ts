@@ -68,6 +68,7 @@ interface GameState {
   earnedAchievements: string[];
   reward: RewardMission | null;
   activeCheckpoint: LessonCheckpointState | null;
+  activeCheckpointHydrated: boolean;
 
   // daily challenge: dateKey of today's attempt (null = not done today)
   dailyDoneDate: string | null;
@@ -261,6 +262,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   earnedAchievements: [],
   reward: null,
   activeCheckpoint: null,
+  activeCheckpointHydrated: false,
   dailyDoneDate: null,
   dailyScore: null,
   view: { name: "landing" },
@@ -293,12 +295,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   setSiteSettings: (s) => set({ siteSettings: s }),
 
   setReward: (reward) => set({ reward }),
-  setActiveCheckpoint: (activeCheckpoint) => set({ activeCheckpoint }),
+  setActiveCheckpoint: (activeCheckpoint) => set({ activeCheckpoint, activeCheckpointHydrated: false }),
 
   setCurrentProfile: (id) => set({
     currentProfileId: id,
     view: { name: id ? "home" : "landing" },
-    ...(id ? { hydrated: false, reward: null, activeCheckpoint: null } : {}),
+    ...(id ? { hydrated: false, reward: null, activeCheckpoint: null, activeCheckpointHydrated: false } : {}),
   }),
 
   createProfile: async (name, level, avatar) => {
@@ -352,6 +354,7 @@ export const useGameStore = create<GameState>((set, get) => ({
               earnedAchievements: [],
               reward: null,
               activeCheckpoint: null,
+              activeCheckpointHydrated: false,
               dailyDoneDate: null,
               dailyScore: null,
               lastEarnedAchievements: [],
@@ -377,6 +380,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       earnedAchievements: data.earnedAchievements,
       reward: data.reward ?? null,
       activeCheckpoint: data.activeCheckpoint ?? null,
+      activeCheckpointHydrated: Boolean(data.activeCheckpoint),
       dailyDoneDate: data.dailyDoneDate,
       dailyScore: data.dailyScore,
       hydrated: true,
@@ -495,6 +499,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       streak: saved?.streak ?? (wasCompleted || !passed ? state.streak : Math.max(state.streak, 1)),
       reward: saved?.reward ?? state.reward,
       activeCheckpoint: null,
+      activeCheckpointHydrated: false,
     });
 
     return { stars, score, newlyEarned };
@@ -523,6 +528,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       earnedAchievements: [],
       reward: null,
       activeCheckpoint: null,
+      activeCheckpointHydrated: false,
       dailyDoneDate: null,
       dailyScore: null,
       view: { name: "home" },

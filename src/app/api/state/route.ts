@@ -92,13 +92,6 @@ export async function GET(req: Request) {
     }
   }
 
-  if (activeCheckpoint && computed[activeCheckpoint.lessonId]?.status !== "completed") {
-    computed[activeCheckpoint.lessonId] = {
-      ...computed[activeCheckpoint.lessonId],
-      status: "in-progress",
-    };
-  }
-
   const achievements = await db.achievement.findMany({
     where: { studentId: student.id },
     select: { achievementId: true },

@@ -24,11 +24,13 @@ export function PracticeSession({
   const recordResult = useGameStore((s) => s.recordResult);
   const soundOn = useGameStore((s) => s.soundOn);
   const activeCheckpoint = useGameStore((s) => s.activeCheckpoint);
+  const activeCheckpointHydrated = useGameStore((s) => s.activeCheckpointHydrated);
   const setActiveCheckpoint = useGameStore((s) => s.setActiveCheckpoint);
   // Snapshot only the checkpoint that existed when this practice screen
   // opened. Saving the final answer updates the global store, but must not
   // make the current screen think it is a newly resumed finished session.
   const [checkpoint] = useState(() => activeCheckpoint?.lessonId === lessonId ? activeCheckpoint : null);
+  const [resumedAfterHydration] = useState(() => Boolean(checkpoint && activeCheckpointHydrated));
   const effectiveDifficulty = checkpoint?.difficulty ?? difficulty;
   const [practiceTool, setPracticeTool] = useState<PracticeTool>("pip");
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -39,7 +41,8 @@ export function PracticeSession({
     setPracticeTool(tool);
     setToolsOpen(true);
   };
-  const [attemptId] = useState(() => checkpoint?.attemptId ?? globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const createAttemptId = () => globalThis.crypto?.randomUUID?.() ?? `attempt-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const [attemptId, setAttemptId] = useState(() => checkpoint?.attemptId ?? createAttemptId());
 
   const [problems] = useState<Problem[]>(() =>
     checkpoint?.problems.length
@@ -78,21 +81,38 @@ export function PracticeSession({
         correctCount: correct,
       }),
     });
-    const saved = await response.json().catch(() => null) as { error?: string; updatedAt?: string } | null;
-    if (!response.ok || !saved?.updatedAt) {
+    const saved = await response.json().catch(() => null) as {
+      error?: string;
+      completed?: boolean;
+      advancedElsewhere?: boolean;
+      attemptId?: string;
+      nextIndex?: number;
+      correctCount?: number;
+      updatedAt?: string;
+    } | null;
+    if (!response.ok || (!saved?.completed && !saved?.updatedAt)) {
       throw new Error(saved?.error ?? "Your place could not be saved. Check your connection and try again.");
+    }
+    if (saved.completed) {
+      setActiveCheckpoint(null);
+      return;
     }
     const nextCheckpoint: LessonCheckpointState = {
       lessonId,
-      attemptId,
+      attemptId: saved.attemptId ?? attemptId,
       difficulty: effectiveDifficulty,
       problems,
-      nextIndex,
-      correctCount: correct,
+      nextIndex: saved.nextIndex ?? nextIndex,
+      correctCount: saved.correctCount ?? correct,
       total: problems.length,
-      updatedAt: saved.updatedAt,
+      updatedAt: saved.updatedAt!,
     };
     setActiveCheckpoint(nextCheckpoint);
+    if (saved.advancedElsewhere) {
+      // Another tab or device has a newer answer. Return to the dashboard so
+      // the learner resumes the persisted question instead of repeating work.
+      setView({ name: "home" });
+    }
   };
 
   const clearCheckpoint = async () => {
@@ -103,6 +123,13 @@ export function PracticeSession({
     });
     if (!response.ok) throw new Error("The lesson could not restart. Check your connection and try again.");
     setActiveCheckpoint(null);
+  };
+
+  const restartPractice = async () => {
+    await clearCheckpoint();
+    // A final save may have committed even if its response was lost. A new
+    // attempt id keeps a deliberate restart from receiving that old result.
+    setAttemptId(createAttemptId());
   };
 
   return (
@@ -145,9 +172,9 @@ export function PracticeSession({
         problems={problems}
         initialIndex={checkpoint?.nextIndex ?? 0}
         initialCorrectCount={checkpoint?.correctCount ?? 0}
-        resumeReadyToFinish={Boolean(checkpoint && checkpoint.nextIndex >= problems.length)}
+        resumeReadyToFinish={Boolean(resumedAfterHydration && checkpoint && checkpoint.nextIndex >= problems.length)}
         onCheckpoint={saveCheckpoint}
-        onRestart={clearCheckpoint}
+        onRestart={restartPractice}
         soundOn={soundOn}
         preschool={lessonId.startsWith("ps-") || lessonId.startsWith("g1-")}
         onExit={() => setView({ name: "lesson", lessonId })}
