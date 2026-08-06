@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: false,
+  async redirects() {
+    return [{
+      source: "/:path*",
+      has: [{ type: "host", value: "mathstars.net" }],
+      destination: "https://www.mathstars.net/:path*",
+      permanent: true,
+    }];
+  },
   async headers() {
     return [{
       source: "/:path*",
