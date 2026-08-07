@@ -1,59 +1,69 @@
-# Design QA: Guided Math Studio lesson system
+# Design QA: Public storybook landing page
 
 ## Evidence
 
-- Source visual truth: `/workspace/scratch/a3be78015eb6/generated_images/exec-5deab9aa-df19-4cbc-b5ea-49a5499fec5c.png`
-- Source pixels: 1488 × 1056.
-- Intended desktop CSS viewport: approximately 1488 × 1056 at device scale factor 1.
-- Implementation screenshot: unavailable.
-- Implementation URL attempted: local Work Mode preview on port 4173.
-- State: Grade 3 equal-groups lesson and practice question.
-- Browser evidence: blocked. The required cloud browser returned `net::ERR_BLOCKED_BY_CLIENT` for the Work Mode preview URL.
-- Full-view comparison evidence: unavailable because the implementation could not be captured in the required browser.
-- Focused region comparison evidence: unavailable for the same reason.
+- Source visual truth: the full-page homepage direction selected by the user in the conversation, grounded by the production storybook hero artwork at `/workspace/scratch/2fa07fdec928/math-stars/public/storybook-adventure-map.webp`.
+- Source hero pixels: 1716 × 916.
+- Implementation URL: `http://terminal.local:4173/` in the Work Mode cloud browser.
+- Browser viewport: 1363 × 936 CSS pixels at device scale factor 1.
+- Browser captures:
+  - `/workspace/scratch/2fa07fdec928/math-stars/qa-artifacts/landing-hero-desktop.jpg` (1348 × 926 pixels after browser scrollbar exclusion)
+  - `/workspace/scratch/2fa07fdec928/math-stars/qa-artifacts/landing-arcade-desktop.jpg` (1348 × 926 pixels)
+  - `/workspace/scratch/2fa07fdec928/math-stars/qa-artifacts/landing-parent-desktop.jpg` (1348 × 926 pixels)
+- Combined focused comparison: `/workspace/scratch/2fa07fdec928/math-stars/qa-artifacts/landing-hero-comparison.jpg` (1320 × 540 pixels).
+- Density normalization: source and implementation were rendered at 1× density, then each was fit within an equal 660 × 540 comparison panel without stretching.
+- State: signed-out public landing page, default motion preference, family-story carousel advanced once, and registration CTA opened in create-account mode.
 
 ## Findings
 
-- [P1] Browser-rendered visual verification is unavailable
-  - Location: complete lesson and practice flow.
-  - Evidence: the source mock opens successfully, but the required local implementation preview is blocked by the cloud browser before the app renders.
-  - Impact: typography, responsive wrapping, generated basket compositing, interactions, and console state cannot be signed off visually.
-  - Fix: restore cloud-browser access to the local preview, capture desktop and mobile states, compare them with the source in one combined view, and address any visible P0/P1/P2 differences.
+- No actionable P0, P1, or P2 visual differences remain in the inspected desktop experience.
+- Typography matches the selected friendly storybook direction through the existing Fredoka variable family, with clear display hierarchy and readable supporting text.
+- Spacing and layout rhythm are consistent across the hero, Arcade, grade path, toolkit, rewards, parent view, trust sections, family stories, final CTA, and footer. The rendered page has no horizontal overflow.
+- Colors and visual tokens preserve the selected forest green, parchment, burgundy, gold, and purple Arcade palette with sufficient foreground contrast in inspected states.
+- Image quality and asset fidelity pass: the production storybook map, Pip, Luna, journey art, and three-doorway environment are used directly. No custom illustration was replaced by CSS or placeholder art.
+- Copy and content match the current product: Preschool through 4th Grade, three Arcade games, saved grade-aware play, rewards, companions, parent progress, read-aloud support, and family-managed privacy.
 
-## Static and Build Validation
+## Full-view comparison evidence
 
+- The combined hero comparison confirms that the selected map remains the visual center of the page and retains its original crop, color, detail, and sign text.
+- Browser captures confirm the map-first hero, high-contrast Arcade transition, full-width grade path, and parent dashboard have the same calm storybook-to-game-world progression as the chosen direction.
+- The hero visual is not stretched or clipped at the inspected desktop viewport. The Arcade cards align evenly and the parent dashboard remains readable without overlap.
+
+## Focused region comparison evidence
+
+- The hero artwork was compared side by side with its rendered placement. Subject order, crop, star mountain, castle, treehouse, signs, and parchment background remain intact.
+- Arcade cards were inspected at their section anchor. All three game titles, skills, descriptions, and calls to action are visible with consistent elevation and no clipping.
+- Parent progress was inspected as a focused browser capture. Count-up metrics, all three skill bars, growth/next-skill cards, and the explanatory checklist are visible and aligned.
+
+## Interaction and accessibility checks
+
+- Hero, Arcade, parent, privacy, sign-in, and registration links resolve to the intended routes or section anchors.
+- The family-story next control changes the visible story and its dot state.
+- The registration CTA opens `/signin?mode=register` with the create-account form selected.
+- Scroll parallax, floating stars, portal glow, card reactions, count-up metrics, skill bars, character motion, and story transitions are active in the default-motion experience.
+- Framer Motion uses the app-level `reducedMotion="user"` preference, and CSS animation/transition fallbacks are disabled by the existing reduced-motion media query.
+- All inspected images have an `alt` attribute. Decorative images use empty alt text.
+- No application warnings or errors appeared in the browser console. Browser-extension messages were excluded because they do not originate from Math Stars.
+
+## Comparison history
+
+### Pass 1
+
+- Earlier finding: the first cloud-browser navigation timed out before a page capture could be created.
+- Fix/recovery: reused the selected cloud browser, opened a fresh tab, and loaded the same local preview successfully.
+- Post-fix evidence: hero, Arcade, parent dashboard, final CTA, and registration form all rendered and were inspected. No product-code visual fix was required after the successful capture.
+
+## Validation
+
+- Automated tests: 61 passed.
 - TypeScript: passed.
 - ESLint: passed.
-- Production build: passed.
-- Automated Bun tests: not run because Bun is unavailable in this environment.
-- Primary browser interactions: not tested due to the browser preview blocker.
-- Browser console errors: not checked due to the browser preview blocker.
+- Production build: passed for all 33 routes.
+- Primary interactions: passed for landing navigation, family-story transition, and registration CTA.
+- Browser console: no app-originated warnings or errors.
 
-## Implementation Scope Completed
+## Follow-up polish
 
-- Shared guided-studio teaching layout for every curriculum and grade level.
-- Shared two-column practice layout with age-aware learning steps.
-- Prominent lesson and question read-aloud controls.
-- Server TTS with browser speech-synthesis fallback, stop state, retry state, timeout, and accessible labels.
-- Real woven basket asset for equal-group questions.
-- Spoken object names separated from visual emoji so narration says “apples,” “cookies,” and similar words naturally.
-- Responsive desktop and stacked mobile CSS structure.
-- Existing answer inputs, hints, feedback, progress, results, difficulty modes, worksheets, and Pip tutor navigation retained.
+- Capture an additional narrow-phone screenshot during a future iteration if the cloud browser adds viewport resizing. The responsive breakpoints and stacked layouts are implemented, but the selected source visual is desktop-first and this QA run used the available desktop cloud-browser viewport.
 
-## Implementation Checklist
-
-- [x] Apply the selected Guided Math Studio information architecture.
-- [x] Repair read-aloud failure behavior and accessibility labels.
-- [x] Replace rectangle group placeholders with recognizable baskets.
-- [x] Apply the redesign through shared components used by all grades.
-- [x] Pass TypeScript, ESLint, and production build.
-- [ ] Capture and compare browser-rendered desktop practice state.
-- [ ] Test Read aloud, hint, answer, feedback, next question, and restart interactions.
-- [ ] Capture and inspect the mobile layout.
-- [ ] Confirm no application console errors.
-
-## Follow-up Polish
-
-- Consider a future custom object-illustration library so every countable object uses the same premium 3D art direction as the baskets and Pip.
-
-final result: blocked
+final result: passed
