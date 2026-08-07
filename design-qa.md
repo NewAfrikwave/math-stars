@@ -1,59 +1,68 @@
-# Design QA: Guided Math Studio lesson system
+# Design QA: Public storybook landing page
 
 ## Evidence
 
-- Source visual truth: `/workspace/scratch/a3be78015eb6/generated_images/exec-5deab9aa-df19-4cbc-b5ea-49a5499fec5c.png`
-- Source pixels: 1488 × 1056.
-- Intended desktop CSS viewport: approximately 1488 × 1056 at device scale factor 1.
-- Implementation screenshot: unavailable.
-- Implementation URL attempted: local Work Mode preview on port 4173.
-- State: Grade 3 equal-groups lesson and practice question.
-- Browser evidence: blocked. The required cloud browser returned `net::ERR_BLOCKED_BY_CLIENT` for the Work Mode preview URL.
-- Full-view comparison evidence: unavailable because the implementation could not be captured in the required browser.
-- Focused region comparison evidence: unavailable for the same reason.
+- Source of visual truth: `/workspace/scratch/2fa07fdec928/upload/719d60ea-87e9-4f53-800f-cbef3ca2c0b7.png`.
+- Source dimensions: 606 × 1194 pixels.
+- Implementation: signed-out public homepage at `http://terminal.local:4173/` in the Work Mode cloud browser.
+- Browser viewport: 1363 × 936 CSS pixels at device scale factor 1.
+- Final implementation capture: cloud-browser inline viewport capture of the hero and the start of “Choose your path,” taken after the final production build.
+- Comparison method: the uploaded reference and the rendered implementation were inspected together in one comparison input, then focused browser captures were inspected for the journey, Arcade, grade levels, toolkit, rewards, parent dashboard, family stories, final CTA, and footer.
+- State: signed-out, default motion preference, family-story carousel advanced once, Arcade anchor visited, and the registration CTA opened in create-account mode.
 
 ## Findings
 
-- [P1] Browser-rendered visual verification is unavailable
-  - Location: complete lesson and practice flow.
-  - Evidence: the source mock opens successfully, but the required local implementation preview is blocked by the cloud browser before the app renders.
-  - Impact: typography, responsive wrapping, generated basket compositing, interactions, and console state cannot be signed off visually.
-  - Fix: restore cloud-browser access to the local preview, capture desktop and mobile states, compare them with the source in one combined view, and address any visible P0/P1/P2 differences.
+- No actionable P0, P1, or P2 visual differences remain in the inspected desktop experience.
+- The final hero matches the reference composition: compact header, left-aligned two-color headline and vertically stacked calls to action, parchment background, and a right-side watercolor adventure world with readable Learn, Play Arcade, and Celebrate signs.
+- Pip and the blue tutor robot sit on the lower hero path without covering the headline or primary action.
+- The page follows the reference sequence and visual rhythm: Choose your path, Arcade, grade bands, complete toolkit, rewards, then the requested parent progress, family stories, final CTA, and footer sections.
+- The three Arcade cards use dedicated storybook illustrations. The daily mission and tutor robot also use generated watercolor assets rather than placeholder art or CSS drawings.
+- The page has no horizontal overflow at the inspected desktop viewport. Section spacing, card alignment, borders, radii, image crops, and button sizing remain consistent through the full scroll.
+- P3: the toolkit and reward objects use the product’s Lucide icon system instead of bespoke watercolor object illustrations. This preserves clarity and existing product consistency while leaving a small stylistic difference from the reference.
+- P3: the provided reference ends after rewards; the implementation continues with the parent dashboard, family stories, final CTA, and footer required by the broader homepage brief.
 
-## Static and Build Validation
+## Interaction and accessibility checks
 
+- Header and footer section links scroll to their intended sections.
+- The family-story control changes the visible quote and active dot without leaving a blank transition state.
+- “Explore the Arcade” opens `/signin?mode=register`, and the create-account heading is selected.
+- Default-motion character floats, path glow, story transitions, and progress animation render correctly.
+- Framer Motion respects the app-level `reducedMotion="user"` preference, and the existing reduced-motion media query disables CSS animation and transition fallbacks.
+- Images have appropriate alt text; decorative images use empty alt text.
+- No application-originated browser console warnings or errors were found. A Chrome-extension metadata message was excluded because it does not originate from Math Stars.
+
+## Comparison history
+
+### Pass 1
+
+- P1: the earlier PR version used a centered hero, dark generic section transitions, and the wrong storybook composition.
+- Fix: rebuilt the landing page around the uploaded screenshot’s split hero, parchment palette, section order, and illustrated adventure path.
+
+### Pass 2
+
+- P1: the hero copy column was too narrow and Pip overlapped the headline and calls to action.
+- Fix: adjusted the desktop grid ratio, stacked the calls to action, and moved both characters fully into the illustrated world.
+
+### Pass 3
+
+- P2: the family-story transition could briefly render an empty card, and an older grade background contained baked-in text from a previous concept.
+- Fix: changed the carousel to synchronized transitions and replaced the background with the clean watercolor landscape.
+
+### Pass 4
+
+- Final combined comparison passed. The source and implementation now share the same hierarchy, focal balance, palette, storybook atmosphere, prominent path signage, and conversion flow.
+
+## Validation
+
+- Automated tests: 61 passed, 0 failed.
 - TypeScript: passed.
 - ESLint: passed.
-- Production build: passed.
-- Automated Bun tests: not run because Bun is unavailable in this environment.
-- Primary browser interactions: not tested due to the browser preview blocker.
-- Browser console errors: not checked due to the browser preview blocker.
+- Production build: passed for all 33 routes.
+- Primary interactions: passed for landing anchors, family-story transition, and registration CTA.
+- Browser console: no app-originated warnings or errors.
 
-## Implementation Scope Completed
+## Follow-up polish
 
-- Shared guided-studio teaching layout for every curriculum and grade level.
-- Shared two-column practice layout with age-aware learning steps.
-- Prominent lesson and question read-aloud controls.
-- Server TTS with browser speech-synthesis fallback, stop state, retry state, timeout, and accessible labels.
-- Real woven basket asset for equal-group questions.
-- Spoken object names separated from visual emoji so narration says “apples,” “cookies,” and similar words naturally.
-- Responsive desktop and stacked mobile CSS structure.
-- Existing answer inputs, hints, feedback, progress, results, difficulty modes, worksheets, and Pip tutor navigation retained.
+- Capture an additional narrow-phone screenshot when the cloud browser supports viewport resizing. Responsive breakpoints and stacked layouts are implemented, but this comparison used the available desktop viewport because the supplied visual target is desktop-first.
 
-## Implementation Checklist
-
-- [x] Apply the selected Guided Math Studio information architecture.
-- [x] Repair read-aloud failure behavior and accessibility labels.
-- [x] Replace rectangle group placeholders with recognizable baskets.
-- [x] Apply the redesign through shared components used by all grades.
-- [x] Pass TypeScript, ESLint, and production build.
-- [ ] Capture and compare browser-rendered desktop practice state.
-- [ ] Test Read aloud, hint, answer, feedback, next question, and restart interactions.
-- [ ] Capture and inspect the mobile layout.
-- [ ] Confirm no application console errors.
-
-## Follow-up Polish
-
-- Consider a future custom object-illustration library so every countable object uses the same premium 3D art direction as the baskets and Pip.
-
-final result: blocked
+final result: passed

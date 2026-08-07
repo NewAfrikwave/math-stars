@@ -499,6 +499,147 @@ input[type="number"] {
   50% { transform: translateY(-4px) rotate(12deg) scale(1.12); opacity: 1; }
 }
 
+/* ---------- Public landing: faithful animated storybook world ---------- */
+html { scroll-behavior: smooth; }
+
+.storybook-landing {
+  overflow: hidden;
+  background-color: #fffaf0;
+  color: #352d23;
+}
+
+.reference-section,
+.reference-arcade,
+.reference-levels,
+.reference-rewards,
+.reference-parent,
+.reference-stories,
+.reference-final { scroll-margin-top: 5rem; }
+
+.reference-hero {
+  min-height: 610px;
+  background-color: #f8edd4;
+}
+
+.reference-hero__world {
+  position: absolute;
+  inset: -4% -3% -7% 28%;
+  z-index: 0;
+  background-image: url("/landing-hero-world-v3.webp");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: saturate(.94) contrast(.97);
+}
+
+.landing-primary-button { isolation: isolate; overflow: hidden; }
+
+.hero-character--fox { animation: reference-fox-float 4.8s ease-in-out infinite; }
+.hero-character--robot { animation: reference-robot-float 3.6s ease-in-out infinite; }
+
+.reference-section { position: relative; background-color: #fffaf0; }
+.reference-path::before {
+  position: absolute;
+  top: 39px;
+  right: 8%;
+  left: 8%;
+  z-index: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: #e8c94f;
+  box-shadow: 0 0 11px rgb(236 199 58 / 75%);
+  content: "";
+  animation: reference-path-glow 3.2s ease-in-out infinite;
+}
+
+.reference-arcade {
+  isolation: isolate;
+  background-color: #eff0df;
+  border-block: 1px solid #ded0ad;
+}
+.reference-arcade__landscape {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url("/landing-hero-world-v2.webp");
+  background-position: center 70%;
+  background-size: cover;
+  opacity: .2;
+  filter: saturate(.75);
+}
+.reference-arcade::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(249 246 229 / 69%);
+  content: "";
+}
+
+.reference-game-card { transform-style: preserve-3d; }
+.reference-game-card__shade {
+  position: absolute;
+  inset: 0;
+  background: rgb(17 19 42 / 58%);
+}
+
+.reference-levels {
+  isolation: isolate;
+  background-color: #f8f0d7;
+}
+.reference-levels::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/landing-hero-world-v2.webp");
+  background-position: center 82%;
+  background-size: cover;
+  content: "";
+  opacity: .11;
+}
+.grade-reference-card { transition: transform 220ms ease, box-shadow 220ms ease; }
+.grade-reference-card:hover { transform: translateY(-5px); box-shadow: 0 17px 34px rgb(91 65 30 / 17%); }
+
+.toolkit-reference-card:hover h3 { color: #a9443f; }
+.reference-rewards { background-color: #f7edcf; }
+.reward-reference-card + .reward-reference-card { border-left: 1px solid #e3d3ad; }
+
+.reference-parent {
+  background-color: #f4ead0;
+  border-top: 1px solid #dcc9a2;
+}
+.parent-reference-dashboard { perspective: 1200px; transform-origin: center bottom; }
+.reference-stories { background-color: #fffaf0; border-top: 1px solid #dfcda5; }
+.reference-final { background-color: #efe2c3; border-top: 1px solid #dbc699; }
+
+@keyframes reference-path-glow {
+  0%, 100% { opacity: .55; box-shadow: 0 0 8px rgb(236 199 58 / 55%); }
+  50% { opacity: 1; box-shadow: 0 0 18px rgb(236 199 58 / 92%); }
+}
+
+@keyframes reference-fox-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+@keyframes reference-robot-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1.5deg); }
+}
+
+@media (max-width: 1023px) {
+  .reference-hero__world { inset: 0; opacity: .38; background-position: 63% center; }
+  .reference-hero__copy { margin-inline: auto; text-align: center; }
+  .reference-hero__copy { border-radius: 34px; background: rgb(255 249 233 / 90%); box-shadow: 0 18px 44px rgb(84 62 32 / 14%); padding: 2rem; }
+  .reference-hero__copy ul, .reference-hero__copy > div { justify-content: center; }
+}
+
+@media (max-width: 767px) {
+  .reference-hero { min-height: 660px; }
+  .reference-hero__world { background-position: 68% center; opacity: .28; }
+  .reference-path::before { display: none; }
+  .reward-reference-card + .reward-reference-card { border-left: 0; }
+}
+
 /* Print styles for worksheets: hide app chrome, show only the worksheet. */
 @media print {
   body {
@@ -533,7 +674,10 @@ input[type="number"] {
   .arcade-feature,
   .arcade-feature::before,
   .arcade-feature__badge,
-  .arcade-feature__stars svg {
+  .arcade-feature__stars svg,
+  .landing-primary-button::after,
+  .journey-line::before,
+  .arcade-portal-glow {
     animation: none !important;
   }
 }
