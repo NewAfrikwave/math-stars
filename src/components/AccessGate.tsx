@@ -125,18 +125,19 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
               width={1400}
               height={360}
               priority
+              unoptimized
               className="h-12 w-auto sm:h-14"
             />
           </a>
 
-          {!signInPage && <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex" aria-label="Landing page">
-            <a href="#journey" className="transition-colors hover:text-rose-600">The journey</a>
-            <a href="#arcade" className="transition-colors hover:text-rose-600">Arcade</a>
-            <a href="#parents" className="transition-colors hover:text-rose-600">For parents</a>
+          {!signInPage && <nav className="hidden items-center gap-9 text-sm font-bold lg:flex" aria-label="Landing page">
+            <a href="#adventure" className="transition-colors hover:text-rose-600">Adventure</a>
+            <a href="#arcade" className="transition-colors hover:text-rose-600">Games</a>
+            <a href="#parents" className="transition-colors hover:text-rose-600">For Parents</a>
             <a href="/privacy" className="transition-colors hover:text-rose-600">Privacy</a>
           </nav>}
 
-          <a href={signInPage ? "/" : "/signin"} className="inline-flex h-11 items-center gap-2 rounded-xl border-2 border-rose-500 px-4 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50">
+          <a href={signInPage ? "/" : "/signin"} className="inline-flex h-11 items-center gap-2 rounded-full border-2 border-rose-500 px-5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50">
             <LockKeyhole className="h-4 w-4" aria-hidden="true" />
             <span>{signInPage ? "Back home" : "Family sign in"}</span>
           </a>
