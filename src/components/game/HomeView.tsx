@@ -98,9 +98,12 @@ export function HomeView() {
     <div className="explorer-home relative min-h-[100svh] overflow-hidden bg-[#3d2415] text-[#2d2318]">
       <Image src="/explorer-study-bg.webp" alt="A cozy explorer study filled with books and a map" fill priority sizes="100vw" className="object-cover object-center" />
       <div className="absolute inset-0 bg-[#2b1808]/10" />
+      <div className="explorer-ambient explorer-ambient--gold" aria-hidden="true" />
+      <div className="explorer-ambient explorer-ambient--plum" aria-hidden="true" />
+      <div className="explorer-vignette" aria-hidden="true" />
       <FloatingSparkles className="z-[1] opacity-70" tone="cream" />
 
-      <header className="relative z-30 border-b border-[#ad9455]/50 bg-[#142d1d]/95 text-[#fff7d5] shadow-lg">
+      <header className="explorer-header relative z-30 border-b border-[#ad9455]/50 bg-[#142d1d]/95 text-[#fff7d5] shadow-lg">
         <div className="mx-auto flex h-[86px] w-full max-w-[1440px] items-center justify-between px-4 sm:px-8">
           <button onClick={() => setView({ name: "home" })} className="group flex items-center gap-3 rounded-2xl text-left focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457]">
             <span className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[#d5af4d] bg-[#f1d792] shadow-md transition-transform group-hover:scale-105 sm:h-16 sm:w-16">
@@ -119,8 +122,8 @@ export function HomeView() {
           </button>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex h-11 items-center gap-2 rounded-full border border-[#b49a58]/50 bg-[#2b462e] px-4 font-display text-lg font-black shadow-inner sm:h-12 sm:px-6">
-              <Star className="h-6 w-6 fill-[#f8c53d] text-[#f8c53d]" aria-hidden="true" />
+            <div className="star-counter flex h-11 items-center gap-2 rounded-full border border-[#b49a58]/50 bg-[#2b462e] px-4 font-display text-lg font-black shadow-inner sm:h-12 sm:px-6">
+              <Star className="star-counter__icon h-6 w-6 fill-[#f8c53d] text-[#f8c53d]" aria-hidden="true" />
               <AnimatedNumber value={totalStars} /><span className="sr-only">stars</span>
             </div>
             <button onClick={() => setSoundOn(!soundOn)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#b49a58]/50 bg-[#2b462e] shadow-md transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457] sm:h-12 sm:w-12" aria-label={soundOn ? "Turn sound off" : "Turn sound on"}>
@@ -134,16 +137,16 @@ export function HomeView() {
       </header>
 
       <main className="relative z-10 mx-auto grid w-full max-w-[1280px] gap-5 px-3 pb-32 pt-5 sm:px-6 lg:grid-cols-[minmax(0,3fr)_minmax(270px,1fr)] lg:pb-28 lg:pt-7">
-        <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="relative rounded-[28px] border-[5px] border-[#68421f] bg-[#f5dfad]/95 p-3 shadow-[0_18px_40px_rgba(30,13,3,0.42)] sm:p-7 lg:min-h-[670px]">
+        <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="storybook-panel storybook-panel--mission relative rounded-[28px] border-[5px] border-[#68421f] bg-[#f5dfad]/95 p-3 shadow-[0_18px_40px_rgba(30,13,3,0.42)] sm:p-7 lg:min-h-[670px]">
           <div className="pointer-events-none absolute inset-2 rounded-[20px] border border-[#aa7b36]/60" />
           <motion.div variants={staggerItem} className="relative z-10 text-center">
             <h1 className="font-display text-3xl font-black text-[#24482d] sm:text-5xl">{greeting}, {studentName}</h1>
-            <p className="mx-auto mt-3 w-fit rounded-full bg-[#9e2f2b] px-6 py-2 font-display text-sm font-black uppercase tracking-[0.12em] text-[#fff5d5] shadow-md sm:text-base">
+            <p className="mission-ribbon mx-auto mt-3 w-fit rounded-full bg-[#9e2f2b] px-6 py-2 font-display text-sm font-black uppercase tracking-[0.12em] text-[#fff5d5] shadow-md sm:text-base">
               {nextMission.returning ? "Continue your mission" : "Your first mission"}
             </p>
           </motion.div>
 
-          <motion.div variants={staggerItem} whileHover={{ y: -3 }} className="relative z-10 mt-5 grid items-center gap-4 rounded-2xl border-2 border-[#c79d4d] bg-[#fff4d2]/80 p-4 shadow-inner sm:grid-cols-[190px_1fr] sm:p-5 lg:pr-[210px]">
+          <motion.div variants={staggerItem} whileHover={{ y: -3 }} className="mission-hero-card relative z-10 mt-5 grid items-center gap-4 rounded-2xl border-2 border-[#c79d4d] bg-[#fff4d2]/80 p-4 shadow-inner sm:grid-cols-[190px_1fr] sm:p-5 lg:pr-[210px]">
             <Image src="/equal-groups-baskets.webp" alt="Two baskets with three apples in each basket" width={760} height={507} className="mx-auto h-auto w-full max-w-[220px] drop-shadow-md" />
             <div className="text-center sm:text-left">
               <p className="font-display text-2xl font-black text-[#8f2429] sm:text-3xl">{missionTitle}</p>
@@ -199,7 +202,7 @@ export function HomeView() {
               </motion.div>
             )}
             <MissionLink icon={<Flame className="h-7 w-7" />} title="Warm-up: Daily Challenge" subtitle="Kickstart your brain with five quick questions." onClick={() => setView({ name: "daily" })} tone="red" />
-            <MissionLink icon={<Gamepad2 className="h-7 w-7" />} title="Play: Math Adventure Arcade" subtitle="Race, hunt for treasure, build rockets, and unlock new buddies." onClick={() => setView({ name: "arcade" })} tone="purple" />
+            <MissionLink featured icon={<Gamepad2 className="h-7 w-7" />} title="Play: Math Adventure Arcade" subtitle="Race, hunt for treasure, build rockets, and unlock new buddies." onClick={() => setView({ name: "arcade" })} tone="purple" />
             <MissionLink icon={<Calculator className="h-7 w-7" />} title="Explore: Times Table Lab, 2× to 12×" subtitle="Build speed and confidence with every table." onClick={() => setView({ name: "times-tables" })} tone="purple" />
           </motion.div>
 
@@ -210,7 +213,7 @@ export function HomeView() {
           </MascotMotion>
         </motion.section>
 
-        <motion.aside id="journey-board" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="rounded-[24px] border-[4px] border-[#795027] bg-[#f4dfb4]/95 p-5 shadow-[0_18px_40px_rgba(30,13,3,0.4)] lg:min-h-[670px]">
+        <motion.aside id="journey-board" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="storybook-panel journey-board rounded-[24px] border-[4px] border-[#795027] bg-[#f4dfb4]/95 p-5 shadow-[0_18px_40px_rgba(30,13,3,0.4)] lg:min-h-[670px]">
           <div className="mx-auto -mt-2 w-fit rounded-lg bg-[#284a2e] px-7 py-2 font-display text-xl font-black text-[#fff1c8] shadow-md">Your journey</div>
           <div className="mt-5 text-center">
             <Medal className="mx-auto h-14 w-14 text-[#a36a20]" />
@@ -225,7 +228,7 @@ export function HomeView() {
               const Icon = journeyIcons[index];
               const done = domain.lessons.filter((lesson) => progress[lesson.id]?.status === "completed").length;
               return (
-                <motion.button key={domain.id} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ ...springy, delay: 0.2 + index * 0.07 }} whileHover={{ x: 5, scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => setView({ name: "domain", domainId: domain.id })} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent p-2 text-left transition-colors hover:border-[#b7924e] hover:bg-[#fff2cd] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2a5132]">
+                <motion.button key={domain.id} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ ...springy, delay: 0.2 + index * 0.07 }} whileHover={{ x: 5, scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => setView({ name: "domain", domainId: domain.id })} className="journey-step group flex w-full items-center gap-3 rounded-2xl border border-transparent p-2 text-left transition-colors hover:border-[#b7924e] hover:bg-[#fff2cd] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2a5132]">
                   <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 shadow-sm ${index === 0 ? "border-[#bc6b35] bg-[#e6a260] text-[#6c301f]" : index === 1 ? "border-[#7462a5] bg-[#a99cd2] text-[#3e315f]" : index === 2 ? "border-[#b38c3a] bg-[#e4c66d] text-[#664c18]" : index === 3 ? "border-[#3a8b7d] bg-[#6dc4b0] text-[#1f554c]" : "border-[#5674a8] bg-[#84a7d8] text-[#2c4269]"}`}>
                     <Icon className="h-6 w-6" />
                   </span>
@@ -241,7 +244,7 @@ export function HomeView() {
         </motion.aside>
       </main>
 
-      <nav aria-label="Learner navigation" className="fixed inset-x-2 bottom-2 z-40 mx-auto grid max-w-[1160px] grid-cols-5 rounded-[28px] border-2 border-[#c8a968] bg-[#fff2cf]/95 p-2 shadow-[0_10px_35px_rgba(40,17,4,0.45)] backdrop-blur-sm sm:inset-x-6 sm:bottom-5">
+      <nav aria-label="Learner navigation" className="explorer-nav fixed inset-x-2 bottom-2 z-40 mx-auto grid max-w-[1160px] grid-cols-5 rounded-[28px] border-2 border-[#c8a968] bg-[#fff2cf]/95 p-2 shadow-[0_10px_35px_rgba(40,17,4,0.45)] backdrop-blur-sm sm:inset-x-6 sm:bottom-5">
         <NavButton active icon={<Home />} label="Home" onClick={() => setView({ name: "home" })} />
         <NavButton icon={<Map />} label="Adventure Map" onClick={scrollToJourney} />
         <NavButton icon={<Calculator />} label="Times Tables" onClick={() => setView({ name: "times-tables" })} />
@@ -280,11 +283,18 @@ export function HomeView() {
   );
 }
 
-function MissionLink({ icon, title, subtitle, onClick, tone }: { icon: React.ReactNode; title: string; subtitle: string; onClick: () => void; tone: "red" | "purple" }) {
+function MissionLink({ icon, title, subtitle, onClick, tone, featured = false }: { icon: React.ReactNode; title: string; subtitle: string; onClick: () => void; tone: "red" | "purple"; featured?: boolean }) {
   return (
-    <motion.button variants={staggerItem} whileHover={{ y: -4, scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={onClick} className="group flex min-h-[72px] w-full items-center gap-4 rounded-2xl border border-[#caa568] bg-[#fff4d4]/90 p-3 text-left shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]">
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-white shadow-sm ${tone === "red" ? "border-[#9b4538] bg-[#c65a42]" : "border-[#5b477d] bg-[#8066a5]"}`}>{icon}</span>
-      <span className="min-w-0 flex-1"><span className="block font-display text-lg font-black text-[#24482d]">{title}</span><span className="block text-sm font-semibold text-[#725d40]">{subtitle}</span></span>
+    <motion.button variants={staggerItem} whileHover={{ y: -4, scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={onClick} className={`mission-link group relative flex min-h-[72px] w-full items-center gap-4 overflow-hidden rounded-2xl border p-3 text-left shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d] ${featured ? "arcade-feature border-[#9b76bd] bg-[linear-gradient(120deg,rgba(248,234,255,0.97),rgba(229,207,250,0.95))] pr-4" : "border-[#caa568] bg-[#fff4d4]/90"}`}>
+      {featured && <span className="arcade-feature__stars" aria-hidden="true"><Star /><Sparkles /><Star /></span>}
+      <span className={`mission-link__icon flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-white shadow-sm ${tone === "red" ? "border-[#9b4538] bg-[#c65a42]" : "border-[#5b477d] bg-[#8066a5]"}`}>{icon}</span>
+      <span className="relative z-[1] min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="block font-display text-lg font-black text-[#24482d]">{title}</span>
+          {featured && <span className="arcade-feature__badge rounded-full bg-[#67428a] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-white shadow-sm">3 games</span>}
+        </span>
+        <span className="block text-sm font-semibold text-[#725d40]">{subtitle}</span>
+      </span>
       <ChevronRight className="h-6 w-6 shrink-0 transition-transform group-hover:translate-x-1" />
     </motion.button>
   );
