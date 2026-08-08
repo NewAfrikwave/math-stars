@@ -21,6 +21,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import {
   AdminFamilies,
@@ -261,10 +271,55 @@ function GlobalNavigation({ active, onChange, onExit }: { active: AdminTab; onCh
         })}
       </nav>
       <div className="absolute bottom-5 left-0 hidden w-full space-y-2 px-3 lg:block">
-        <button className="flex w-full flex-col items-center gap-1 rounded-xl py-2 text-xs font-semibold text-white/75 hover:bg-white/8 hover:text-white"><CircleHelp className="h-5 w-5" />Help</button>
+        <AdminHelpDialog onNavigate={onChange} />
         <button onClick={onExit} className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/8 px-2 py-3 text-xs font-bold hover:bg-white/14"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black text-[#111f46]">A</span><span>Exit admin</span></button>
       </div>
     </aside>
+  );
+}
+
+function AdminHelpDialog({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
+  const destinations: Array<{ tab: AdminTab; title: string; description: string }> = [
+    { tab: "analytics", title: "Understand activity", description: "Review engagement, learning outcomes, devices, and downloadable reports." },
+    { tab: "system", title: "Check platform health", description: "Inspect service health and recent errors when something does not look right." },
+    { tab: "settings", title: "Change site controls", description: "Manage announcements, support details, and protected administrator access." },
+  ];
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button className="flex w-full flex-col items-center gap-1 rounded-xl py-2 text-xs font-semibold text-white/75 transition hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+          <CircleHelp className="h-5 w-5" />Help
+        </button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl rounded-2xl border-[#dedbd5] bg-[#fbfaf7] p-0 text-[#101936] shadow-[0_30px_90px_rgba(8,18,43,.28)]">
+        <DialogHeader className="border-b border-[#e5e1da] px-6 pb-5 pt-6 text-left">
+          <p className="text-xs font-black uppercase tracking-[.16em] text-[#9a2450]">Admin guide</p>
+          <DialogTitle className="text-2xl font-black tracking-[-.03em]">How can we help?</DialogTitle>
+          <DialogDescription className="leading-6 text-[#68738b]">
+            Choose an area to open it directly. Your current admin session will stay active.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 px-6 py-5">
+          {destinations.map((destination) => (
+            <DialogClose asChild key={destination.tab}>
+              <button
+                onClick={() => onNavigate(destination.tab)}
+                className="rounded-xl border border-[#e1ded8] bg-white p-4 text-left transition hover:border-[#b9a8ef] hover:bg-[#f7f3ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d9cffb]"
+              >
+                <span className="font-black">{destination.title}</span>
+                <span className="mt-1 block text-sm leading-5 text-[#68738b]">{destination.description}</span>
+              </button>
+            </DialogClose>
+          ))}
+        </div>
+        <DialogFooter className="border-t border-[#e5e1da] px-6 py-4">
+          <DialogClose asChild>
+            <Button variant="outline" className="rounded-lg border-[#aab1c0] bg-white font-bold text-[#17203c]">Close guide</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

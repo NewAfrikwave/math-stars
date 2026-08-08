@@ -51,11 +51,16 @@
 
 ## Validation
 
-- Automated tests: 61 passed, 0 failed.
+- Automated tests: 63 passed, 0 failed, including grade-scoped curriculum progress and desktop Help wiring.
 - TypeScript: passed.
 - ESLint: passed.
 - Production build: passed for all 33 routes.
 - Browser interactions: passed for analytics views and range filter, family search and review, and all primary management destinations.
+
+## Review fixes
+
+- Curriculum progress now calculates each domain only against learners assigned to that domain's grade; grades with no learners report a truthful `0/0` total.
+- The desktop Help control now opens an accessible admin guide with working destinations for Analytics, System, and Settings.
 
 ## Follow-up polish
 

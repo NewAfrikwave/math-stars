@@ -6,6 +6,7 @@ import { PRESCHOOL_CURRICULUM, PRESCHOOL_LESSON_IDS } from "@/lib/preschool";
 import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS } from "@/lib/grade1";
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS } from "@/lib/grade2";
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS } from "@/lib/grade4";
+import { buildCurriculumDomainStats } from "@/lib/admin-curriculum-progress";
 
 const gradeDefinitions = [
   { level: "preschool", label: "Preschool", curricula: PRESCHOOL_CURRICULUM, lessonIds: PRESCHOOL_LESSON_IDS },
@@ -150,11 +151,7 @@ export async function GET(req: Request) {
     .sort((left, right) => right.attempts - left.attempts)
     .slice(0, 10);
 
-  const domainStats = allCurricula.map((domain) => {
-    const lessonIds = new Set(domain.lessons.map((lesson) => lesson.id));
-    const rows = completed.filter((progress) => lessonIds.has(progress.lessonId));
-    return { id: domain.id, title: domain.title, emoji: domain.emoji, completed: rows.length, total: domain.lessons.length * Math.max(1, allStudents.length) };
-  });
+  const domainStats = buildCurriculumDomainStats(gradeDefinitions, allStudents, completed);
 
   const lessonsToday = recentEvents.filter((event) => event.type === "lesson" && event.createdAt >= todayStart).length;
   const arcadeToday = recentEvents.filter((event) => event.type === "arcade" && event.createdAt >= todayStart).length;
