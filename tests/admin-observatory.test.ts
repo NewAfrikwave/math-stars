@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { buildCurriculumDomainStats } from "../src/lib/admin-curriculum-progress";
+import { buildActivitySeries, countInstalledFamilies, summarizeGradeStats } from "../src/lib/admin-analytics";
 
 describe("admin learning observatory", () => {
   test("calculates each curriculum domain against learners in its own grade", () => {
@@ -58,5 +59,43 @@ describe("admin learning observatory", () => {
     expect(portal).toContain("Owner access code");
     expect(portal).toContain("Four-digit admin PIN");
     expect(portal).toContain("<AdminView standalone />");
+  });
+
+  test("counts family install adoption once per family, including an explicit legacy family", () => {
+    const devices = [
+      { familyId: "family-a", scopeKey: "family-a", installed: true },
+      { familyId: "family-a", scopeKey: "family-a", installed: true },
+      { familyId: "family-b", scopeKey: "family-b", installed: false },
+      { familyId: null, scopeKey: "legacy", installed: true },
+      { familyId: null, scopeKey: "orphan", installed: true },
+    ];
+
+    expect(countInstalledFamilies(devices, true)).toBe(2);
+    expect(countInstalledFamilies(devices, false)).toBe(1);
+  });
+
+  test("uses lesson scores only for the lesson mastery series", () => {
+    const date = new Date(2026, 7, 8, 12);
+    expect(buildActivitySeries(["2026-08-08"], [
+      { type: "lesson", score: 80, createdAt: date },
+      { type: "lesson", score: 100, createdAt: date },
+      { type: "daily", score: 10, createdAt: date },
+      { type: "placement", score: 20, createdAt: date },
+      { type: "arcade", score: 30, createdAt: date },
+    ])).toEqual([{ date: "2026-08-08", count: 5, lessons: 2, arcade: 1, avgScore: 90 }]);
+  });
+
+  test("sums active learners separately from enrolled learners", () => {
+    expect(summarizeGradeStats([
+      { learners: 5, activeLearners: 2, lessonsCompleted: 4, avgScore: 75 },
+      { learners: 3, activeLearners: 1, lessonsCompleted: 2, avgScore: 90 },
+    ])).toEqual({ learners: 8, activeLearners: 3, lessons: 6, weightedScore: 480 });
+  });
+
+  test("keeps a mobile exit control in the admin navigation", () => {
+    const source = readFileSync(new URL("../src/components/game/AdminView.tsx", import.meta.url), "utf8");
+    expect(source).toContain("<span>Exit</span>");
+    expect(source).toContain("lg:hidden");
+    expect(source).toContain("onClick={onExit}");
   });
 });

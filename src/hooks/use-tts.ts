@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { speakableText } from "@/lib/speech";
 
 // A simple in-memory cache so the same text isn't re-synthesized on replay.
@@ -66,9 +66,7 @@ interface UseTTSResult {
 // Read-aloud hook backed by /api/tts (z-ai-web-dev-sdk TTS).
 // Shared across all callers so only one piece of text plays at a time.
 export function useTTS(): UseTTSResult {
-  const ownerId = useRef<number | null>(null);
-  if (ownerId.current === null) ownerId.current = ++nextOwnerId;
-  const id = ownerId.current;
+  const [id] = useState(() => ++nextOwnerId);
   const snapshot = useSyncExternalStore(subscribeToSpeech, getSpeechSnapshot, getSpeechSnapshot);
   const ownsSpeech = snapshot.ownerId === id;
   const speaking = ownsSpeech && snapshot.speaking;

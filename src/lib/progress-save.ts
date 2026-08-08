@@ -20,6 +20,7 @@ interface SaveInput {
   stars: number;
   difficulty: "easy" | "challenge" | null;
   attemptId: string;
+  occurredAt?: Date;
 }
 
 export function streakAfterCompletion(previous: number, lastCompletion: Date | null, today: Date) {
@@ -45,6 +46,22 @@ export function latestCompletionDate(values: Array<Date | null | undefined>) {
   }, null);
 }
 
+export function consecutiveLearningStreak(values: readonly Date[]) {
+  const keys = [...new Set(values.map((value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`))].sort().reverse();
+  if (!keys.length) return 0;
+  let streak = 1;
+  let cursor = new Date(`${keys[0]}T12:00:00`);
+  for (const key of keys.slice(1)) {
+    const expected = new Date(cursor);
+    expected.setDate(cursor.getDate() - 1);
+    const expectedKey = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, "0")}-${String(expected.getDate()).padStart(2, "0")}`;
+    if (expectedKey !== key) break;
+    streak += 1;
+    cursor = new Date(`${key}T12:00:00`);
+  }
+  return streak;
+}
+
 export async function saveProgressAttempt(input: SaveInput) {
   try {
     return await db.$transaction(async (tx) => {
@@ -60,9 +77,8 @@ export async function saveProgressAttempt(input: SaveInput) {
         where: { studentId_lessonId: { studentId: input.studentId, lessonId: input.lessonId } },
       });
       const currentRows = await tx.lessonProgress.findMany({ where: { studentId: input.studentId } });
-      const latestDaily = await tx.dailyChallenge.findFirst({
+      const dailyCompletions = await tx.dailyChallenge.findMany({
         where: { studentId: input.studentId },
-        orderBy: { completedAt: "desc" },
         select: { completedAt: true },
       });
       const completedBefore = (id: string) => currentRows.some((row) => row.lessonId === id && row.status === "completed");
@@ -75,7 +91,7 @@ export async function saveProgressAttempt(input: SaveInput) {
         return { kind: "error" as const, status: 403, error: "lesson is locked" };
       }
 
-      const now = new Date();
+      const now = input.occurredAt ?? new Date();
       const passed = input.score >= 70;
       const wasCompleted = existing?.status === "completed";
       const nextStatus: LessonStatus = wasCompleted || passed ? "completed" : "in-progress";
@@ -120,19 +136,25 @@ export async function saveProgressAttempt(input: SaveInput) {
       // includes failed practice attempts).
       const legacyCompletion = latestCompletionDate([
         ...currentRows.map((progress) => progress.completedAt),
-        latestDaily?.completedAt,
+        ...dailyCompletions.map((daily) => daily.completedAt),
       ]);
       const lastCompletion = student.lastCompletedAt ?? legacyCompletion;
-      const streak = !wasCompleted && passed
-        ? streakAfterCompletion(student.streak, lastCompletion, now)
-        : student.streak;
+      const allSuccessfulDates = [
+        ...freshRows.map((progress) => progress.completedAt).filter((value): value is Date => Boolean(value)),
+        ...dailyCompletions.map((daily) => daily.completedAt),
+      ];
+      const historicalStreak = consecutiveLearningStreak(allSuccessfulDates);
+      const streak = input.occurredAt
+        ? historicalStreak
+        : !wasCompleted && passed ? streakAfterCompletion(student.streak, lastCompletion, now) : student.streak;
+      const nextLastCompletion = input.occurredAt ? latestCompletionDate(allSuccessfulDates) : !wasCompleted && passed ? now : lastCompletion;
       await tx.student.update({
         where: { id: input.studentId },
         data: {
           totalStars,
           streak,
-          lastPlayedAt: now,
-          lastCompletedAt: !wasCompleted && passed ? now : lastCompletion,
+          lastPlayedAt: latestCompletionDate([student.lastPlayedAt, now]),
+          lastCompletedAt: nextLastCompletion,
         },
       });
 

@@ -16,6 +16,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
+import { hasOfflineParentReport, sealOfflineParentReport, unlockOfflineParentReport } from "@/lib/offline/parent-vault";
+import { clearOfflineDeviceData, loadSnapshot, saveSnapshot } from "@/lib/offline/database";
 import { cn } from "@/lib/utils";
 import { domainsForLevel, REWARD_PRESETS, type RewardMission, type RewardTargetType } from "@/lib/rewards";
 
@@ -100,6 +102,10 @@ export function ParentView() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!navigator.onLine) {
+      hasOfflineParentReport().then((available) => { if (!cancelled) setStage(available ? "pin" : "setup"); }).catch(() => setStage("setup"));
+      return () => { cancelled = true; };
+    }
     fetch("/api/parent?summary=1")
       .then((r) => (r.status === 401 ? { error: "wrong-pin", hasPin: true } : r.json()))
       .then((d) => {
@@ -107,18 +113,25 @@ export function ParentView() {
         if (d.error === "wrong-pin" || d.hasPin) setStage("pin");
         else setStage("setup");
       })
-      .catch(() => setStage("setup"));
+      .catch(() => { hasOfflineParentReport().then((available) => setStage(available ? "pin" : "setup")).catch(() => setStage("setup")); });
     return () => {
       cancelled = true;
     };
   }, []);
 
   const loadSummary = async (pin: string) => {
-    const res = await fetch("/api/parent?summary=1", { headers: { "x-parent-pin": pin } });
-    if (res.status === 401) return null;
-    const d = await res.json();
-    if (d.error) return null;
-    return (d.profiles ?? []) as ProfileSummaryData[];
+    if (!navigator.onLine) return unlockOfflineParentReport<ProfileSummaryData[]>(pin);
+    try {
+      const res = await fetch("/api/parent?summary=1", { headers: { "x-parent-pin": pin } });
+      if (res.status === 401) return null;
+      const d = await res.json();
+      if (d.error) return null;
+      const profiles = (d.profiles ?? []) as ProfileSummaryData[];
+      await sealOfflineParentReport(pin, profiles).catch(() => {});
+      return profiles;
+    } catch {
+      return unlockOfflineParentReport<ProfileSummaryData[]>(pin);
+    }
   };
 
   const loadActivity = async (profileId: string) => {
@@ -128,8 +141,9 @@ export function ParentView() {
       });
       const d = await res.json();
       setActivity((d.events ?? []) as ActivityItem[]);
+      await saveSnapshot(`parent-activity:${profileId}`, d.events ?? []).catch(() => {});
     } catch {
-      setActivity([]);
+      setActivity(await loadSnapshot<ActivityItem[]>(`parent-activity:${profileId}`).catch(() => null) ?? []);
     }
   };
 
@@ -138,8 +152,9 @@ export function ParentView() {
       const res = await fetch("/api/rewards", { headers: { "x-profile-id": profileId } });
       const data = await res.json();
       setReward(data.reward ?? null);
+      await saveSnapshot(`parent-reward:${profileId}`, data.reward ?? null).catch(() => {});
     } catch {
-      setReward(null);
+      setReward(await loadSnapshot<RewardMission | null>(`parent-reward:${profileId}`).catch(() => null));
     }
   };
 
@@ -638,7 +653,7 @@ export function ParentView() {
               headers: { "Content-Type": "application/json", "x-parent-pin": pinInput },
               body: JSON.stringify({ confirmation }),
             });
-            if (response.ok) window.location.reload(); else setError("Family data was not deleted.");
+            if (response.ok) { await clearOfflineDeviceData(); window.location.reload(); } else setError("Family data was not deleted.");
           }}>Delete all family data</Button>
           {familyAccount && <Button variant="destructive" onClick={async () => {
             const confirmation = prompt('Type "DELETE MY FAMILY ACCOUNT" to remove the parent account, learner profiles, progress, tutor history, and device records.');
@@ -650,7 +665,7 @@ export function ParentView() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ confirmation, password }),
             });
-            if (response.ok) window.location.reload(); else setError("The family account was not deleted. Check the password and try again.");
+            if (response.ok) { await clearOfflineDeviceData(); window.location.reload(); } else setError("The family account was not deleted. Check the password and try again.");
           }}>Delete family account</Button>}
           <a href="/privacy" className="inline-flex h-10 items-center px-3 text-sm font-semibold text-primary underline">Privacy details</a>
         </div>

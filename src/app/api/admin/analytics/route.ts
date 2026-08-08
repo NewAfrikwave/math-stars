@@ -7,6 +7,7 @@ import { GRADE1_CURRICULUM, GRADE1_LESSON_IDS } from "@/lib/grade1";
 import { GRADE2_CURRICULUM, GRADE2_LESSON_IDS } from "@/lib/grade2";
 import { GRADE4_CURRICULUM, GRADE4_LESSON_IDS } from "@/lib/grade4";
 import { buildCurriculumDomainStats } from "@/lib/admin-curriculum-progress";
+import { buildActivitySeries, countInstalledFamilies } from "@/lib/admin-analytics";
 
 const gradeDefinitions = [
   { level: "preschool", label: "Preschool", curricula: PRESCHOOL_CURRICULUM, lessonIds: PRESCHOOL_LESSON_IDS },
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [allStudents, accounts, devices, allProgress, recentEvents, tutorMessagesToday] = await Promise.all([
+  const [allStudents, accounts, devices, allProgress, recentEvents, tutorMessagesToday, offlineReceipts] = await Promise.all([
     db.student.findMany({ select: { id: true, familyId: true, level: true, createdAt: true, lastPlayedAt: true } }),
     db.familyAccount.findMany({
       orderBy: { createdAt: "desc" },
@@ -60,10 +61,15 @@ export async function GET(req: Request) {
       select: { studentId: true, lessonId: true, type: true, score: true, createdAt: true },
     }),
     db.tutorMessage.count({ where: { createdAt: { gte: todayStart } } }),
+    db.offlineSyncReceipt.findMany({
+      where: { receivedAt: { gte: rangeStart } },
+      select: { studentId: true, delayMinutes: true },
+    }),
   ]);
 
   const legacyExists = allStudents.some((student) => student.familyId === null);
   const totalFamilies = accounts.length + (legacyExists ? 1 : 0);
+  const installedFamilies = countInstalledFamilies(devices, legacyExists);
   const completed = allProgress.filter((progress) => progress.status === "completed");
   const avgScore = completed.length
     ? Math.round(completed.reduce((sum, progress) => sum + progress.bestScore, 0) / completed.length)
@@ -89,16 +95,7 @@ export async function GET(req: Request) {
     if (signupByDay.has(key)) signupByDay.set(key, (signupByDay.get(key) ?? 0) + 1);
   }
 
-  const activityByDay = new Map(dateKeys.map((date) => [date, { count: 0, lessons: 0, arcade: 0, scores: [] as number[] }]));
-  for (const event of recentEvents) {
-    const key = localDateKey(event.createdAt);
-    const day = activityByDay.get(key);
-    if (!day) continue;
-    day.count += 1;
-    if (event.type === "lesson") day.lessons += 1;
-    if (event.type === "arcade") day.arcade += 1;
-    if (event.score > 0) day.scores.push(event.score);
-  }
+  const activityByDay = buildActivitySeries(dateKeys, recentEvents);
 
   const gradeStats = gradeDefinitions.map((grade) => {
     const students = allStudents.filter((student) => student.level === grade.level);
@@ -165,6 +162,11 @@ export async function GET(req: Request) {
     newFamilies7: accounts.filter((account) => account.createdAt >= rangeStart).length,
     totalDevices: devices.length,
     installedDevices: devices.filter((device) => device.installed).length,
+    installedFamilies,
+    offlineSyncEvents: offlineReceipts.length,
+    offlineSyncLearners: new Set(offlineReceipts.map((receipt) => receipt.studentId)).size,
+    offlineSyncWithin24h: offlineReceipts.length ? Math.round((offlineReceipts.filter((receipt) => receipt.delayMinutes <= 24 * 60).length / offlineReceipts.length) * 100) : 100,
+    offlineSyncAvgDelayMinutes: offlineReceipts.length ? Math.round(offlineReceipts.reduce((sum, receipt) => sum + receipt.delayMinutes, 0) / offlineReceipts.length) : 0,
     deviceMix,
     platformMix,
     activeLearners,
@@ -178,13 +180,7 @@ export async function GET(req: Request) {
     gradeStats,
     domainStats,
     signupByDay: [...signupByDay].map(([date, count]) => ({ date, count })),
-    activityByDay: [...activityByDay].map(([date, day]) => ({
-      date,
-      count: day.count,
-      lessons: day.lessons,
-      arcade: day.arcade,
-      avgScore: day.scores.length ? Math.round(day.scores.reduce((sum, score) => sum + score, 0) / day.scores.length) : 0,
-    })),
+    activityByDay,
     recentFamilies: accounts.slice(0, 12).map((account) => ({
       id: account.id,
       displayName: account.displayName,

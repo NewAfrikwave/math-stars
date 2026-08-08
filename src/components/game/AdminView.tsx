@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -81,6 +82,7 @@ const sectionCopy: Record<Exclude<AdminTab, "analytics">, { eyebrow: string; tit
 };
 
 export function AdminView({ standalone = false }: { standalone?: boolean }) {
+  const router = useRouter();
   const setView = useGameStore((state) => state.setView);
   const [stage, setStage] = useState<"loading" | "pin" | "panel" | "setup">("loading");
   const [pinInput, setPinInput] = useState("");
@@ -89,7 +91,7 @@ export function AdminView({ standalone = false }: { standalone?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const exitAdmin = () => {
-    if (standalone) window.location.href = "/";
+    if (standalone) router.push("/");
     else setView({ name: "home" });
   };
 
@@ -273,6 +275,13 @@ function GlobalNavigation({ active, onChange, onExit }: { active: AdminTab; onCh
             </button>
           );
         })}
+        <button
+          onClick={onExit}
+          className="group relative flex min-w-[62px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold text-white/72 transition hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white lg:hidden"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span>Exit</span>
+        </button>
       </nav>
       <div className="absolute bottom-5 left-0 hidden w-full space-y-2 px-3 lg:block">
         <AdminHelpDialog onNavigate={onChange} />

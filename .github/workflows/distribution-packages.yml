@@ -1,0 +1,28 @@
+name: Build distribution packages
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  school-kit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.4
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+      - run: docker build -t math-stars-school:${{ github.sha }} .
+      - run: docker save math-stars-school:${{ github.sha }} | gzip > math-stars-school-image.tar.gz
+      - run: tar -czf math-stars-school-kit.tar.gz school-kit DEPLOY.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: math-stars-school-kit
+          path: |
+            math-stars-school-image.tar.gz
+            math-stars-school-kit.tar.gz
+            download/android

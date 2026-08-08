@@ -228,4 +228,5 @@ export type GameView =
   | { name: "parent" }
   | { name: "placement"; domainId: string }
   | { name: "donations" }
+  | { name: "offline" }
   | { name: "admin" };

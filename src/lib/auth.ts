@@ -102,7 +102,7 @@ export function verifyAccessCode(code: string) {
 
 export const sessionCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.NODE_ENV === "production" && process.env.MATH_STARS_ALLOW_LOCAL_HTTP !== "true",
   sameSite: "strict" as const,
   path: "/",
   maxAge: SESSION_AGE_SECONDS,
@@ -110,7 +110,7 @@ export const sessionCookieOptions = {
 
 export const adminSessionCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.NODE_ENV === "production" && process.env.MATH_STARS_ALLOW_LOCAL_HTTP !== "true",
   sameSite: "strict" as const,
   path: "/",
   maxAge: ADMIN_SESSION_AGE_SECONDS,

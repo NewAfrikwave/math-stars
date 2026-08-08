@@ -80,6 +80,7 @@ export function QuizRunner({
   const [checkpointSaving, setCheckpointSaving] = useState(false);
   const [checkpointError, setCheckpointError] = useState<string | null>(null);
   const [checkpointSaved, setCheckpointSaved] = useState(initialIndex > 0);
+  const [hasPendingCheckpoint, setHasPendingCheckpoint] = useState(false);
   const pendingCheckpoint = useRef<{ nextIndex: number; correct: number; total: number } | null>(null);
   const resumedFinish = useRef(false);
   const [praiseText, setPraiseText] = useState("");
@@ -133,12 +134,14 @@ export function QuizRunner({
   const persistCheckpoint = async (payload: { nextIndex: number; correct: number; total: number }) => {
     if (!onCheckpoint) return;
     pendingCheckpoint.current = payload;
+    setHasPendingCheckpoint(true);
     setCheckpointSaving(true);
     setCheckpointError(null);
     setCheckpointSaved(false);
     try {
       const outcome = await retryOperation(() => Promise.resolve(onCheckpoint(payload)));
       pendingCheckpoint.current = null;
+      setHasPendingCheckpoint(false);
       if (!canContinueAfterCheckpoint(outcome)) {
         // The same attempt finished on another device. Keep this quiz locked
         // while its owner reconciles and navigates to the persisted result.
@@ -236,6 +239,7 @@ export function QuizRunner({
     setFinishing(false);
     setFinishError(null);
     pendingCheckpoint.current = null;
+    setHasPendingCheckpoint(false);
     setCheckpointSaving(false);
     // Force every answer control to remount, including when question 1 is
     // already visible. Typed, spoken, and selected answers must all clear.
@@ -431,7 +435,7 @@ export function QuizRunner({
                 <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
                   <p>We could not update your lesson yet.</p>
                   <p className="mt-1 font-normal">{checkpointError}</p>
-                  {pendingCheckpoint.current ? (
+                  {hasPendingCheckpoint ? (
                     <Button
                       variant="outline"
                       size="sm"

@@ -1,0 +1,19 @@
+{
+  "packageId": "net.mathstars.app",
+  "host": "www.mathstars.net",
+  "name": "Math Stars",
+  "launcherName": "Math Stars",
+  "display": "standalone",
+  "themeColor": "#2e6b4f",
+  "backgroundColor": "#fff7e7",
+  "startUrl": "/?source=android",
+  "iconUrl": "https://www.mathstars.net/brand/math-stars-icon-512.png",
+  "maskableIconUrl": "https://www.mathstars.net/brand/math-stars-icon-512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "orientation": "portrait",
+  "minSdkVersion": 23,
+  "fallbackType": "customtabs",
+  "enableNotifications": false,
+  "isChromeOSOnly": false
+}

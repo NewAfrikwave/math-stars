@@ -46,6 +46,25 @@ function makePuzzle(): Puzzle {
   };
 }
 
+function PoolCounter({ remaining, emoji }: { remaining: number; emoji: string }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: "pool" });
+  if (remaining <= 0) return null;
+  return (
+    <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={cn(
+        "flex h-16 w-16 select-none items-center justify-center rounded-2xl bg-amber-100 text-4xl shadow-sm transition-transform hover:scale-105 active:scale-95 dark:bg-amber-950/40",
+        isDragging && "opacity-50"
+      )}
+      title="Drag me into a basket"
+    >
+      {emoji}
+    </button>
+  );
+}
+
 export function ManipulativeView({ lessonId }: { lessonId?: string }) {
   const setView = useGameStore((s) => s.setView);
   const target = lessonId ?? "mult-concept";
@@ -111,26 +130,6 @@ export function ManipulativeView({ lessonId }: { lessonId?: string }) {
     }
   };
 
-  // draggable pool counter
-  const PoolCounter = () => {
-    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: "pool" });
-    if (remaining <= 0) return null;
-    return (
-      <button
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
-        className={cn(
-          "flex h-16 w-16 select-none items-center justify-center rounded-2xl bg-amber-100 text-4xl shadow-sm transition-transform hover:scale-105 active:scale-95 dark:bg-amber-950/40",
-          isDragging && "opacity-50"
-        )}
-        title="Drag me into a basket"
-      >
-        {puzzle.emoji}
-      </button>
-    );
-  };
-
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-28 pt-6">
       <Confetti active={celebrate} />
@@ -172,7 +171,7 @@ export function ManipulativeView({ lessonId }: { lessonId?: string }) {
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 p-4 dark:bg-amber-950/20">
               {remaining > 0 ? (
-                <PoolCounter />
+                <PoolCounter remaining={remaining} emoji={puzzle.emoji} />
               ) : (
                 <span className="text-sm font-medium text-muted-foreground">Tray is empty — all counters placed!</span>
               )}
