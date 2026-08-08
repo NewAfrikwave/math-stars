@@ -1,68 +1,69 @@
-# Design QA: Public storybook landing page
+# Design QA: Learning Observatory admin dashboard
 
 ## Evidence
 
-- Source of visual truth: `/workspace/scratch/2fa07fdec928/upload/719d60ea-87e9-4f53-800f-cbef3ca2c0b7.png`.
-- Source dimensions: 606 × 1194 pixels.
-- Implementation: signed-out public homepage at `http://terminal.local:4173/` in the Work Mode cloud browser.
+- Source of visual truth: `/workspace/scratch/2fa07fdec928/upload/image(8).png`.
+- Source dimensions: 1480 × 1068 pixels.
+- Implementation: authenticated Math Stars admin workspace in the Work Mode cloud browser.
 - Browser viewport: 1363 × 936 CSS pixels at device scale factor 1.
-- Final implementation capture: cloud-browser inline viewport capture of the hero and the start of “Choose your path,” taken after the final production build.
-- Comparison method: the uploaded reference and the rendered implementation were inspected together in one comparison input, then focused browser captures were inspected for the journey, Arcade, grade levels, toolkit, rewards, parent dashboard, family stories, final CTA, and footer.
-- State: signed-out, default motion preference, family-story carousel advanced once, Arcade anchor visited, and the registration CTA opened in create-account mode.
+- Final implementation capture: `/workspace/scratch/2fa07fdec928/math-stars-admin-observatory-final.jpg` (1348 × 1586 pixels, full page).
+- Combined comparison input: `/workspace/scratch/2fa07fdec928/admin-design-qa-comparison-final.jpg`, with the source on the left and implementation on the right at a normalized 1348-pixel content width.
+- State: Overview, 14-day range, realistic disposable family, learner, device, lesson, arcade, and tutor records.
 
 ## Findings
 
 - No actionable P0, P1, or P2 visual differences remain in the inspected desktop experience.
-- The final hero matches the reference composition: compact header, left-aligned two-color headline and vertically stacked calls to action, parchment background, and a right-side watercolor adventure world with readable Learn, Play Arcade, and Celebrate signs.
-- Pip and the blue tutor robot sit on the lower hero path without covering the headline or primary action.
-- The page follows the reference sequence and visual rhythm: Choose your path, Arcade, grade bands, complete toolkit, rewards, then the requested parent progress, family stories, final CTA, and footer sections.
-- The three Arcade cards use dedicated storybook illustrations. The daily mission and tutor robot also use generated watercolor assets rather than placeholder art or CSS drawings.
-- The page has no horizontal overflow at the inspected desktop viewport. Section spacing, card alignment, borders, radii, image crops, and button sizing remain consistent through the full scroll.
-- P3: the toolkit and reward objects use the product’s Lucide icon system instead of bespoke watercolor object illustrations. This preserves clarity and existing product consistency while leaving a small stylistic difference from the reference.
-- P3: the provided reference ends after rewards; the implementation continues with the parent dashboard, family stories, final CTA, and footer required by the broader homepage brief.
+- The implementation matches the source's two-rail structure, navy global navigation, warm secondary rail, cream canvas, dark display typography, compact white cards, muted borders, and purple, green, berry, and amber data accents.
+- The overview retains the source hierarchy: date controls, three headline metric cards, dual-axis engagement and mastery chart, live pulse, inactive-learner alert, grade performance, and top lessons.
+- The final chart shows both the purple activity area and green mastery line. Its animation is disabled for deterministic reporting captures.
+- Cards, rows, and chart content have no visible cropping or horizontal page overflow at the inspected viewport.
+- At the available 1363-pixel viewport, the two lower data cards stack so their columns stay readable. The source's side-by-side arrangement and additional grade columns return at the 1440-pixel desktop breakpoint.
+- The numbers differ from the source because the prototype is connected to live-shaped Math Stars records rather than copying screenshot values.
+- P3: the app's existing Math Stars fox mark and display face replace the reference's simplified logo treatment while preserving the same visual weight and placement.
 
 ## Interaction and accessibility checks
 
-- Header and footer section links scroll to their intended sections.
-- The family-story control changes the visible quote and active dot without leaving a blank transition state.
-- “Explore the Arcade” opens `/signin?mode=register`, and the create-account heading is selected.
-- Default-motion character floats, path glow, story transitions, and progress animation render correctly.
-- Framer Motion respects the app-level `reducedMotion="user"` preference, and the existing reduced-motion media query disables CSS animation and transition fallbacks.
-- Images have appropriate alt text; decorative images use empty alt text.
-- No application-originated browser console warnings or errors were found. A Chrome-extension metadata message was excluded because it does not originate from Math Stars.
+- Analytics navigation passed for Overview, Engagement, Learning outcomes, Devices, and Reports.
+- The 7-, 14-, and 30-day range selector updates the date label and reloads the matching data window.
+- Family search and account-detail expansion passed with live records.
+- Learner, Features, System, and Settings sections load from the secured admin APIs.
+- The desktop page has no horizontal overflow; responsive tables reduce or stack columns before they crop.
+- The mobile bottom navigation retains an Analytics entry even though the desktop rail follows the source and begins with Families.
+- The final browser session produced no new application-originated console errors. A historical dev-refresh JSON error and Chrome-extension metadata messages were excluded from the final clean session.
 
 ## Comparison history
 
 ### Pass 1
 
-- P1: the earlier PR version used a centered hero, dark generic section transitions, and the wrong storybook composition.
-- Fix: rebuilt the landing page around the uploaded screenshot’s split hero, parchment palette, section order, and illustrated adventure path.
+- P1: cards inherited excess vertical gap, the engagement chart was incomplete during animation, and the lower tables cropped at the available viewport.
+- Fix: removed inherited card gaps, made chart rendering deterministic, reduced row density, and added responsive table behavior.
 
 ### Pass 2
 
-- P1: the hero copy column was too narrow and Pip overlapped the headline and calls to action.
-- Fix: adjusted the desktop grid ratio, stacked the calls to action, and moved both characters fully into the illustrated world.
+- P1: the green mastery series did not render because the line was nested in an area-only chart container.
+- Fix: switched the visualization to a composed chart and verified both series in the combined comparison.
+- P2: the global desktop rail contained an extra Analytics item not present in the source.
+- Fix: hid that item on desktop while retaining it in the mobile bottom navigation; the logo remains the desktop return path to Analytics.
 
 ### Pass 3
 
-- P2: the family-story transition could briefly render an empty card, and an older grade background contained baked-in text from a previous concept.
-- Fix: changed the carousel to synchronized transitions and replaced the background with the clean watercolor landscape.
-
-### Pass 4
-
-- Final combined comparison passed. The source and implementation now share the same hierarchy, focal balance, palette, storybook atmosphere, prominent path signage, and conversion flow.
+- Final combined comparison passed. Layout, palette, navigation density, card hierarchy, chart language, alert treatment, and tabular presentation now follow the selected reference.
 
 ## Validation
 
-- Automated tests: 61 passed, 0 failed.
+- Automated tests: 63 passed, 0 failed, including grade-scoped curriculum progress and desktop Help wiring.
 - TypeScript: passed.
 - ESLint: passed.
 - Production build: passed for all 33 routes.
-- Primary interactions: passed for landing anchors, family-story transition, and registration CTA.
-- Browser console: no app-originated warnings or errors.
+- Browser interactions: passed for analytics views and range filter, family search and review, and all primary management destinations.
+
+## Review fixes
+
+- Curriculum progress now calculates each domain only against learners assigned to that domain's grade; grades with no learners report a truthful `0/0` total.
+- The desktop Help control now opens an accessible admin guide with working destinations for Analytics, System, and Settings.
 
 ## Follow-up polish
 
-- Capture an additional narrow-phone screenshot when the cloud browser supports viewport resizing. Responsive breakpoints and stacked layouts are implemented, but this comparison used the available desktop viewport because the supplied visual target is desktop-first.
+- Capture an additional narrow-phone screenshot when the selected cloud browser supports viewport resizing. Mobile navigation and stacked breakpoints are implemented, but the supplied visual target and this comparison are desktop-first.
 
 final result: passed

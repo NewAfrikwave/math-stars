@@ -36,6 +36,7 @@ yarn-error.log*
 
 # local SQLite data (may contain learner profiles, activity, and PINs)
 /db/*.db
+/db/*.db-*
 /package-lock.json
 /.git-archive-backup/
 
