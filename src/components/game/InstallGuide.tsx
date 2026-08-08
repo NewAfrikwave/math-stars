@@ -89,7 +89,7 @@ export function InstallGuide({ open, onClose }: { open: boolean; onClose: () => 
               <Mascot size={64} className="animate-bob" />
               <h2 className="mt-2 font-display text-2xl font-bold">Put Math Stars on your tablet</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                It works just like an app — no App Store needed! Free for every family.
+                It works like an app, stays free, and can keep teaching with downloaded grade packs when the internet is unavailable.
               </p>
             </div>
 
@@ -158,6 +158,7 @@ export function InstallGuide({ open, onClose }: { open: boolean; onClose: () => 
             <Button variant="outline" onClick={onClose} className="mt-4 w-full">
               Got it!
             </Button>
+            <a href="/?view=offline" className="mt-3 flex min-h-11 items-center justify-center rounded-full bg-emerald-700 px-5 text-sm font-black text-white">Download offline grade packs</a>
           </motion.div>
         </motion.div>
       )}

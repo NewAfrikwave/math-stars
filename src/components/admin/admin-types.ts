@@ -35,6 +35,11 @@ export interface AnalyticsData {
   newFamilies7: number;
   totalDevices: number;
   installedDevices: number;
+  installedFamilies: number;
+  offlineSyncEvents: number;
+  offlineSyncLearners: number;
+  offlineSyncWithin24h: number;
+  offlineSyncAvgDelayMinutes: number;
   activeLearners: number;
   inactiveLearners: number;
   avgScore: number;

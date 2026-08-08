@@ -5,10 +5,12 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, Loader2, Trash2, Volume2 } from "lucide-react";
-import { useGameStore, profileFetch } from "@/store/useGameStore";
+import { findLessonAny, profileFetch, useGameStore } from "@/store/useGameStore";
 import { Mascot } from "@/components/game/Mascot";
 import { useTTS } from "@/hooks/use-tts";
 import { cn } from "@/lib/utils";
+import { tutorFallback } from "@/lib/tutor-fallback";
+import { loadSnapshot, saveSnapshot } from "@/lib/offline/database";
 
 interface ChatMsg {
   role: "user" | "assistant";
@@ -28,6 +30,7 @@ export function TutorView() {
   const view = useGameStore((s) => s.view);
   const lessonId = view.name === "tutor" ? view.lessonId : undefined;
   const soundOn = useGameStore((s) => s.soundOn);
+  const currentProfileId = useGameStore((s) => s.currentProfileId);
 
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
@@ -60,17 +63,16 @@ export function TutorView() {
         }
       })
       .catch(() => {
-        setMessages([
-          {
-            role: "assistant",
-            content: "Hi! I'm Pip 🦊. Ask me a math question and I'll help you out!",
-          },
-        ]);
+        loadSnapshot<ChatMsg[]>(`tutor:${currentProfileId}`).then((saved) => setMessages(saved?.length ? saved : [{ role: "assistant", content: "Hi! I'm Pip 🦊. Ask me a math question and I'll help you out, even offline!" }])).catch(() => setMessages([{ role: "assistant", content: "Hi! I'm Pip 🦊. Ask me a math question and I'll help you out!" }]));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentProfileId]);
+
+  useEffect(() => {
+    if (currentProfileId && messages.length) saveSnapshot(`tutor:${currentProfileId}`, messages).catch(() => {});
+  }, [currentProfileId, messages]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -90,6 +92,7 @@ export function TutorView() {
         body: JSON.stringify({ message: trimmed, lessonId }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Tutor connection unavailable");
       const reply = data.reply ?? "Hmm, I didn't catch that. Try again? 🌟";
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
       // Auto-speak Pip's reply if sound is on.
@@ -98,10 +101,13 @@ export function TutorView() {
         speak(reply);
       }
     } catch {
+      const lesson = lessonId ? findLessonAny(lessonId)?.lesson : undefined;
+      const reply = tutorFallback(trimmed, lesson ? { title: lesson.title, subtitle: lesson.subtitle } : undefined);
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: "Oops, I had trouble thinking just now. Try again in a moment! 🌟" },
+        { role: "assistant", content: reply },
       ]);
+      if (soundOn && autoSpeak) speak(reply);
     } finally {
       setLoading(false);
     }
@@ -115,6 +121,7 @@ export function TutorView() {
         content: "Fresh start! What would you like to learn about? 🦊",
       },
     ]);
+    if (currentProfileId) await saveSnapshot(`tutor:${currentProfileId}`, []);
   };
 
   return (

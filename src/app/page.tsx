@@ -16,18 +16,22 @@ import { WorksheetView } from "@/components/game/WorksheetView";
 import { ManipulativeView } from "@/components/game/ManipulativeView";
 import { ParentView } from "@/components/game/ParentView";
 import { PlacementView } from "@/components/game/PlacementView";
-import { DonationsView } from "@/components/game/DonationsView";
 import { AdminView } from "@/components/game/AdminView";
 import { InstallGuide } from "@/components/game/InstallGuide";
 import { LandingView } from "@/components/game/LandingView";
 import { TimesTableView } from "@/components/game/TimesTableView";
 import { ArcadeView } from "@/components/game/ArcadeView";
+import { OfflineCenter } from "@/components/game/OfflineCenter";
+import { OfflineCoordinator } from "@/components/OfflineCoordinator";
+import { OfflineStatusButton } from "@/components/OfflineStatusButton";
 import { DomainCelebration } from "@/components/game/DomainCelebration";
 import { Mascot } from "@/components/game/Mascot";
-import { Star, Trophy, Home, Bot, Loader2, Repeat, Download, Heart } from "lucide-react";
+import { Star, Trophy, Home, Bot, Loader2, Repeat, Download } from "lucide-react";
 import { useState } from "react";
 import type { RewardMission } from "@/lib/rewards";
 import type { LessonCheckpointState } from "@/lib/types";
+import { clearOfflineDeviceData, loadLatestOfflineCheckpoint, loadSnapshot, saveSnapshot } from "@/lib/offline/database";
+import type { CachedLearnerState } from "@/lib/offline/types";
 
 // Load a single profile's full state from the server (with the profile header).
 async function loadProfileState(
@@ -52,6 +56,8 @@ async function loadProfileState(
     if (!res.ok) throw new Error("Could not load learner progress");
     const data = await res.json();
     if (signal?.aborted || !data) return;
+    await saveSnapshot(`state:${profileId}`, data).catch(() => {});
+    const localCheckpoint = await loadLatestOfflineCheckpoint(profileId).catch(() => null);
     hydrate({
       studentName: data.studentName ?? "Star Learner",
       level: data.level ?? null,
@@ -63,10 +69,14 @@ async function loadProfileState(
       dailyDoneDate: data.dailyDoneDate ?? null,
       dailyScore: data.dailyScore ?? null,
       reward: data.reward ?? null,
-      activeCheckpoint: data.activeCheckpoint ?? null,
+      activeCheckpoint: localCheckpoint && (!data.activeCheckpoint || localCheckpoint.updatedAt > data.activeCheckpoint.updatedAt) ? localCheckpoint : data.activeCheckpoint ?? null,
     });
   } catch {
-    /* A later profile request or a temporary offline state owns the UI. */
+    if (signal?.aborted) return;
+    const cached = await loadSnapshot<CachedLearnerState>(`state:${profileId}`).catch(() => null);
+    if (!cached) return;
+    const localCheckpoint = await loadLatestOfflineCheckpoint(profileId).catch(() => null);
+    hydrate({ ...cached, reward: cached.reward as RewardMission | null | undefined, activeCheckpoint: localCheckpoint ?? cached.activeCheckpoint ?? null });
   }
 }
 
@@ -104,21 +114,38 @@ export default function Page() {
     }
   }, [setView]);
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") === "offline") setView({ name: "offline" });
+  }, [setView]);
+
   // Load site settings (feature flags, broadcast, donations) on first load.
   useEffect(() => {
-    fetch("/api/site")
-      .then((r) => r.json())
-      .then((d) => { if (d) setSiteSettings(d); })
-      .catch(() => {});
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/site");
+        const data = await response.json();
+        if (!response.ok || !data) throw new Error("settings unavailable");
+        await saveSnapshot("site-settings", data).catch(() => {});
+        if (!cancelled) setSiteSettings(data);
+      } catch {
+        const cached = await loadSnapshot<ReturnType<typeof useGameStore.getState>["siteSettings"]>("site-settings").catch(() => null);
+        if (!cancelled && cached) setSiteSettings(cached);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [setSiteSettings]);
 
   // On first load: fetch the profiles list, then restore the last-used
   // profile from localStorage and load its state.
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/profiles")
-      .then((r) => r.json())
-      .then((data) => {
+    void (async () => {
+      try {
+        const response = await fetch("/api/profiles");
+        const data = await response.json();
+        if (!response.ok || !data) throw new Error("profiles unavailable");
+        await saveSnapshot("family-profiles", data).catch(() => {});
         if (cancelled || !data) return;
         const list = (data.profiles ?? []) as Array<{
           id: string; name: string; avatar: string; level: string;
@@ -156,8 +183,9 @@ export default function Page() {
             activeCheckpoint: null,
           });
         }
-      })
-      .catch(() => {
+      } catch {
+        const data = await loadSnapshot<{ profiles?: Array<{ id: string; name: string; avatar: string; level: string; totalStars: number; streak: number; lastPlayedAt?: string | null }> }>("family-profiles").catch(() => null);
+        if (cancelled || !data?.profiles?.length) {
         hydrate({
           studentName: "Star Learner",
           level: null,
@@ -171,7 +199,15 @@ export default function Page() {
           reward: null,
           activeCheckpoint: null,
         });
-      });
+          return;
+        }
+        const list = data.profiles;
+        setProfiles(list.map((p) => ({ ...p, level: (["preschool", "grade1", "grade2", "grade3", "grade4"].includes(p.level) ? p.level : "grade3") as "preschool" | "grade1" | "grade2" | "grade3" | "grade4" })));
+        const saved = localStorage.getItem("mathstars-profile");
+        const useId = saved && list.some((profile) => profile.id === saved) ? saved : list[0]?.id ?? null;
+        if (useId) setCurrentProfile(useId);
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -196,6 +232,7 @@ export default function Page() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      <OfflineCoordinator />
       {/* Header */}
       {!immersiveView && <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-2 px-4">
@@ -235,14 +272,7 @@ export default function Page() {
             >
               <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Install</span>
             </button>
-            <button
-              onClick={() => setView({ name: "donations" })}
-              title="Donate"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-100 text-rose-600 transition-colors hover:bg-rose-200 dark:bg-rose-950/40 dark:text-rose-300"
-              aria-label="Donate"
-            >
-              <Heart className="h-4 w-4" />
-            </button>
+            <OfflineStatusButton onClick={() => setView({ name: "offline" })} />
             <button
               onClick={() => {
                 setCurrentProfile(null);
@@ -329,7 +359,7 @@ export default function Page() {
               label="Ask Pip"
             />
             <a href="/privacy" className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Privacy</a>
-            <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }} className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Sign out</button>
+            <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }).catch(() => {}); await clearOfflineDeviceData(); window.location.reload(); }} className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Sign out</button>
           </div>
         </div>
       </footer>}
@@ -355,6 +385,8 @@ function renderView(
       return <TimesTableView />;
     case "arcade":
       return <ArcadeView />;
+    case "offline":
+      return <OfflineCenter />;
     case "domain":
       return <DomainView domainId={view.domainId} />;
     case "lesson":
@@ -387,8 +419,6 @@ function renderView(
       return <ParentView />;
     case "placement":
       return <PlacementView domainId={view.domainId} />;
-    case "donations":
-      return <DonationsView />;
     case "admin":
       return <AdminView />;
     default:

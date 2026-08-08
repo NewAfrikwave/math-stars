@@ -1,17 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   BookOpen,
   Calculator,
+  CloudDownload,
   ChevronRight,
   Flame,
   Gift,
   Gamepad2,
-  Heart,
   Home,
   LockKeyhole,
   LogOut,
@@ -51,6 +52,7 @@ function gradeLabel(level: ReturnType<typeof useGameStore.getState>["level"]) {
 }
 
 export function HomeView() {
+  const router = useRouter();
   const setView = useGameStore((s) => s.setView);
   const level = useGameStore((s) => s.level);
   const studentName = useGameStore((s) => s.studentName);
@@ -91,7 +93,8 @@ export function HomeView() {
   const scrollToJourney = () => document.getElementById("journey-board")?.scrollIntoView({ behavior: "smooth", block: "center" });
   const returnToWelcomePage = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+    router.push("/");
+    router.refresh();
   };
 
   return (
@@ -264,7 +267,7 @@ export function HomeView() {
               <MoreButton icon={<Gamepad2 />} label="Math arcade" onClick={() => setView({ name: "arcade" })} />
               <MoreButton icon={<Printer />} label="Worksheets" onClick={() => setView({ name: "worksheet" })} />
               <MoreButton icon={<UserRoundCog />} label="Grown-ups" onClick={() => setView({ name: "parent" })} />
-              <MoreButton icon={<Heart />} label="Keep it free" onClick={() => setView({ name: "donations" })} />
+              <MoreButton icon={<CloudDownload />} label="Offline packs" onClick={() => setView({ name: "offline" })} />
               <MoreButton icon={<Settings />} label="Install app" onClick={() => window.dispatchEvent(new Event("mathstars-open-install"))} />
               <MoreButton icon={<RefreshCcw />} label="Switch learner" onClick={() => { setCurrentProfile(null); setView({ name: "landing" }); }} />
             </div>

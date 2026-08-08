@@ -22,6 +22,7 @@ import * as G2 from "@/lib/grade2";
 import * as G4 from "@/lib/grade4";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import type { RewardMission } from "@/lib/rewards";
+import { offlineAwareFetch } from "@/lib/offline/request";
 
 const DEFAULT_STUDENT_ID = "me";
 
@@ -242,10 +243,17 @@ function recomputeStatuses(progress: Record<string, LessonProgressState>) {
 // API call operates on the active learner's data. Exported for components
 // that make their own API calls (progress, daily, tutor).
 export function profileFetch(url: string, opts: RequestInit = {}): Promise<Response> {
-  const pid = useGameStore.getState().currentProfileId;
+  const state = useGameStore.getState();
+  const pid = state.currentProfileId;
   const headers = new Headers(opts.headers);
   if (pid) headers.set("x-profile-id", pid);
-  return fetch(url, { ...opts, headers });
+  return offlineAwareFetch(url, { ...opts, headers }, {
+    profileId: pid,
+    level: state.level,
+    totalStars: state.totalStars,
+    streak: state.streak,
+    progress: state.progress,
+  });
 }
 
 export const useGameStore = create<GameState>((set, get) => ({

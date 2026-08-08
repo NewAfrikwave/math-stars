@@ -65,7 +65,10 @@ export function ArcadeView() {
     }
   }, []);
 
-  useEffect(() => { loadOverview(); }, [loadOverview]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadOverview(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadOverview]);
 
   const activeGame = useMemo(() => ARCADE_GAMES.find((game) => game.key === run?.gameKey), [run?.gameKey]);
   const companion = overview?.companions.find((item) => item.id === overview.selectedCompanion) ?? overview?.companions[0];

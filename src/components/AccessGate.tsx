@@ -12,6 +12,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { PublicLanding } from "@/components/PublicLanding";
+import { clearOfflineDeviceData } from "@/lib/offline/database";
 
 export function AccessGate({ authenticated, staleSession = false, children }: { authenticated: boolean; staleSession?: boolean; children: React.ReactNode }) {
   const pathname = usePathname();
@@ -28,13 +29,19 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
   const adminPage = pathname === "/admin";
 
   useEffect(() => {
-    if (staleSession) fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    if (staleSession) {
+      fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      clearOfflineDeviceData().catch(() => {});
+    }
   }, [staleSession]);
 
   useEffect(() => {
-    if (signInPage && new URLSearchParams(window.location.search).get("mode") === "register") {
-      setMode("register");
-    }
+    const timer = window.setTimeout(() => {
+      if (signInPage && new URLSearchParams(window.location.search).get("mode") === "register") {
+        setMode("register");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [signInPage]);
 
   useEffect(() => {
@@ -55,7 +62,8 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
     );
   }
 
-  if (authenticated || adminPage || pathname === "/privacy") return <>{children}</>;
+  const publicUtilityPage = pathname === "/privacy" || pathname === "/support" || pathname === "/transparency" || pathname === "/offline";
+  if (authenticated || adminPage || publicUtilityPage) return <>{children}</>;
 
   async function submit(event: FormEvent) {
     event.preventDefault();

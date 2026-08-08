@@ -59,8 +59,27 @@ model Student {
   activityEvents ActivityEvent[]
   arcadeRuns ArcadeRun[]
   rewardGoals RewardGoal[]
+  offlineSyncReceipts OfflineSyncReceipt[]
 
   @@index([familyId])
+}
+
+// Privacy-safe receipt for work completed offline and synchronized later.
+// The payload itself stays in the domain tables; this record supports access
+// and reliability reporting without storing location or device identifiers.
+model OfflineSyncReceipt {
+  id           String   @id @default(cuid())
+  eventId      String   @unique
+  studentId    String
+  eventType    String
+  occurredAt   DateTime
+  receivedAt   DateTime @default(now())
+  delayMinutes Int      @default(0)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, receivedAt])
+  @@index([eventType, receivedAt])
 }
 
 // A server-generated arcade round. Keeping the questions and next unanswered

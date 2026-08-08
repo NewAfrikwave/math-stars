@@ -5,6 +5,13 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
+  "scope": "/",
+  "id": "/?source=pwa",
+  "categories": ["education", "kids"],
+  "shortcuts": [
+    { "name": "Continue learning", "short_name": "Learn", "url": "/?source=shortcut", "icons": [{ "src": "/brand/math-stars-icon-192.png", "sizes": "192x192" }] },
+    { "name": "Offline learning packs", "short_name": "Offline", "url": "/?view=offline", "icons": [{ "src": "/brand/math-stars-icon-192.png", "sizes": "192x192" }] }
+  ],
   "background_color": "#fff7e7",
   "theme_color": "#2e6b4f",
   "icons": [

@@ -1,0 +1,20 @@
+services:
+  math-stars:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: file:/data/math-stars-school.db
+      SESSION_SECRET: ${MATH_STARS_SCHOOL_SECRET}
+      FAMILY_ACCESS_CODE: ${MATH_STARS_SCHOOL_ACCESS_CODE}
+      MATH_STARS_ALLOW_LOCAL_HTTP: "true"
+      NEXT_PUBLIC_APP_URL: http://mathstars.local
+      NODE_ENV: production
+    volumes:
+      - math-stars-school-data:/data
+    ports:
+      - "8080:3000"
+
+volumes:
+  math-stars-school-data:

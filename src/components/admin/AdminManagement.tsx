@@ -89,7 +89,7 @@ export function AdminFamilies() {
     } catch { setError(true); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
   const changeStatus = async (account: FamilyAccountData) => {
     const action = account.status === "active" ? "suspend" : "activate";
@@ -145,7 +145,7 @@ export function AdminLearners() {
     try { const response = await fetch("/api/admin/users", { cache: "no-store" }); if (!response.ok) throw new Error(); const data = await response.json(); setUsers(data.users ?? []); }
     catch { setError(true); } finally { setLoading(false); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
   const action = async (profileId: string, actionName: string, extra?: Record<string, unknown>) => {
     if (actionName === "delete" && !window.confirm("Delete this learner profile permanently? This cannot be undone.")) return;
@@ -193,7 +193,7 @@ interface SystemData { dbStats: Record<string, number>; recentErrors: Array<{ id
 export function AdminSystem() {
   const [data, setData] = useState<SystemData | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(false);
   const load = useCallback(async () => { setLoading(true); setError(false); try { const response = await fetch("/api/admin/system", { cache: "no-store" }); if (!response.ok) throw new Error(); const next = await response.json(); setData(next.dbStats ? next : null); } catch { setError(true); } finally { setLoading(false); } }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
   if (loading) return <LoadingPanel label="Checking system health" />;
   if (error || !data) return <RetryPanel title="System health could not be loaded" onRetry={() => void load()} />;
   const tables = [{ key: "families", label: "Families", icon: Users }, { key: "devices", label: "Devices", icon: Smartphone }, { key: "students", label: "Learners", icon: UserRound }, { key: "lessonProgress", label: "Lesson progress", icon: Gauge }, { key: "dailyChallenges", label: "Daily challenges", icon: Zap }, { key: "achievements", label: "Achievements", icon: ShieldCheck }, { key: "tutorMessages", label: "Tutor messages", icon: Bot }, { key: "activityEvents", label: "Activity events", icon: Wifi }, { key: "errorLogs", label: "Error logs", icon: AlertTriangle }];
@@ -202,7 +202,16 @@ export function AdminSystem() {
 
 export function AdminSettings({ settings, setSettings }: { settings: SiteSettings | null; setSettings: (settings: SiteSettings) => void }) {
   const [cashapp, setCashapp] = useState(settings?.cashappHandle ?? ""); const [zelle, setZelle] = useState(settings?.zelleInfo ?? ""); const [broadcast, setBroadcast] = useState(settings?.broadcastMessage ?? ""); const [broadcastActive, setBroadcastActive] = useState(settings?.broadcastActive ?? false); const [newPin, setNewPin] = useState(""); const [saving, setSaving] = useState(false); const [notice, setNotice] = useState<string | null>(null);
-  useEffect(() => { if (!settings) return; setCashapp(settings.cashappHandle); setZelle(settings.zelleInfo); setBroadcast(settings.broadcastMessage ?? ""); setBroadcastActive(settings.broadcastActive); }, [settings]);
+  useEffect(() => {
+    if (!settings) return;
+    const timer = window.setTimeout(() => {
+      setCashapp(settings.cashappHandle);
+      setZelle(settings.zelleInfo);
+      setBroadcast(settings.broadcastMessage ?? "");
+      setBroadcastActive(settings.broadcastActive);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [settings]);
   if (!settings) return <LoadingPanel label="Loading settings" />;
   const save = async () => { setSaving(true); setNotice(null); try { const response = await fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cashappHandle: cashapp, zelleInfo: zelle, broadcastMessage: broadcast || null, broadcastActive }) }); if (!response.ok) throw new Error(); setSettings({ ...settings, cashappHandle: cashapp, zelleInfo: zelle, broadcastMessage: broadcast || null, broadcastActive }); setNotice("Settings saved successfully."); } catch { setNotice("Settings could not be saved. Please try again."); } finally { setSaving(false); } };
   const updatePin = async () => { if (!/^\d{4}$/.test(newPin)) { setNotice("The admin PIN must contain exactly four digits."); return; } setSaving(true); try { const response = await fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "set-pin", pin: newPin }) }); if (!response.ok) throw new Error(); setNewPin(""); setNotice("Admin PIN updated."); } catch { setNotice("The admin PIN could not be updated."); } finally { setSaving(false); } };
