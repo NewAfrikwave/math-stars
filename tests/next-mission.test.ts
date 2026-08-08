@@ -51,4 +51,31 @@ describe("dashboard resume mission", () => {
     expect(selected.returning).toBe(true);
     expect(completed.status).toBe("completed");
   });
+
+  test("celebrates a completed grade and reviews the lowest-scoring lesson", () => {
+    const selected = chooseNextMission(curriculum, {
+      "available-first": { ...progress("available-first", "completed"), bestScore: 92, completedAt: "2026-08-08T12:00:00.000Z" },
+      "continue-this": { ...progress("continue-this", "completed"), bestScore: 74, completedAt: "2026-08-08T13:00:00.000Z" },
+    });
+
+    expect(selected.gradeComplete).toBe(true);
+    expect(selected.lesson.id).toBe("continue-this");
+    expect(selected.returning).toBe(false);
+
+    const locked = chooseNextMission(curriculum, {
+      "available-first": progress("available-first", "locked"),
+      "continue-this": progress("continue-this", "locked"),
+    });
+    expect(locked.gradeComplete).toBe(false);
+  });
+
+  test("uses the least-recently-practiced lesson when completed scores tie", () => {
+    const selected = chooseNextMission(curriculum, {
+      "available-first": { ...progress("available-first", "completed"), bestScore: 90, completedAt: "2026-08-01T12:00:00.000Z" },
+      "continue-this": { ...progress("continue-this", "completed"), bestScore: 90, completedAt: "2026-08-08T12:00:00.000Z" },
+    });
+
+    expect(selected.gradeComplete).toBe(true);
+    expect(selected.lesson.id).toBe("available-first");
+  });
 });

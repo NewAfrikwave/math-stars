@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ARCADE_GAME_KEYS,
   arcadeReward,
   arcadeLevel,
   arcadeSkillForGame,
@@ -51,5 +52,30 @@ describe("math adventure arcade", () => {
     const treasure = report.find((item) => item.gameKey === "treasure-match");
     expect(sprint).toMatchObject({ plays: 2, correctAnswers: 11, totalAnswers: 16, accuracy: 69, bestScore: 88 });
     expect(treasure).toMatchObject({ plays: 0, accuracy: 0, bestScore: 0 });
+  });
+
+  test("builds all six games safely at every supported grade", () => {
+    const levels = ["preschool", "grade1", "grade2", "grade3", "grade4"] as const;
+    expect(ARCADE_GAME_KEYS).toHaveLength(6);
+    for (const level of levels) {
+      for (const gameKey of ARCADE_GAME_KEYS) {
+        const questions = createArcadeQuestions(gameKey, level, 8, () => 0.42);
+        expect(questions).toHaveLength(8);
+        for (const question of questions) {
+          expect(question.choices.length).toBeGreaterThanOrEqual(2);
+          expect(new Set(question.choices).size).toBe(question.choices.length);
+          expect(question.answerIndex).toBeGreaterThanOrEqual(0);
+          expect(question.answerIndex).toBeLessThan(question.choices.length);
+          expect(question.choices[question.answerIndex]).toBeTruthy();
+        }
+      }
+    }
+  });
+
+  test("gives the new games distinct learning goals", () => {
+    expect(arcadeSkillForGame("bubble-pop", "grade4")).toBe("Number bonds & place value");
+    expect(arcadeSkillForGame("shape-safari", "grade3")).toBe("Geometry & measurement");
+    expect(arcadeSkillForGame("pizza-party", "preschool")).toBe("Equal sharing");
+    expect(arcadeSkillForGame("pizza-party", "grade4")).toBe("Fractions");
   });
 });
