@@ -9,6 +9,13 @@ import type { OfflineEvent } from "../src/lib/offline/types";
 import type { LessonProgressState } from "../src/lib/types";
 
 describe("Math Stars Anywhere", () => {
+  test("keeps the mobile breakpoint server-safe during hydration", () => {
+    const source = readFileSync(new URL("../src/hooks/use-mobile.ts", import.meta.url), "utf8");
+    expect(source).toContain("useSyncExternalStore");
+    expect(source).toContain("() => false");
+    expect(source).not.toContain('useState(() =>');
+  });
+
   test("ships a versioned downloadable pack for every supported grade", () => {
     expect(OFFLINE_LEVELS).toEqual(["preschool", "grade1", "grade2", "grade3", "grade4"]);
     const metadata = listGradePackMetadata();
