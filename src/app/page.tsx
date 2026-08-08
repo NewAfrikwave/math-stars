@@ -89,7 +89,7 @@ export default function Page() {
   const setSiteSettings = useGameStore((s) => s.setSiteSettings);
   const siteSettings = useGameStore((s) => s.siteSettings);
   const [installOpen, setInstallOpen] = useState(false);
-  const immersiveView = view.name === "home" || view.name === "times-tables" || view.name === "arcade";
+  const immersiveView = view.name === "home" || view.name === "times-tables" || view.name === "arcade" || view.name === "admin";
 
   useEffect(() => {
     const openInstall = () => setInstallOpen(true);
@@ -267,7 +267,7 @@ export default function Page() {
       </header>}
 
       {/* Broadcast banner (if admin has set one) */}
-      {siteSettings?.broadcastMessage && (
+      {view.name !== "admin" && siteSettings?.broadcastMessage && (
         <div className="bg-gradient-to-r from-amber-400 to-rose-400 px-4 py-2 text-center text-sm font-bold text-white">
           {siteSettings.broadcastMessage}
         </div>
