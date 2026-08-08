@@ -45,4 +45,18 @@ describe("admin learning observatory", () => {
     expect(source).toContain("<DialogTitle");
     expect(source).toContain("onClick={() => onNavigate(destination.tab)}");
   });
+
+  test("provides a dedicated administrator route separate from family sign in", () => {
+    const gate = readFileSync(new URL("../src/components/AccessGate.tsx", import.meta.url), "utf8");
+    const portal = readFileSync(new URL("../src/components/admin/AdminPortal.tsx", import.meta.url), "utf8");
+    const page = readFileSync(new URL("../src/app/admin/page.tsx", import.meta.url), "utf8");
+
+    expect(gate).toContain('const adminPage = pathname === "/admin"');
+    expect(gate).toContain('href="/admin"');
+    expect(gate).not.toContain('mathstars-open-admin');
+    expect(page).toContain("<AdminPortal />");
+    expect(portal).toContain("Owner access code");
+    expect(portal).toContain("Four-digit admin PIN");
+    expect(portal).toContain("<AdminView standalone />");
+  });
 });

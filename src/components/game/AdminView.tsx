@@ -80,7 +80,7 @@ const sectionCopy: Record<Exclude<AdminTab, "analytics">, { eyebrow: string; tit
   },
 };
 
-export function AdminView() {
+export function AdminView({ standalone = false }: { standalone?: boolean }) {
   const setView = useGameStore((state) => state.setView);
   const [stage, setStage] = useState<"loading" | "pin" | "panel" | "setup">("loading");
   const [pinInput, setPinInput] = useState("");
@@ -88,6 +88,10 @@ export function AdminView() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const exitAdmin = () => {
+    if (standalone) window.location.href = "/";
+    else setView({ name: "home" });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -176,7 +180,7 @@ export function AdminView() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f5f3ee] px-5 py-12 text-[#101936]">
         <div className="w-full max-w-md">
-          <button onClick={() => setView({ name: "home" })} className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-[#526078] transition hover:text-[#101936] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d9cffb]">
+          <button onClick={exitAdmin} className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-[#526078] transition hover:text-[#101936] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d9cffb]">
             <ArrowLeft className="h-4 w-4" /> Return to Math Stars
           </button>
           <Card className="rounded-[28px] border-[#ddd9d1] bg-white p-8 text-center shadow-[0_24px_70px_rgba(16,25,54,.12)]">
@@ -215,7 +219,7 @@ export function AdminView() {
 
   return (
     <div data-testid="admin-dashboard" className="min-h-screen bg-[#f8f7f3] text-[#101936]">
-      <GlobalNavigation active={tab} onChange={setTab} onExit={() => setView({ name: "home" })} />
+      <GlobalNavigation active={tab} onChange={setTab} onExit={exitAdmin} />
       <div className="min-h-screen pb-20 lg:pb-0 lg:pl-[142px]">
         {tab === "analytics" ? (
           <AdminAnalytics onNavigate={setTab} />
