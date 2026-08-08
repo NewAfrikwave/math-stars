@@ -1,6 +1,13 @@
 import type { Level } from "@/lib/types";
 
-export const ARCADE_GAME_KEYS = ["star-sprint", "treasure-match", "rocket-builder"] as const;
+export const ARCADE_GAME_KEYS = [
+  "star-sprint",
+  "treasure-match",
+  "rocket-builder",
+  "bubble-pop",
+  "shape-safari",
+  "pizza-party",
+] as const;
 export type ArcadeGameKey = (typeof ARCADE_GAME_KEYS)[number];
 
 export interface ArcadeQuestion {
@@ -81,6 +88,27 @@ export const ARCADE_GAMES = [
     description: "Solve each mission to add another part to your rocket.",
     color: "from-indigo-700 via-violet-600 to-fuchsia-400",
   },
+  {
+    key: "bubble-pop" as const,
+    title: "Bubble Pop",
+    emoji: "🫧",
+    description: "Pop the missing number, number bond, or place-value bubble.",
+    color: "from-cyan-600 via-sky-500 to-blue-300",
+  },
+  {
+    key: "shape-safari" as const,
+    title: "Shape Safari",
+    emoji: "🦁",
+    description: "Track shapes through the safari and solve their geometry clues.",
+    color: "from-lime-700 via-emerald-500 to-yellow-300",
+  },
+  {
+    key: "pizza-party" as const,
+    title: "Pizza Party",
+    emoji: "🍕",
+    description: "Share every pizza fairly and build fraction confidence.",
+    color: "from-red-700 via-orange-500 to-amber-300",
+  },
 ] as const;
 
 export function isArcadeGameKey(value: unknown): value is ArcadeGameKey {
@@ -106,7 +134,10 @@ export function companionForCoins(companionId: string, coins: number) {
 export function arcadeSkillForGame(gameKey: ArcadeGameKey, level: Level) {
   if (gameKey === "star-sprint") return level === "preschool" ? "Counting" : "Addition & subtraction";
   if (gameKey === "treasure-match") return level === "preschool" ? "Comparing numbers" : "Patterns & number sense";
-  return level === "preschool" || level === "grade1" ? "Addition" : "Multiplication";
+  if (gameKey === "rocket-builder") return level === "preschool" || level === "grade1" ? "Addition" : "Multiplication";
+  if (gameKey === "bubble-pop") return level === "preschool" ? "Number order" : "Number bonds & place value";
+  if (gameKey === "shape-safari") return level === "preschool" || level === "grade1" ? "Shapes" : "Geometry & measurement";
+  return level === "preschool" ? "Equal sharing" : "Fractions";
 }
 
 export function summarizeArcadeSkills(runs: ArcadeRunSummaryInput[], level: Level): ArcadeSkillSummary[] {
@@ -191,6 +222,10 @@ function createQuestion(gameKey: ArcadeGameKey, level: Level, index: number, rng
         ? { max: 500, multiplier: 12 }
         : { max: 1000, multiplier: 15 };
 
+  if (gameKey === "bubble-pop") return bubblePopQuestion(level, index, rng);
+  if (gameKey === "shape-safari") return shapeSafariQuestion(level, index, rng);
+  if (gameKey === "pizza-party") return pizzaPartyQuestion(level, index, rng);
+
   if (gameKey === "treasure-match") {
     const step = randomInt(2, level === "grade1" ? 5 : 12, rng);
     const start = randomInt(1, Math.max(4, Math.floor(ranges.max / 3)), rng);
@@ -233,6 +268,23 @@ function createQuestion(gameKey: ArcadeGameKey, level: Level, index: number, rng
 function preschoolQuestion(gameKey: ArcadeGameKey, index: number, rng: Rng) {
   const a = randomInt(1, 5, rng);
   const b = randomInt(1, 4, rng);
+  if (gameKey === "bubble-pop") {
+    const start = randomInt(0, 6, rng);
+    return choiceQuestion(`${gameKey}-${index}`, `Which number comes next: ${start}, ${start + 1}, __?`, start + 2, rng, "Count up one more.", "🫧  🫧  ❔");
+  }
+  if (gameKey === "shape-safari") {
+    const shapes = [
+      { name: "triangle", sides: 3, visual: "🔺" },
+      { name: "square", sides: 4, visual: "🟨" },
+      { name: "circle", sides: 0, visual: "🔵" },
+    ];
+    const shape = shapes[index % shapes.length];
+    return choiceQuestion(`${gameKey}-${index}`, `How many straight sides does this ${shape.name} have?`, shape.sides, rng, "Trace around the shape with your finger.", shape.visual);
+  }
+  if (gameKey === "pizza-party") {
+    const slices = (randomInt(1, 3, rng)) * 2;
+    return choiceQuestion(`${gameKey}-${index}`, `${slices} pizza slices are shared equally by 2 friends. How many slices does each friend get?`, slices / 2, rng, "Give one slice to each friend, then repeat.", "🍕  👧🏾  👦🏾");
+  }
   if (gameKey === "treasure-match") {
     const answer = Math.max(a, b);
     return choiceQuestion(`${gameKey}-${index}`, `Which number is bigger: ${a} or ${b}?`, answer, rng, "Point to each number and choose the bigger one.", "🧰 ✨ 🧰");
@@ -242,6 +294,95 @@ function preschoolQuestion(gameKey: ArcadeGameKey, index: number, rng: Rng) {
     return choiceQuestion(`${gameKey}-${index}`, `Put ${a} and ${b} stars together. How many?`, answer, rng, "Count every star once.", `${"⭐".repeat(a)} + ${"⭐".repeat(b)}`);
   }
   return choiceQuestion(`${gameKey}-${index}`, "How many stars do you see?", a, rng, "Touch each star while you count.", "⭐".repeat(a));
+}
+
+function bubblePopQuestion(level: Exclude<Level, "preschool">, index: number, rng: Rng) {
+  if (level === "grade1") {
+    if (index % 2 === 1) {
+      const total = randomInt(8, 20, rng);
+      const part = randomInt(1, total - 1, rng);
+      return choiceQuestion(`bubble-pop-${index}`, `Complete the number bond: ${part} + __ = ${total}`, total - part, rng, "Think about the part that is missing.", "🫧 + ❔ = 🫧");
+    }
+    const start = randomInt(1, 80, rng);
+    return choiceQuestion(`bubble-pop-${index}`, `Pop the missing number: ${start}, ${start + 1}, __, ${start + 3}`, start + 2, rng, "Count forward by 1.", "🫧  🫧  ❔  🫧");
+  }
+
+  const digits = level === "grade2" ? 3 : level === "grade3" ? 4 : 5;
+  const placeIndex = index % Math.min(3, digits);
+  const place = 10 ** placeIndex;
+  const minimum = 10 ** (digits - 1);
+  const number = randomInt(minimum, minimum * 9 - 1, rng);
+  const digit = Math.floor(number / place) % 10;
+  const placeName = place === 1 ? "ones" : place === 10 ? "tens" : "hundreds";
+  return choiceQuestion(
+    `bubble-pop-${index}`,
+    `In ${number.toLocaleString("en-US")}, what is the value of the digit in the ${placeName} place?`,
+    digit * place,
+    rng,
+    "Find the place first, then tell its value.",
+    "🫧  🔢  🫧",
+  );
+}
+
+function shapeSafariQuestion(level: Exclude<Level, "preschool">, index: number, rng: Rng) {
+  if (level === "grade1") {
+    const shapes = [
+      { name: "triangle", sides: 3, visual: "🔺" },
+      { name: "rectangle", sides: 4, visual: "▭" },
+      { name: "hexagon", sides: 6, visual: "⬡" },
+    ];
+    const shape = shapes[index % shapes.length];
+    return choiceQuestion(`shape-safari-${index}`, `A ${shape.name} has how many sides?`, shape.sides, rng, "Trace and count each side once.", `${shape.visual}  🦁`);
+  }
+
+  const width = randomInt(2, level === "grade2" ? 8 : 12, rng);
+  const height = randomInt(2, level === "grade2" ? 8 : 12, rng);
+  if (level === "grade2" || index % 2 === 0) {
+    return choiceQuestion(`shape-safari-${index}`, `A rectangle is ${width} units long and ${height} units wide. What is its perimeter?`, 2 * (width + height), rng, "Add all four sides.", `▭  ${width} × ${height}`);
+  }
+  if (level === "grade3") {
+    return choiceQuestion(`shape-safari-${index}`, `A rectangle is ${width} units long and ${height} units wide. What is its area?`, width * height, rng, "Multiply length by width.", `▦  ${width} × ${height}`);
+  }
+  const area = width * height;
+  return choiceQuestion(`shape-safari-${index}`, `A rectangle has area ${area} square units and width ${width}. What is its length?`, height, rng, "Area ÷ width gives the missing length.", `▦  ? × ${width} = ${area}`);
+}
+
+function pizzaPartyQuestion(level: Exclude<Level, "preschool">, index: number, rng: Rng) {
+  if (level === "grade1") {
+    const slices = randomInt(2, 6, rng) * 2;
+    return choiceQuestion(`pizza-party-${index}`, `What is half of ${slices} pizza slices?`, slices / 2, rng, "Split the slices into 2 equal groups.", "🍕  ½  🍕");
+  }
+  if (level === "grade2") {
+    const groups = index % 2 === 0 ? 2 : 4;
+    const each = randomInt(1, 4, rng);
+    const slices = groups * each;
+    return choiceQuestion(`pizza-party-${index}`, `${slices} slices are shared equally by ${groups} friends. How many does each friend get?`, each, rng, "Make equal groups with no slices left over.", `🍕 ÷ ${groups}`);
+  }
+  if (level === "grade3") {
+    const denominator = index % 2 === 0 ? 6 : 8;
+    return stringChoiceQuestion(
+      `pizza-party-${index}`,
+      `Which fraction is equal to one half of this ${denominator}-slice pizza?`,
+      `${denominator / 2}/${denominator}`,
+      [`1/${denominator}`, `2/${denominator}`, `${denominator - 1}/${denominator}`],
+      rng,
+      "Half means 2 equal groups.",
+      "🍕 ½",
+    );
+  }
+  const denominator = index % 2 === 0 ? 8 : 12;
+  const first = randomInt(1, Math.floor(denominator / 3), rng);
+  const second = randomInt(1, Math.floor(denominator / 3), rng);
+  const numerator = first + second;
+  return stringChoiceQuestion(
+    `pizza-party-${index}`,
+    `Mia ate ${first}/${denominator} of a pizza and Jo ate ${second}/${denominator}. How much did they eat altogether?`,
+    `${numerator}/${denominator}`,
+    [`${Math.max(1, numerator - 1)}/${denominator}`, `${Math.min(denominator, numerator + 1)}/${denominator}`, `${numerator}/${denominator * 2}`],
+    rng,
+    "The denominators match, so add the numerators.",
+    "🍕 + 🍕",
+  );
 }
 
 function choiceQuestion(id: string, prompt: string, answer: number, rng: Rng, helper?: string, visual?: string): ArcadeQuestion {
@@ -259,6 +400,11 @@ function choiceQuestion(id: string, prompt: string, answer: number, rng: Rng, he
   }
   const choices = shuffle([...values].map(String), rng);
   return { id, prompt, choices, answerIndex: choices.indexOf(String(answer)), helper, visual };
+}
+
+function stringChoiceQuestion(id: string, prompt: string, answer: string, distractors: string[], rng: Rng, helper?: string, visual?: string): ArcadeQuestion {
+  const choices = shuffle([...new Set([answer, ...distractors])].slice(0, 4), rng);
+  return { id, prompt, choices, answerIndex: choices.indexOf(answer), helper, visual };
 }
 
 function randomInt(min: number, max: number, rng: Rng) {

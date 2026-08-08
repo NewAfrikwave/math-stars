@@ -1,4 +1,4 @@
-import { ARCADE_COMPANIONS, ARCADE_GAMES, arcadeReward, createArcadeQuestions, publicQuestion, type ArcadeAnswerRecord, type ArcadeGameKey } from "@/lib/arcade";
+import { ARCADE_COMPANIONS, ARCADE_GAME_KEYS, ARCADE_GAMES, arcadeReward, createArcadeQuestions, isArcadeGameKey, publicQuestion, type ArcadeAnswerRecord, type ArcadeGameKey } from "@/lib/arcade";
 import { deleteOfflineArcadeRun, deleteOfflineCheckpoint, enqueueOfflineEvent, loadOfflineArcadeRun, loadSnapshot, saveOfflineArcadeRun, saveOfflineCheckpoint, saveSnapshot } from "@/lib/offline/database";
 import { requestBackgroundSync } from "@/lib/offline/sync-client";
 import type { Level } from "@/lib/types";
@@ -135,7 +135,7 @@ async function offlineSettings(body: Record<string, unknown>, profileId: string)
 
 async function offlineArcadeAction(body: Record<string, unknown>, context: OfflineRequestContext) {
   const gameKey = body.gameKey as ArcadeGameKey;
-  if (!context.level || !["star-sprint", "treasure-match", "rocket-builder"].includes(gameKey)) return jsonResponse({ error: "Choose an arcade game" }, 400);
+  if (!context.level || !isArcadeGameKey(gameKey)) return jsonResponse({ error: "Choose an arcade game" }, 400);
   if (body.action === "abandon") {
     await deleteOfflineArcadeRun(context.profileId!, gameKey);
     await updateArcadeOverview(context.profileId!, (overview) => ({ ...overview, activeRuns: overview.activeRuns.filter((item) => (item as { gameKey?: string }).gameKey !== gameKey) }));
@@ -172,7 +172,7 @@ async function offlineArcadeAction(body: Record<string, unknown>, context: Offli
 }
 
 async function offlineArcadeAnswer(body: Record<string, unknown>, context: OfflineRequestContext) {
-  const runs = ["star-sprint", "treasure-match", "rocket-builder"] as ArcadeGameKey[];
+  const runs = ARCADE_GAME_KEYS;
   let run: OfflineArcadeRun | null = null;
   for (const gameKey of runs) {
     const candidate = await loadOfflineArcadeRun(context.profileId!, gameKey);
