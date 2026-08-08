@@ -3,7 +3,7 @@ import type { ArcadeAnswerRecord, ArcadeGameKey, ArcadeQuestion } from "@/lib/ar
 
 export const OFFLINE_DB_NAME = "math-stars-anywhere";
 export const OFFLINE_DB_VERSION = 1;
-export const OFFLINE_PACK_VERSION = "2026.08.1";
+export const OFFLINE_PACK_VERSION = "2026.08.2";
 
 export type OfflineEvent =
   | {

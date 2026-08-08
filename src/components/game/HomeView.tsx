@@ -81,10 +81,12 @@ export function HomeView() {
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
   const activeProfile = profiles.find((profile) => profile.id === currentProfileId);
   const activeAvatar = activeProfile?.avatar === "owl" ? "owl" : "fox";
-  const missionTitle = nextMission.lesson.title;
+  const missionTitle = nextMission.gradeComplete ? `Star Practice: ${nextMission.lesson.title}` : nextMission.lesson.title;
   const missionDescription = nextMission.lesson.subtitle;
   const canResumeExactQuestion = activeCheckpoint?.lessonId === nextMission.lesson.id;
-  const missionProgressLabel = canResumeExactQuestion
+  const missionProgressLabel = nextMission.gradeComplete
+    ? "You finished every lesson in this grade. Keep your skills strong with a personalized review."
+    : canResumeExactQuestion
     ? activeCheckpoint.nextIndex >= activeCheckpoint.total
       ? "Your answers are safely saved. Your results are ready."
       : `Question ${activeCheckpoint.nextIndex + 1} of ${activeCheckpoint.total} is ready`
@@ -145,7 +147,7 @@ export function HomeView() {
           <motion.div variants={staggerItem} className="relative z-10 text-center">
             <h1 className="font-display text-3xl font-black text-[#24482d] sm:text-5xl">{greeting}, {studentName}</h1>
             <p className="mission-ribbon mx-auto mt-3 w-fit rounded-full bg-[#9e2f2b] px-6 py-2 font-display text-sm font-black uppercase tracking-[0.12em] text-[#fff5d5] shadow-md sm:text-base">
-              {nextMission.returning ? "Continue your mission" : "Your first mission"}
+              {nextMission.gradeComplete ? "Grade complete · Keep shining" : nextMission.returning ? "Continue your mission" : "Your first mission"}
             </p>
           </motion.div>
 
@@ -157,7 +159,7 @@ export function HomeView() {
               <button onClick={() => setView(canResumeExactQuestion
                 ? { name: "practice", lessonId: nextMission.lesson.id, difficulty: activeCheckpoint.difficulty }
                 : { name: "lesson", lessonId: nextMission.lesson.id })} className="mt-5 inline-flex min-h-14 items-center justify-center gap-3 rounded-full border-2 border-[#7a2328] bg-[#aa2f34] px-7 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#24482d]">
-                {nextMission.returning ? "Continue mission" : "Begin mission"}<ArrowRight className="h-5 w-5" />
+                {nextMission.gradeComplete ? "Start Star Practice" : nextMission.returning ? "Continue mission" : "Begin mission"}<ArrowRight className="h-5 w-5" />
               </button>
             </div>
           </motion.div>
@@ -205,7 +207,7 @@ export function HomeView() {
               </motion.div>
             )}
             <MissionLink icon={<Flame className="h-7 w-7" />} title="Warm-up: Daily Challenge" subtitle="Kickstart your brain with five quick questions." onClick={() => setView({ name: "daily" })} tone="red" />
-            <MissionLink featured icon={<Gamepad2 className="h-7 w-7" />} title="Play: Math Adventure Arcade" subtitle="Race, hunt for treasure, build rockets, and unlock new buddies." onClick={() => setView({ name: "arcade" })} tone="purple" />
+            <MissionLink featured icon={<Gamepad2 className="h-7 w-7" />} title="Play: Math Adventure Arcade" subtitle="Race, find treasure, pop bubbles, explore shapes, share pizza, and build rockets." onClick={() => setView({ name: "arcade" })} tone="purple" />
             <MissionLink icon={<Calculator className="h-7 w-7" />} title="Explore: Times Table Lab, 2× to 12×" subtitle="Build speed and confidence with every table." onClick={() => setView({ name: "times-tables" })} tone="purple" />
           </motion.div>
 
@@ -294,7 +296,7 @@ function MissionLink({ icon, title, subtitle, onClick, tone, featured = false }:
       <span className="relative z-[1] min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className="block font-display text-lg font-black text-[#24482d]">{title}</span>
-          {featured && <span className="arcade-feature__badge rounded-full bg-[#67428a] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-white shadow-sm">3 games</span>}
+          {featured && <span className="arcade-feature__badge rounded-full bg-[#67428a] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-white shadow-sm">6 games</span>}
         </span>
         <span className="block text-sm font-semibold text-[#725d40]">{subtitle}</span>
       </span>
