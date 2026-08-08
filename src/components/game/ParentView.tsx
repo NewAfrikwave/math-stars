@@ -69,6 +69,16 @@ function parentGradeLabel(level: string) {
   return "3rd Grade";
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = 15_000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 export function ParentView() {
   const setView = useGameStore((s) => s.setView);
   const deleteProfile = useGameStore((s) => s.deleteProfile);
@@ -122,12 +132,12 @@ export function ParentView() {
   const loadSummary = async (pin: string) => {
     if (!navigator.onLine) return unlockOfflineParentReport<ProfileSummaryData[]>(pin);
     try {
-      const res = await fetch("/api/parent?summary=1", { headers: { "x-parent-pin": pin } });
+      const res = await fetchWithTimeout("/api/parent?summary=1", { headers: { "x-parent-pin": pin } });
       if (res.status === 401) return null;
       const d = await res.json();
-      if (d.error) return null;
+      if (!res.ok || d.error) return null;
       const profiles = (d.profiles ?? []) as ProfileSummaryData[];
-      await sealOfflineParentReport(pin, profiles).catch(() => {});
+      void sealOfflineParentReport(pin, profiles).catch(() => {});
       return profiles;
     } catch {
       return unlockOfflineParentReport<ProfileSummaryData[]>(pin);
@@ -190,25 +200,37 @@ export function ParentView() {
     }
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/parent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-parent-pin": pinInput },
-      body: JSON.stringify({ action: "set-pin", pin: pinInput }),
-    });
-    const d = await res.json();
-    if (d.ok) {
+    try {
+      const res = await fetchWithTimeout("/api/parent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-parent-pin": pinInput },
+        body: JSON.stringify({ action: "set-pin", pin: pinInput }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok || !d?.ok) {
+        setError(d?.error ?? "Could not set PIN. Please try again.");
+        return;
+      }
+
       const list = await loadSummary(pinInput);
-      setProfiles(list ?? []);
-      if (list?.[0]) {
+      if (list === null) {
+        setError("Your PIN was saved, but the dashboard could not load. Tap Set PIN & enter again.");
+        return;
+      }
+      setProfiles(list);
+      if (list[0]) {
         setSelectedProfileId(list[0].id);
-        loadActivity(list[0].id);
-        loadReward(list[0].id);
+        void loadActivity(list[0].id);
+        void loadReward(list[0].id);
       }
       setStage("dashboard");
-    } else {
-      setError(d.error ?? "Could not set PIN");
+    } catch (requestError) {
+      setError(requestError instanceof DOMException && requestError.name === "AbortError"
+        ? "The request took too long. Please check your connection and try again."
+        : "Could not set PIN. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const pickProfileActivity = (id: string) => {

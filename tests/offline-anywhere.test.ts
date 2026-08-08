@@ -16,6 +16,13 @@ describe("Math Stars Anywhere", () => {
     expect(source).not.toContain('useState(() =>');
   });
 
+  test("does not block grown-up entry on the offline report cache", () => {
+    const source = readFileSync(new URL("../src/components/game/ParentView.tsx", import.meta.url), "utf8");
+    expect(source).toContain("void sealOfflineParentReport(pin, profiles).catch");
+    expect(source).toContain("fetchWithTimeout");
+    expect(source).toContain("finally {\n      setLoading(false);");
+  });
+
   test("ships a versioned downloadable pack for every supported grade", () => {
     expect(OFFLINE_LEVELS).toEqual(["preschool", "grade1", "grade2", "grade3", "grade4"]);
     const metadata = listGradePackMetadata();
