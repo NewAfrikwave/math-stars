@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Coins, Gamepad2, Loader2, Lock, RotateCcw, Sparkles, Trophy } from "lucide-react";
-import { ARCADE_GAMES, type ArcadeGameKey, type PublicArcadeQuestion } from "@/lib/arcade";
+import { ARCADE_GAMES, pizzaSlicesEarned, type ArcadeGameKey, type PublicArcadeQuestion } from "@/lib/arcade";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { profileFetch, useGameStore } from "@/store/useGameStore";
 
@@ -275,11 +275,11 @@ export function ArcadeView() {
         <div className="mt-6 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] border-4 border-amber-300 bg-fuchsia-500 text-4xl shadow-[0_8px_0_#6e2b89]"><Gamepad2 className="h-11 w-11" /></div>
           <h1 className="mt-4 font-display text-4xl font-black sm:text-6xl">Math Adventure Arcade</h1>
-          <p className="mx-auto mt-2 max-w-2xl text-lg font-bold text-violet-200">Three games, fresh challenges for {studentName}&apos;s grade, and a saved place after every answer.</p>
+          <p className="mx-auto mt-2 max-w-2xl text-lg font-bold text-violet-200">Six games, fresh challenges for {studentName}&apos;s grade, and a saved place after every answer.</p>
           {overview.dailyBonusAvailable && <div className="mx-auto mt-4 w-fit rounded-full border-2 border-amber-300 bg-amber-300/15 px-5 py-2 font-display font-black text-amber-200"><Sparkles className="mr-2 inline h-5 w-5" /> First finished round today earns 10 bonus coins</div>}
         </div>
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {ARCADE_GAMES.map((game) => {
             const active = overview.activeRuns.find((item) => item.gameKey === game.key);
             const stats = overview.byGame[game.key];
@@ -325,7 +325,18 @@ function GameStage({ gameKey, completed, total, companionEmoji }: { gameKey: Arc
   if (gameKey === "treasure-match") {
     return <div className="mt-5 flex justify-center gap-2 text-3xl">{Array.from({ length: total }, (_, index) => <motion.span key={index} animate={index < completed ? { scale: [1, 1.2, 1] } : {}}>{index < completed ? "💎" : "🧰"}</motion.span>)}</div>;
   }
-  return <div className="mt-5 flex min-h-28 items-end justify-center text-6xl"><motion.span animate={{ y: completed === total - 1 ? [0, -4, 0] : 0 }}>{completed < 2 ? "⚙️" : completed < 5 ? "🚀" : "🚀🔥"}</motion.span><span className="ml-3 text-3xl">{companionEmoji}</span></div>;
+  if (gameKey === "rocket-builder") {
+    return <div className="mt-5 flex min-h-28 items-end justify-center text-6xl"><motion.span animate={{ y: completed === total - 1 ? [0, -4, 0] : 0 }}>{completed < 2 ? "⚙️" : completed < 5 ? "🚀" : "🚀🔥"}</motion.span><span className="ml-3 text-3xl">{companionEmoji}</span></div>;
+  }
+  if (gameKey === "bubble-pop") {
+    return <div className="mt-5 flex min-h-28 flex-wrap items-center justify-center gap-3 text-4xl">{Array.from({ length: Math.min(total, 8) }, (_, index) => <motion.span key={index} animate={index < completed ? { scale: [1, 1.35, 0], opacity: [1, 1, 0.25] } : { y: [0, -5, 0] }} transition={index < completed ? { duration: 0.45 } : { duration: 1.8, repeat: Infinity, delay: index * 0.12 }}>{index < completed ? "✨" : "🫧"}</motion.span>)}</div>;
+  }
+  if (gameKey === "shape-safari") {
+    const trail = ["🔺", "🟨", "⬡", "▭"];
+    return <div className="mt-5 rounded-2xl bg-emerald-950/25 p-4"><div className="flex items-center justify-between text-4xl"><span>{companionEmoji}</span>{trail.map((shape, index) => <motion.span key={shape} animate={completed > index * (total / trail.length) ? { scale: [1, 1.25, 1] } : { opacity: 0.45 }}>{shape}</motion.span>)}<span>🦁</span></div><div className="mt-2 border-t-4 border-dotted border-yellow-200/60" /></div>;
+  }
+  const slices = pizzaSlicesEarned(completed, total);
+  return <div className="mt-5 flex min-h-28 items-center justify-center gap-4"><motion.span animate={{ rotate: completed ? [0, 4, -4, 0] : 0 }} className="text-7xl" aria-label={`${slices} pizza slices earned`}>🍕</motion.span><div className="grid grid-cols-4 gap-1 text-2xl">{Array.from({ length: 8 }, (_, index) => <span key={index} className={index < slices ? "opacity-100" : "opacity-25"}>◢</span>)}</div><span className="text-3xl">{companionEmoji}</span></div>;
 }
 
 function StatPill({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {

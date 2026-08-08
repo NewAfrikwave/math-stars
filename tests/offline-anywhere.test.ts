@@ -5,6 +5,8 @@ import { discoverBuildAssets } from "../src/lib/offline/download";
 import { coalesceEvents, mergeProgressMaps, nextSyncBatch, retryDelay, toStoredEvent } from "../src/lib/offline/event-queue";
 import { buildMasteryMap, recommendedMission } from "../src/lib/adaptive-learning";
 import { consecutiveLearningStreak } from "../src/lib/progress-save";
+import { ARCADE_GAME_KEYS } from "../src/lib/arcade";
+import { OFFLINE_PACK_VERSION } from "../src/lib/offline/types";
 import type { OfflineEvent } from "../src/lib/offline/types";
 import type { LessonProgressState } from "../src/lib/types";
 
@@ -20,7 +22,7 @@ describe("Math Stars Anywhere", () => {
     const source = readFileSync(new URL("../src/components/game/ParentView.tsx", import.meta.url), "utf8");
     expect(source).toContain("void sealOfflineParentReport(pin, profiles).catch");
     expect(source).toContain("fetchWithTimeout");
-    expect(source).toContain("finally {\n      setLoading(false);");
+    expect(source).toMatch(/finally\s*{\s*setLoading\(false\);/);
   });
 
   test("ships a versioned downloadable pack for every supported grade", () => {
@@ -35,6 +37,17 @@ describe("Math Stars Anywhere", () => {
       expect(pack.estimatedBytes).toBeGreaterThan(1000);
       expect(pack.lessons.every((lesson) => lesson.spokenText.length > 0)).toBe(true);
     }
+  });
+
+  test("downloads and recognizes all six arcade games offline", () => {
+    expect(OFFLINE_PACK_VERSION).toBe("2026.08.2");
+    for (const level of OFFLINE_LEVELS) {
+      expect(buildGradePack(level).arcadeGames.map((game) => game.key)).toEqual([...ARCADE_GAME_KEYS]);
+    }
+    const requestSource = readFileSync(new URL("../src/lib/offline/request.ts", import.meta.url), "utf8");
+    expect(requestSource).toContain("isArcadeGameKey(gameKey)");
+    expect(requestSource).toContain("const runs = ARCADE_GAME_KEYS");
+    expect(requestSource).not.toContain('["star-sprint", "treasure-match", "rocket-builder"].includes');
   });
 
   test("keeps multiple learners separate and syncs their events in chronological batches", () => {
