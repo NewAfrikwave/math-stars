@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Coins, Gamepad2, Loader2, Lock, RotateCcw, Sparkles, Trophy } from "lucide-react";
-import { ARCADE_GAMES, type ArcadeGameKey, type PublicArcadeQuestion } from "@/lib/arcade";
+import { ARCADE_GAMES, pizzaSlicesEarned, type ArcadeGameKey, type PublicArcadeQuestion } from "@/lib/arcade";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { profileFetch, useGameStore } from "@/store/useGameStore";
 
@@ -335,7 +335,7 @@ function GameStage({ gameKey, completed, total, companionEmoji }: { gameKey: Arc
     const trail = ["🔺", "🟨", "⬡", "▭"];
     return <div className="mt-5 rounded-2xl bg-emerald-950/25 p-4"><div className="flex items-center justify-between text-4xl"><span>{companionEmoji}</span>{trail.map((shape, index) => <motion.span key={shape} animate={completed > index * (total / trail.length) ? { scale: [1, 1.25, 1] } : { opacity: 0.45 }}>{shape}</motion.span>)}<span>🦁</span></div><div className="mt-2 border-t-4 border-dotted border-yellow-200/60" /></div>;
   }
-  const slices = Math.max(1, Math.min(8, Math.ceil((completed / Math.max(1, total)) * 8)));
+  const slices = pizzaSlicesEarned(completed, total);
   return <div className="mt-5 flex min-h-28 items-center justify-center gap-4"><motion.span animate={{ rotate: completed ? [0, 4, -4, 0] : 0 }} className="text-7xl" aria-label={`${slices} pizza slices earned`}>🍕</motion.span><div className="grid grid-cols-4 gap-1 text-2xl">{Array.from({ length: 8 }, (_, index) => <span key={index} className={index < slices ? "opacity-100" : "opacity-25"}>◢</span>)}</div><span className="text-3xl">{companionEmoji}</span></div>;
 }
 

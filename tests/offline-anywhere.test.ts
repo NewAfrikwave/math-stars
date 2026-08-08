@@ -22,7 +22,7 @@ describe("Math Stars Anywhere", () => {
     const source = readFileSync(new URL("../src/components/game/ParentView.tsx", import.meta.url), "utf8");
     expect(source).toContain("void sealOfflineParentReport(pin, profiles).catch");
     expect(source).toContain("fetchWithTimeout");
-    expect(source).toContain("finally {\n      setLoading(false);");
+    expect(source).toMatch(/finally\s*{\s*setLoading\(false\);/);
   });
 
   test("ships a versioned downloadable pack for every supported grade", () => {

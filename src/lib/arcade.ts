@@ -115,6 +115,11 @@ export function isArcadeGameKey(value: unknown): value is ArcadeGameKey {
   return typeof value === "string" && (ARCADE_GAME_KEYS as readonly string[]).includes(value);
 }
 
+export function pizzaSlicesEarned(completed: number, total: number) {
+  if (completed <= 0 || total <= 0) return 0;
+  return Math.min(8, Math.ceil((completed / total) * 8));
+}
+
 export function arcadeLevel(value: string): Level {
   return (["preschool", "grade1", "grade2", "grade3", "grade4"] as string[]).includes(value)
     ? value as Level

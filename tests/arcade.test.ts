@@ -6,6 +6,7 @@ import {
   arcadeSkillForGame,
   companionForCoins,
   createArcadeQuestions,
+  pizzaSlicesEarned,
   publicQuestion,
   summarizeArcadeSkills,
 } from "../src/lib/arcade";
@@ -77,5 +78,11 @@ describe("math adventure arcade", () => {
     expect(arcadeSkillForGame("shape-safari", "grade3")).toBe("Geometry & measurement");
     expect(arcadeSkillForGame("pizza-party", "preschool")).toBe("Equal sharing");
     expect(arcadeSkillForGame("pizza-party", "grade4")).toBe("Fractions");
+  });
+
+  test("shows no earned pizza slices before the first answer", () => {
+    expect(pizzaSlicesEarned(0, 8)).toBe(0);
+    expect(pizzaSlicesEarned(1, 8)).toBe(1);
+    expect(pizzaSlicesEarned(8, 8)).toBe(8);
   });
 });
