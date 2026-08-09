@@ -1,4 +1,4 @@
-export type AdminTab = "analytics" | "families" | "learners" | "features" | "system" | "settings";
+export type AdminTab = "analytics" | "families" | "learners" | "feedback" | "features" | "system" | "settings";
 export type AnalyticsSection = "overview" | "engagement" | "outcomes" | "devices" | "reports";
 
 export interface SiteSettings {

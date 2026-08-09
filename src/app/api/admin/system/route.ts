@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   // Row counts per table
   const [
     families, devices, students, lessonProgress, dailyChallenges, achievements,
-    tutorMessages, activityEvents, errorLogs,
+    tutorMessages, activityEvents, errorLogs, parentFeedback,
   ] = await Promise.all([
     db.familyAccount.count(),
     db.accountDevice.count(),
@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     db.tutorMessage.count(),
     db.activityEvent.count(),
     db.errorLog.count(),
+    db.parentFeedback.count(),
   ]);
 
   // Recent errors (last 20)
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
       tutorMessages,
       activityEvents,
       errorLogs,
+      parentFeedback,
     },
     recentErrors: recentErrors.map((e) => ({
       id: e.id,

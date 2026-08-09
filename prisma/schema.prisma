@@ -24,6 +24,7 @@ model FamilyAccount {
 
   students Student[]
   devices  AccountDevice[]
+  feedback ParentFeedback[]
 
   @@index([createdAt])
   @@index([lastActiveAt])
@@ -305,4 +306,29 @@ model ErrorLog {
 
   @@index([createdAt])
   @@index([route])
+}
+
+// Parent-submitted product feedback. Reports are entered only inside the
+// PIN-protected grown-up area and intentionally avoid raw user-agent or IP data.
+model ParentFeedback {
+  id             String   @id @default(cuid())
+  scopeKey       String   // family account id, or "legacy" for owner access
+  familyId       String?
+  category       String   // bug | suggestion | general
+  area           String   // voice-audio | arcade | lessons | offline | parent-dashboard | account | other
+  gameKey        String?
+  learnerLevel   String?
+  pagePath       String?
+  message        String
+  contactAllowed Boolean  @default(false)
+  status         String   @default("new") // new | reviewing | resolved
+  resolvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  family FamilyAccount? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([scopeKey, createdAt])
+  @@index([status, createdAt])
+  @@index([category, createdAt])
 }
