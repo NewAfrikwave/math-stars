@@ -56,6 +56,27 @@ const arcadeGames = [
     body: "Race to the finish with quick math!",
     skills: "Fact Fluency, Speed, Accuracy",
   },
+  {
+    emoji: "🫧",
+    gradient: "from-cyan-500 via-sky-600 to-blue-900",
+    title: "Bubble Pop",
+    body: "Pop the right answer and strengthen number sense.",
+    skills: "Missing Numbers, Number Bonds, Place Value",
+  },
+  {
+    emoji: "🦁",
+    gradient: "from-lime-500 via-emerald-700 to-green-950",
+    title: "Shape Safari",
+    body: "Explore shapes, arrays, area, and perimeter by grade.",
+    skills: "Shapes, Geometry, Measurement",
+  },
+  {
+    emoji: "🍕",
+    gradient: "from-amber-400 via-orange-600 to-red-900",
+    title: "Pizza Party",
+    body: "Share pizza fairly and build fraction confidence.",
+    skills: "Equal Sharing, Fractions",
+  },
 ];
 
 const gradeLevels = [
@@ -196,8 +217,8 @@ export function PublicLanding() {
       <section id="arcade" className="reference-arcade relative overflow-hidden px-5 py-14 sm:px-8 sm:py-20">
         <div className="reference-arcade__landscape" aria-hidden="true" />
         <div className="relative mx-auto max-w-6xl">
-          <SectionHeading title={<>Step into the Math <span className="text-[#6f3fa0]">Adventure Arcade</span></>} body="Turn practice into play with three exciting worlds." />
-          <div className="mt-9 grid gap-5 md:grid-cols-3">
+          <SectionHeading title={<>Step into the Math <span className="text-[#6f3fa0]">Adventure Arcade</span></>} body="Turn practice into play with six grade-aware games." />
+          <div className="mt-9 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {arcadeGames.map((game, index) => (
               <motion.article
                 key={game.title}
@@ -209,7 +230,9 @@ export function PublicLanding() {
                 whileHover={reduceMotion ? undefined : { y: -9, rotate: index === 1 ? 0 : index === 0 ? -0.8 : 0.8 }}
                 className="reference-game-card group relative min-h-[250px] overflow-hidden rounded-[22px] border-4 border-[#efe1bc] bg-[#2d315a] shadow-[0_16px_28px_rgba(51,43,52,.22)]"
               >
-                <Image src={game.image} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover transition duration-700 group-hover:scale-105" />
+                {game.image
+                  ? <Image src={game.image} alt="" fill sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw" className="object-cover transition duration-700 group-hover:scale-105" />
+                  : <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br ${game.gradient}`} aria-hidden="true"><span className="-translate-y-5 text-8xl drop-shadow-xl transition duration-700 group-hover:scale-110">{game.emoji}</span></div>}
                 <div className="reference-game-card__shade" aria-hidden="true" />
                 <div className="relative z-10 flex min-h-[250px] flex-col justify-end p-5 text-white">
                   <p className="font-display text-2xl font-black drop-shadow-md">{game.title}</p>

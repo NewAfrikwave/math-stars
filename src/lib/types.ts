@@ -171,6 +171,7 @@ export interface LessonProgressState {
   attempts: number;
   lastScore: number;
   completedAt: string | null;
+  lastPlayedAt?: string | null;
 }
 
 export interface AchievementDef {

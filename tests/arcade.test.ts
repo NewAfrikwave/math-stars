@@ -80,6 +80,19 @@ describe("math adventure arcade", () => {
     expect(arcadeSkillForGame("pizza-party", "grade4")).toBe("Fractions");
   });
 
+  test("keeps Grade 2 Shape Safari on shapes, arrays, and equal partitions", () => {
+    const questions = createArcadeQuestions("shape-safari", "grade2", 9, () => 0.42);
+    expect(questions.some((question) => question.prompt.includes("sides"))).toBe(true);
+    expect(questions.some((question) => question.prompt.includes("array"))).toBe(true);
+    expect(questions.some((question) => question.prompt.includes("equal parts"))).toBe(true);
+    expect(questions.every((question) => !question.prompt.toLowerCase().includes("perimeter"))).toBe(true);
+  });
+
+  test("keeps perimeter practice in Grade 3 Shape Safari", () => {
+    const questions = createArcadeQuestions("shape-safari", "grade3", 4, () => 0.42);
+    expect(questions.some((question) => question.prompt.toLowerCase().includes("perimeter"))).toBe(true);
+  });
+
   test("shows no earned pizza slices before the first answer", () => {
     expect(pizzaSlicesEarned(0, 8)).toBe(0);
     expect(pizzaSlicesEarned(1, 8)).toBe(1);

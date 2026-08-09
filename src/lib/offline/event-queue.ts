@@ -44,7 +44,14 @@ export function mergeProgressMaps(
       attempts: Math.max(localProgress.attempts, remoteProgress.attempts),
       lastScore: remoteProgress.attempts >= localProgress.attempts ? remoteProgress.lastScore : localProgress.lastScore,
       completedAt: remoteProgress.completedAt ?? localProgress.completedAt,
+      lastPlayedAt: latestTimestamp(localProgress.lastPlayedAt, remoteProgress.lastPlayedAt),
     };
   }
   return merged;
+}
+
+function latestTimestamp(left?: string | null, right?: string | null) {
+  if (!left) return right ?? null;
+  if (!right) return left;
+  return Date.parse(left) >= Date.parse(right) ? left : right;
 }

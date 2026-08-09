@@ -91,6 +91,7 @@ export function toProgressMap(
     attempts: number;
     lastScore: number;
     completedAt: Date | null;
+    lastPlayedAt: Date | null;
   }>
 ): Record<string, LessonProgressState> {
   const map: Record<string, LessonProgressState> = {};
@@ -103,6 +104,7 @@ export function toProgressMap(
       attempts: r.attempts,
       lastScore: r.lastScore,
       completedAt: r.completedAt ? r.completedAt.toISOString() : null,
+      lastPlayedAt: r.lastPlayedAt ? r.lastPlayedAt.toISOString() : null,
     };
   }
   return map;
