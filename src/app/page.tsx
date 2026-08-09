@@ -361,6 +361,7 @@ export default function Page() {
             <a href="/privacy" className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Privacy</a>
             <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }).catch(() => {}); await clearOfflineDeviceData(); window.location.reload(); }} className="rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">Sign out</button>
           </div>
+          <p className="text-xs text-muted-foreground sm:basis-full sm:text-center">Developed by <a href="https://www.norzolabs.com/" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 hover:text-foreground">norzolabs.com</a></p>
         </div>
       </footer>}
 

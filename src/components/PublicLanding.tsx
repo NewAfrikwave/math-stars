@@ -399,7 +399,10 @@ export function PublicLanding() {
       <footer className="border-t border-[#d2bf96] bg-[#f4e8cd] px-5 py-9 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
           <Image src="/brand/math-stars-logo.png" alt="Math Stars" width={1400} height={360} unoptimized className="h-11 w-auto" />
-          <p className="text-xs font-semibold text-[#72634f]">Learn. Practice. Shine. Preschool through 4th Grade.</p>
+          <div className="text-xs font-semibold text-[#72634f]">
+            <p>Learn. Practice. Shine. Preschool through 4th Grade.</p>
+            <p className="mt-1">Developed by <a href="https://www.norzolabs.com/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#4b654f] underline decoration-[#4b654f]/40 underline-offset-2 transition hover:text-[#2f4936]">norzolabs.com</a></p>
+          </div>
           <nav className="flex flex-wrap justify-center gap-5 text-xs font-bold text-[#654f3b]" aria-label="Footer"><a href="#adventure">Adventure</a><a href="#arcade">Games</a><a href="#parents">For Parents</a><a href="/support">Support</a><a href="/transparency">Transparency</a><a href="/privacy">Privacy</a></nav>
         </div>
       </footer>
