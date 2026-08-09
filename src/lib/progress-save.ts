@@ -21,6 +21,7 @@ interface SaveInput {
   difficulty: "easy" | "challenge" | null;
   attemptId: string;
   occurredAt?: Date;
+  playedAt?: Date;
 }
 
 export function streakAfterCompletion(previous: number, lastCompletion: Date | null, today: Date) {
@@ -92,6 +93,7 @@ export async function saveProgressAttempt(input: SaveInput) {
       }
 
       const now = input.occurredAt ?? new Date();
+      const playedAt = input.playedAt ?? now;
       const passed = input.score >= 70;
       const wasCompleted = existing?.status === "completed";
       const nextStatus: LessonStatus = wasCompleted || passed ? "completed" : "in-progress";
@@ -102,13 +104,13 @@ export async function saveProgressAttempt(input: SaveInput) {
         create: {
           studentId: input.studentId, lessonId: input.lessonId, status: nextStatus,
           stars: newStars, bestScore: newBest, attempts: 1, lastScore: input.score,
-          lastDifficulty: input.difficulty, completedAt: passed ? now : null, lastPlayedAt: now,
+          lastDifficulty: input.difficulty, completedAt: passed ? now : null, lastPlayedAt: playedAt,
         },
         update: {
           status: nextStatus, stars: newStars, bestScore: newBest, attempts: { increment: 1 },
           lastScore: input.score, lastDifficulty: input.difficulty ?? existing?.lastDifficulty ?? null,
           completedAt: wasCompleted ? existing?.completedAt : passed ? now : null,
-          lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, now]),
+          lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, playedAt]),
         },
       });
 
@@ -154,7 +156,7 @@ export async function saveProgressAttempt(input: SaveInput) {
         data: {
           totalStars,
           streak,
-          lastPlayedAt: latestCompletionDate([student.lastPlayedAt, now]),
+          lastPlayedAt: latestCompletionDate([student.lastPlayedAt, playedAt]),
           lastCompletedAt: nextLastCompletion,
         },
       });

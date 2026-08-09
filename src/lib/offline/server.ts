@@ -7,6 +7,7 @@ import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
 import { ARCADE_GAMES, arcadeReward, isArcadeGameKey, parseArcadeQuestions } from "@/lib/arcade";
 import { consecutiveLearningStreak, saveProgressAttempt } from "@/lib/progress-save";
+import { dateKeyAtOffset, middayForClientDate, offlineLessonDates, safeOffset } from "@/lib/offline/dates";
 import type { OfflineEvent } from "@/lib/offline/types";
 import type { Level } from "@/lib/types";
 
@@ -38,6 +39,7 @@ async function syncLesson(student: { id: string; level: string }, event: Extract
   const correct = Math.min(total, Math.max(0, Math.floor(event.payload.correct)));
   const score = Math.round((correct / total) * 100);
   const stars = score >= 90 ? 3 : score >= 70 ? 2 : score >= 50 ? 1 : 0;
+  const { completionAt, practiceAt } = offlineLessonDates(occurredAt, event.payload.timezoneOffsetMinutes);
   const result = await saveProgressAttempt({
     studentId: student.id,
     level: student.level,
@@ -50,7 +52,8 @@ async function syncLesson(student: { id: string; level: string }, event: Extract
     stars,
     difficulty: event.payload.difficulty === "easy" || event.payload.difficulty === "challenge" ? event.payload.difficulty : null,
     attemptId: event.payload.attemptId,
-    occurredAt: middayForClientDate(occurredAt, event.payload.timezoneOffsetMinutes),
+    occurredAt: completionAt,
+    playedAt: practiceAt,
   });
   if (result.kind === "error") throw new OfflineSyncError(result.status, result.error);
   return { duplicate: result.kind === "duplicate" };
@@ -176,12 +179,6 @@ function findLesson(lessonId: string) {
   }
   return null;
 }
-
-function safeOffset(value: number) { return Number.isFinite(value) && Math.abs(value) <= 14 * 60 ? Math.round(value) : 0; }
-function dateKeyAtOffset(date: Date, timezoneOffsetMinutes: number) {
-  return new Date(date.getTime() - safeOffset(timezoneOffsetMinutes) * 60_000).toISOString().slice(0, 10);
-}
-function middayForClientDate(date: Date, timezoneOffsetMinutes: number) { return new Date(`${dateKeyAtOffset(date, timezoneOffsetMinutes)}T12:00:00.000Z`); }
 
 export class OfflineSyncError extends Error {
   constructor(public status: number, message: string) { super(message); }

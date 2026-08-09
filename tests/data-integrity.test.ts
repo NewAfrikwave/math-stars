@@ -127,7 +127,11 @@ describe("launch data integrity", () => {
     const progressSource = readFileSync(new URL("../src/lib/progress-save.ts", import.meta.url), "utf8");
     expect(studentSource).toContain("lastPlayedAt: r.lastPlayedAt ? r.lastPlayedAt.toISOString() : null");
     expect(storeSource).toContain("lastPlayedAt: new Date().toISOString()");
-    expect(progressSource).toContain("lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, now])");
+    expect(progressSource).toContain("lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, playedAt])");
+    expect(progressSource).toContain("lastPlayedAt: latestCompletionDate([student.lastPlayedAt, playedAt])");
+    expect(progressSource).toContain("const playedAt = input.playedAt ?? now");
+    const offlineSource = readFileSync(new URL("../src/lib/offline/server.ts", import.meta.url), "utf8");
+    expect(offlineSource).toContain("playedAt: practiceAt");
   });
 
   test("duplicate arcade answers reconcile without being graded as wrong", () => {
