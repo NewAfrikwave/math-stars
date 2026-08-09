@@ -4,7 +4,8 @@ import { buildGradePack, listGradePackMetadata, OFFLINE_LEVELS } from "../src/li
 import { discoverBuildAssets } from "../src/lib/offline/download";
 import { coalesceEvents, mergeProgressMaps, nextSyncBatch, retryDelay, toStoredEvent } from "../src/lib/offline/event-queue";
 import { buildMasteryMap, recommendedMission } from "../src/lib/adaptive-learning";
-import { consecutiveLearningStreak } from "../src/lib/progress-save";
+import { consecutiveLearningStreak, latestCompletionDate } from "../src/lib/progress-save";
+import { offlineLessonDates } from "../src/lib/offline/dates";
 import { ARCADE_GAME_KEYS } from "../src/lib/arcade";
 import { OFFLINE_PACK_VERSION } from "../src/lib/offline/types";
 import type { OfflineEvent } from "../src/lib/offline/types";
@@ -70,6 +71,18 @@ describe("Math Stars Anywhere", () => {
     remote.lastPlayedAt = "2026-08-08T12:00:00.000Z";
 
     expect(mergeProgressMaps({ lesson: local }, { lesson: remote }).lesson.lastPlayedAt).toBe(local.lastPlayedAt);
+  });
+
+  test("keeps exact same-day offline practice times separate from streak dates", () => {
+    const morning = offlineLessonDates(new Date("2026-08-09T14:05:00.000Z"), 300);
+    const evening = offlineLessonDates(new Date("2026-08-09T21:45:00.000Z"), 300);
+
+    expect(morning.completionAt.toISOString()).toBe("2026-08-09T12:00:00.000Z");
+    expect(evening.completionAt.toISOString()).toBe(morning.completionAt.toISOString());
+    expect(morning.practiceAt.toISOString()).toBe("2026-08-09T14:05:00.000Z");
+    expect(evening.practiceAt.toISOString()).toBe("2026-08-09T21:45:00.000Z");
+    expect(evening.practiceAt.getTime()).toBeGreaterThan(morning.practiceAt.getTime());
+    expect(latestCompletionDate([evening.practiceAt, morning.practiceAt])).toEqual(evening.practiceAt);
   });
 
   test("waits before retrying failed events and caps backoff at five minutes", () => {
