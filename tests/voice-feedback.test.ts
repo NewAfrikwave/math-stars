@@ -38,6 +38,12 @@ describe("Arcade voice guidance", () => {
     expect(tts).toContain("if (!navigator.onLine)");
     expect(tts.indexOf("if (!navigator.onLine)")).toBeLessThan(tts.indexOf('fetch("/api/tts"'));
   });
+
+  test("stops queued and active narration when the Arcade is left", () => {
+    const arcade = readFileSync(new URL("../src/components/game/ArcadeView.tsx", import.meta.url), "utf8");
+    expect(arcade).toContain("useEffect(() => () => stop(), [stop])");
+    expect(arcade).toContain("window.clearTimeout(timer);\n      stop();");
+  });
 });
 
 describe("parent feedback", () => {
@@ -74,10 +80,32 @@ describe("parent feedback", () => {
     const familyData = readFileSync(new URL("../src/app/api/family-data/route.ts", import.meta.url), "utf8");
     const privacy = readFileSync(new URL("../src/app/privacy/page.tsx", import.meta.url), "utf8");
     expect(route).toContain("verifyPin(pinFrom(req), protectedProfile.parentPin)");
-    expect(route).toContain('rateLimit(clientKey(req, "parent-feedback"), 10');
+    expect(route).toContain('rateLimit(clientKey(req, `parent-feedback:${scopeKey}`), 10');
     expect(adminRoute).toContain("isAdminRequest(req)");
     expect(familyData).toContain("db.parentFeedback.findMany");
     expect(familyData).toContain("db.parentFeedback.deleteMany");
     expect(privacy).toContain("bug reports, suggestions, and general feedback");
+  });
+
+  test("authenticates before consuming the family feedback rate limit", () => {
+    const route = readFileSync(new URL("../src/app/api/feedback/route.ts", import.meta.url), "utf8");
+    const post = route.slice(route.indexOf("export async function POST"));
+    expect(post.indexOf("await parentSession(req)")).toBeGreaterThan(-1);
+    expect(post.indexOf("await parentSession(req)")).toBeLessThan(post.indexOf("rateLimit("));
+    expect(post.indexOf('if (!session) return NextResponse.json({ error: "parent-pin-required" }')).toBeLessThan(post.indexOf("rateLimit("));
+  });
+
+  test("filters the admin inbox on the server before applying its result limit", () => {
+    const route = readFileSync(new URL("../src/app/api/admin/feedback/route.ts", import.meta.url), "utf8");
+    const admin = readFileSync(new URL("../src/components/admin/AdminManagement.tsx", import.meta.url), "utf8");
+    expect(route.indexOf("const where:")).toBeLessThan(route.indexOf("take: 200"));
+    expect(route).toContain("where,\n      orderBy");
+    expect(admin).toContain("new URLSearchParams({ status: statusFilter, category: categoryFilter })");
+  });
+
+  test("reloads recent parent feedback after an offline dashboard reconnects", () => {
+    const card = readFileSync(new URL("../src/components/game/ParentFeedbackCard.tsx", import.meta.url), "utf8");
+    const reconnectHandler = card.slice(card.indexOf("const update = () =>"), card.indexOf('window.addEventListener("online"'));
+    expect(reconnectHandler).toContain("if (isOnline) void loadRecent()");
   });
 });

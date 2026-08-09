@@ -55,7 +55,11 @@ export function ParentFeedbackCard({ parentPin, learnerLevel, familyAccount }: {
   }, [parentPin]);
 
   useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
+    const update = () => {
+      const isOnline = navigator.onLine;
+      setOnline(isOnline);
+      if (isOnline) void loadRecent();
+    };
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
     const timer = window.setTimeout(() => void loadRecent(), 0);

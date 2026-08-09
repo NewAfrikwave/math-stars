@@ -35,18 +35,18 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const attempt = rateLimit(clientKey(req, "parent-feedback"), 10, 60 * 60 * 1000);
+  const session = await parentSession(req);
+  if (!session) return NextResponse.json({ error: "parent-pin-required" }, { status: 401 });
+  const scopeKey = session.kind === "account" ? session.familyId : "legacy";
+  const attempt = rateLimit(clientKey(req, `parent-feedback:${scopeKey}`), 10, 60 * 60 * 1000);
   if (!attempt.allowed) {
     return NextResponse.json({ error: "You have sent several reports recently. Please try again later." }, {
       status: 429,
       headers: { "Retry-After": String(attempt.retryAfter) },
     });
   }
-  const session = await parentSession(req);
-  if (!session) return NextResponse.json({ error: "parent-pin-required" }, { status: 401 });
   const parsed = parseParentFeedback(await req.json().catch(() => null));
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
-  const scopeKey = session.kind === "account" ? session.familyId : "legacy";
   const created = await db.parentFeedback.create({
     data: {
       scopeKey,

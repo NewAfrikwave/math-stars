@@ -60,6 +60,8 @@ export function ArcadeView() {
   const { speak, speakImmediately, stop } = useTTS();
   const { playCorrect, playWrong } = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
 
+  useEffect(() => () => stop(), [stop]);
+
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
     setError(null);
@@ -116,8 +118,11 @@ export function ArcadeView() {
       arcadeRoundSpeech(studentName, run.correctCount, run.total, run.coinsEarned),
       { speed: level === "preschool" ? 0.86 : 0.96 },
     ), 250);
-    return () => window.clearTimeout(timer);
-  }, [level, run?.correctCount, run?.coinsEarned, run?.status, run?.total, soundOn, speakImmediately, studentName]);
+    return () => {
+      window.clearTimeout(timer);
+      stop();
+    };
+  }, [level, run?.correctCount, run?.coinsEarned, run?.status, run?.total, soundOn, speakImmediately, stop, studentName]);
 
   const startGame = async (gameKey: ArcadeGameKey, restart = false) => {
     setBusy(true);

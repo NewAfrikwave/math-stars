@@ -194,7 +194,8 @@ export function AdminFeedback() {
     setLoading(true);
     setError(false);
     try {
-      const response = await fetch("/api/admin/feedback", { cache: "no-store" });
+      const params = new URLSearchParams({ status: statusFilter, category: categoryFilter });
+      const response = await fetch(`/api/admin/feedback?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) throw new Error();
       const data = await response.json();
       setItems(data.feedback ?? []);
@@ -204,7 +205,7 @@ export function AdminFeedback() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [categoryFilter, statusFilter]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
@@ -226,11 +227,6 @@ export function AdminFeedback() {
     }
   };
 
-  const filtered = items.filter((item) => {
-    const matchesStatus = statusFilter === "all" || (statusFilter === "open" ? item.status !== "resolved" : item.status === statusFilter);
-    return matchesStatus && (categoryFilter === "all" || item.category === categoryFilter);
-  });
-
   if (loading) return <LoadingPanel label="Loading parent feedback" />;
   if (error && !items.length) return <RetryPanel title="Parent feedback could not be loaded" onRetry={() => void load()} />;
 
@@ -243,12 +239,12 @@ export function AdminFeedback() {
         <div className="flex gap-2"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-lg border border-[#dcd9d2] bg-white px-3 text-sm font-bold"><option value="open">Open items</option><option value="new">New</option><option value="reviewing">Reviewing</option><option value="resolved">Resolved</option><option value="all">All statuses</option></select><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="h-10 rounded-lg border border-[#dcd9d2] bg-white px-3 text-sm font-bold"><option value="all">All categories</option><option value="bug">Bugs</option><option value="suggestion">Suggestions</option><option value="general">General</option></select></div>
       </div>
       <div className="mt-5 space-y-3">
-        {filtered.map((item) => <article key={item.id} className="rounded-xl border border-[#e2dfd9] bg-[#fbfaf7] p-4">
+        {items.map((item) => <article key={item.id} className="rounded-xl border border-[#e2dfd9] bg-[#fbfaf7] p-4">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide", item.category === "bug" ? "bg-[#fbe3e8] text-[#a12448]" : item.category === "suggestion" ? "bg-[#fff0cf] text-[#94620b]" : "bg-[#e8e3fb] text-[#6245b4]")}>{item.category === "bug" ? "Bug report" : item.category}</span><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#667188]">{item.status}</span></div><p className="mt-2 text-xs font-semibold text-[#68738b]">{item.familyName} · {item.area.replaceAll("-", " ")}{item.gameKey ? ` · ${item.gameKey.replaceAll("-", " ")}` : ""}{item.learnerLevel ? ` · ${item.learnerLevel.replace("grade", "Grade ")}` : ""} · {relativeTime(item.createdAt)}</p></div>{item.familyEmail && <a href={`mailto:${item.familyEmail}?subject=Math%20Stars%20feedback%20follow-up`} className="text-xs font-bold text-[#7048e8] underline">{item.familyEmail}</a>}</div>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#303b55]">{item.message}</p>
           <div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant={item.status === "new" ? "default" : "outline"} disabled={working === item.id} onClick={() => void updateStatus(item, "new")} className="h-9 rounded-lg">New</Button><Button size="sm" variant={item.status === "reviewing" ? "default" : "outline"} disabled={working === item.id} onClick={() => void updateStatus(item, "reviewing")} className="h-9 rounded-lg">Reviewing</Button><Button size="sm" variant={item.status === "resolved" ? "default" : "outline"} disabled={working === item.id} onClick={() => void updateStatus(item, "resolved")} className="h-9 rounded-lg">Resolved</Button>{working === item.id && <Loader2 className="m-2 h-4 w-4 animate-spin" />}</div>
         </article>)}
-        {!filtered.length && <EmptyState text="No parent feedback matches these filters." />}
+        {!items.length && <EmptyState text="No parent feedback matches these filters." />}
       </div>
     </Panel>
   </div>;

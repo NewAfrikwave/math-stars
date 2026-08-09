@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isAdminRequest } from "@/lib/auth";
-import { feedbackStatus } from "@/lib/parent-feedback";
+import { FEEDBACK_CATEGORIES, feedbackStatus, type FeedbackCategory } from "@/lib/parent-feedback";
 
 export async function GET(req: Request) {
   if (!isAdminRequest(req)) return NextResponse.json({ error: "admin-session-required" }, { status: 401 });
+  const params = new URL(req.url).searchParams;
+  const requestedStatus = params.get("status");
+  const requestedCategory = params.get("category");
+  const where: Prisma.ParentFeedbackWhereInput = {};
+  if (requestedStatus === "open") where.status = { in: ["new", "reviewing"] };
+  else {
+    const status = feedbackStatus(requestedStatus);
+    if (status) where.status = status;
+  }
+  if (requestedCategory && FEEDBACK_CATEGORIES.includes(requestedCategory as FeedbackCategory)) {
+    where.category = requestedCategory;
+  }
   const [feedback, newCount, reviewingCount, resolvedCount] = await Promise.all([
     db.parentFeedback.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       take: 200,
       include: { family: { select: { displayName: true, email: true } } },
