@@ -124,8 +124,10 @@ describe("launch data integrity", () => {
   test("lesson progress carries its actual practice time to Star Practice", () => {
     const studentSource = readFileSync(new URL("../src/lib/student.ts", import.meta.url), "utf8");
     const storeSource = readFileSync(new URL("../src/store/useGameStore.ts", import.meta.url), "utf8");
+    const progressSource = readFileSync(new URL("../src/lib/progress-save.ts", import.meta.url), "utf8");
     expect(studentSource).toContain("lastPlayedAt: r.lastPlayedAt ? r.lastPlayedAt.toISOString() : null");
     expect(storeSource).toContain("lastPlayedAt: new Date().toISOString()");
+    expect(progressSource).toContain("lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, now])");
   });
 
   test("duplicate arcade answers reconcile without being graded as wrong", () => {
