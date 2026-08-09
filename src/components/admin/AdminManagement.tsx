@@ -16,6 +16,7 @@ import {
   Loader2,
   Lock,
   Megaphone,
+  MessageSquareText,
   Mic,
   MonitorSmartphone,
   Printer,
@@ -67,6 +68,22 @@ interface UserData {
   createdAt: string;
   eventCount: number;
   hasParentPin: boolean;
+}
+
+interface ParentFeedbackData {
+  id: string;
+  category: "bug" | "suggestion" | "general";
+  area: string;
+  gameKey: string | null;
+  learnerLevel: string | null;
+  pagePath: string | null;
+  message: string;
+  contactAllowed: boolean;
+  status: "new" | "reviewing" | "resolved";
+  familyName: string;
+  familyEmail: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
 }
 
 export function AdminFamilies() {
@@ -164,6 +181,79 @@ export function AdminLearners() {
   return <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3"><SummaryCard icon={<UserRound />} label="Learners" value={users.length} /><SummaryCard icon={<Gauge />} label="Average mastery" value={`${users.length ? Math.round(users.reduce((sum, user) => sum + user.avgScore, 0) / users.length) : 0}%`} /><SummaryCard icon={<AlertTriangle />} label="Inactive 7+ days" value={users.filter((user) => !user.lastPlayedAt || Date.now() - new Date(user.lastPlayedAt).getTime() > 7 * 86400000).length} /></div><Panel><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div><h2 className="text-lg font-black">Learner profiles</h2><p className="mt-1 text-sm text-[#68738b]">Review achievement, grade placement, mastery, and recent activity.</p></div><div className="flex flex-col gap-2 sm:flex-row"><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7b8498]" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search learners" className="h-10 rounded-lg border-[#dcd9d2] bg-[#fbfaf7] pl-9 sm:w-56" /></div><select value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)} className="h-10 rounded-lg border border-[#dcd9d2] bg-white px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#7048e8]"><option value="all">All grade levels</option><option value="preschool">Preschool</option><option value="grade1">Grade 1</option><option value="grade2">Grade 2</option><option value="grade3">Grade 3</option><option value="grade4">Grade 4</option></select></div></div><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="border-b border-[#e6e3dd] text-xs font-semibold text-[#68738b]"><tr><th className="pb-3">Learner</th><th className="pb-3">Grade</th><th className="pb-3">Progress</th><th className="pb-3">Mastery</th><th className="pb-3">Last active</th><th className="pb-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-[#ece9e3]">{filtered.map((user) => <tr key={user.id} className="hover:bg-[#fbfaf7]"><td className="py-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#efeaff] font-black text-[#7048e8]">{user.name.slice(0,1).toUpperCase()}</span><div>{editing === user.id ? <div className="flex gap-2"><Input value={editName} onChange={(event) => setEditName(event.target.value)} className="h-9 w-40" autoFocus /><button onClick={() => void action(user.id, "rename", { name: editName })} aria-label="Save learner name" className="rounded-lg bg-[#e9f5e9] p-2 text-[#39794b]"><Check className="h-4 w-4" /></button><button onClick={() => setEditing(null)} aria-label="Cancel rename" className="rounded-lg bg-[#f1efeb] p-2"><X className="h-4 w-4" /></button></div> : <><p className="font-black">{user.name}{user.hasParentPin && <Lock className="ml-1 inline h-3 w-3 text-[#778096]" />}</p><p className="text-xs text-[#788196]">{user.totalStars} stars · {user.streak} day streak</p></>}</div></div></td><td><select value={user.level} onChange={(event) => void action(user.id, "change-level", { level: event.target.value })} disabled={working === user.id} className="rounded-lg border border-[#ddd9d2] bg-white px-2 py-1.5 text-xs font-bold"><option value="preschool">Preschool</option><option value="grade1">Grade 1</option><option value="grade2">Grade 2</option><option value="grade3">Grade 3</option><option value="grade4">Grade 4</option></select></td><td><p className="font-bold">{user.completedLessons} lessons</p><p className="text-xs text-[#788196]">{user.eventCount} activity events</p></td><td><div className="flex items-center gap-2"><strong className="w-9">{user.avgScore}%</strong><span className="h-2 w-16 overflow-hidden rounded-full bg-[#e9e8e3]"><span className="block h-full rounded-full bg-[#4c963c]" style={{ width: `${user.avgScore}%` }} /></span></div></td><td>{relativeTime(user.lastPlayedAt)}</td><td><div className="flex justify-end gap-1"><IconButton label="Rename learner" onClick={() => { setEditing(user.id); setEditName(user.name); }}><Edit3 /></IconButton><IconButton label="Reset progress" tone="amber" onClick={() => void action(user.id, "reset")}><RotateCcw /></IconButton><IconButton label="Delete learner" tone="red" onClick={() => void action(user.id, "delete")}><Trash2 /></IconButton>{working === user.id && <Loader2 className="m-2 h-4 w-4 animate-spin" />}</div></td></tr>)}</tbody></table>{!filtered.length && <EmptyState text="No learners match this view." />}</div></Panel></div>;
 }
 
+export function AdminFeedback() {
+  const [items, setItems] = useState<ParentFeedbackData[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({ new: 0, reviewing: 0, resolved: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("open");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [working, setWorking] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const response = await fetch("/api/admin/feedback", { cache: "no-store" });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setItems(data.feedback ?? []);
+      setCounts(data.counts ?? { new: 0, reviewing: 0, resolved: 0 });
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+
+  const updateStatus = async (item: ParentFeedbackData, status: ParentFeedbackData["status"]) => {
+    if (item.status === status) return;
+    setWorking(item.id);
+    try {
+      const response = await fetch("/api/admin/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, status }),
+      });
+      if (!response.ok) throw new Error();
+      await load();
+    } catch {
+      setError(true);
+    } finally {
+      setWorking(null);
+    }
+  };
+
+  const filtered = items.filter((item) => {
+    const matchesStatus = statusFilter === "all" || (statusFilter === "open" ? item.status !== "resolved" : item.status === statusFilter);
+    return matchesStatus && (categoryFilter === "all" || item.category === categoryFilter);
+  });
+
+  if (loading) return <LoadingPanel label="Loading parent feedback" />;
+  if (error && !items.length) return <RetryPanel title="Parent feedback could not be loaded" onRetry={() => void load()} />;
+
+  return <div className="space-y-4">
+    <div className="grid gap-3 sm:grid-cols-3"><SummaryCard icon={<MessageSquareText />} label="New reports" value={counts.new ?? 0} /><SummaryCard icon={<RefreshCw />} label="Reviewing" value={counts.reviewing ?? 0} /><SummaryCard icon={<Check />} label="Resolved" value={counts.resolved ?? 0} /></div>
+    {error && <div role="alert" className="rounded-xl border border-[#edc4ce] bg-[#fff5f7] p-4 text-sm font-bold text-[#a12448]">The last update did not finish. Refresh and try again.</div>}
+    <Panel>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="text-lg font-black">Family reports and ideas</h2><p className="mt-1 text-sm text-[#68738b]">Contact details appear only when a parent invites an email follow-up.</p></div>
+        <div className="flex gap-2"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-lg border border-[#dcd9d2] bg-white px-3 text-sm font-bold"><option value="open">Open items</option><option value="new">New</option><option value="reviewing">Reviewing</option><option value="resolved">Resolved</option><option value="all">All statuses</option></select><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="h-10 rounded-lg border border-[#dcd9d2] bg-white px-3 text-sm font-bold"><option value="all">All categories</option><option value="bug">Bugs</option><option value="suggestion">Suggestions</option><option value="general">General</option></select></div>
+      </div>
+      <div className="mt-5 space-y-3">
+        {filtered.map((item) => <article key={item.id} className="rounded-xl border border-[#e2dfd9] bg-[#fbfaf7] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide", item.category === "bug" ? "bg-[#fbe3e8] text-[#a12448]" : item.category === "suggestion" ? "bg-[#fff0cf] text-[#94620b]" : "bg-[#e8e3fb] text-[#6245b4]")}>{item.category === "bug" ? "Bug report" : item.category}</span><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#667188]">{item.status}</span></div><p className="mt-2 text-xs font-semibold text-[#68738b]">{item.familyName} · {item.area.replaceAll("-", " ")}{item.gameKey ? ` · ${item.gameKey.replaceAll("-", " ")}` : ""}{item.learnerLevel ? ` · ${item.learnerLevel.replace("grade", "Grade ")}` : ""} · {relativeTime(item.createdAt)}</p></div>{item.familyEmail && <a href={`mailto:${item.familyEmail}?subject=Math%20Stars%20feedback%20follow-up`} className="text-xs font-bold text-[#7048e8] underline">{item.familyEmail}</a>}</div>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#303b55]">{item.message}</p>
+          <div className="mt-4 flex flex-wrap gap-2"><Button size="sm" variant={item.status === "new" ? "default" : "outline"} disabled={working === item.id} onClick={() => void updateStatus(item, "new")} className="h-9 rounded-lg">New</Button><Button size="sm" variant={item.status === "reviewing" ? "default" : "outline"} disabled={working === item.id} onClick={() => void updateStatus(item, "reviewing")} className="h-9 rounded-lg">Reviewing</Button><Button size="sm" variant={item.status === "resolved" ? "default" : "outline"} disabled={working === item.id} onClick={() => void updateStatus(item, "resolved")} className="h-9 rounded-lg">Resolved</Button>{working === item.id && <Loader2 className="m-2 h-4 w-4 animate-spin" />}</div>
+        </article>)}
+        {!filtered.length && <EmptyState text="No parent feedback matches these filters." />}
+      </div>
+    </Panel>
+  </div>;
+}
+
 const featureDefinitions: Array<{ key: keyof SiteSettings; label: string; description: string; icon: typeof Zap; category: string }> = [
   { key: "dailyChallengeEnabled", label: "Daily Challenge", description: "A short five-question warm-up that refreshes each day.", icon: Zap, category: "Practice" },
   { key: "aiTutorEnabled", label: "Ask Pip AI tutor", description: "Age-aware math explanations and learner support.", icon: Bot, category: "Guidance" },
@@ -196,7 +286,7 @@ export function AdminSystem() {
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
   if (loading) return <LoadingPanel label="Checking system health" />;
   if (error || !data) return <RetryPanel title="System health could not be loaded" onRetry={() => void load()} />;
-  const tables = [{ key: "families", label: "Families", icon: Users }, { key: "devices", label: "Devices", icon: Smartphone }, { key: "students", label: "Learners", icon: UserRound }, { key: "lessonProgress", label: "Lesson progress", icon: Gauge }, { key: "dailyChallenges", label: "Daily challenges", icon: Zap }, { key: "achievements", label: "Achievements", icon: ShieldCheck }, { key: "tutorMessages", label: "Tutor messages", icon: Bot }, { key: "activityEvents", label: "Activity events", icon: Wifi }, { key: "errorLogs", label: "Error logs", icon: AlertTriangle }];
+  const tables = [{ key: "families", label: "Families", icon: Users }, { key: "devices", label: "Devices", icon: Smartphone }, { key: "students", label: "Learners", icon: UserRound }, { key: "lessonProgress", label: "Lesson progress", icon: Gauge }, { key: "dailyChallenges", label: "Daily challenges", icon: Zap }, { key: "achievements", label: "Achievements", icon: ShieldCheck }, { key: "tutorMessages", label: "Tutor messages", icon: Bot }, { key: "activityEvents", label: "Activity events", icon: Wifi }, { key: "parentFeedback", label: "Parent feedback", icon: MessageSquareText }, { key: "errorLogs", label: "Error logs", icon: AlertTriangle }];
   return <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3"><SummaryCard icon={<Database />} label="Database records" value={Object.values(data.dbStats).reduce((sum, value) => sum + value, 0)} /><SummaryCard icon={<AlertTriangle />} label="Recent errors" value={data.recentErrors.length} /><SummaryCard icon={<ShieldCheck />} label="Service status" value={data.recentErrors.length ? "Attention" : "Healthy"} /></div><Panel><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">Database activity</h2><p className="mt-1 text-xs text-[#68738b]">Server time: {new Date(data.serverTime).toLocaleString()}</p></div><Button variant="outline" size="sm" onClick={() => void load()} className="rounded-lg"><RefreshCw className="h-4 w-4" />Refresh</Button></div><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{tables.map((table) => { const Icon = table.icon; return <div key={table.key} className="flex items-center gap-3 rounded-xl border border-[#e4e1db] bg-[#fbfaf7] p-4"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#efeaff] text-[#7048e8]"><Icon className="h-5 w-5" /></span><div><p className="text-2xl font-black tabular-nums">{data.dbStats[table.key] ?? 0}</p><p className="text-xs font-semibold text-[#68738b]">{table.label}</p></div></div>; })}</div></Panel><Panel><div className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-[#c28a22]" /><h2 className="text-lg font-black">Error log</h2></div>{data.recentErrors.length ? <div className="mt-4 space-y-2">{data.recentErrors.map((item) => <div key={item.id} className="rounded-xl border border-[#edc7ce] bg-[#fff7f8] p-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="rounded-md bg-[#f8dfe5] px-2 py-1 font-mono text-[10px] font-black text-[#a12448]">{item.method} {item.route}</span><span className="text-[10px] text-[#7a8498]">{new Date(item.createdAt).toLocaleString()}</span></div><p className="mt-2 text-sm font-semibold text-[#7f2442]">{item.message}</p></div>)}</div> : <div className="mt-5 rounded-xl bg-[#edf8ed] px-5 py-8 text-center"><ShieldCheck className="mx-auto h-7 w-7 text-[#3d9254]" /><p className="mt-2 font-black text-[#39794b]">No errors logged. All clear.</p></div>}</Panel></div>;
 }
 

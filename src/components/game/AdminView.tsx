@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Loader2,
   Lock,
+  MessageSquareText,
   Settings as SettingsIcon,
   ShieldCheck,
   SlidersHorizontal,
@@ -35,6 +36,7 @@ import {
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import {
   AdminFamilies,
+  AdminFeedback,
   AdminFeatures,
   AdminLearners,
   AdminSettings,
@@ -48,6 +50,7 @@ const navigation: Array<{ id: AdminTab; label: string; icon: typeof BarChart3 }>
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "families", label: "Families", icon: Users },
   { id: "learners", label: "Learners", icon: UserRound },
+  { id: "feedback", label: "Feedback", icon: MessageSquareText },
   { id: "features", label: "Features", icon: SlidersHorizontal },
   { id: "system", label: "System", icon: Cpu },
   { id: "settings", label: "Settings", icon: SettingsIcon },
@@ -63,6 +66,11 @@ const sectionCopy: Record<Exclude<AdminTab, "analytics">, { eyebrow: string; tit
     eyebrow: "Learner operations",
     title: "Learner management",
     description: "Understand progress and safely manage each Preschool through 4th Grade profile.",
+  },
+  feedback: {
+    eyebrow: "Family voice",
+    title: "Parent feedback inbox",
+    description: "Review bug reports, suggestions, and family feedback, then track each item through resolution.",
   },
   features: {
     eyebrow: "Product controls",
@@ -233,6 +241,7 @@ export function AdminView({ standalone = false }: { standalone?: boolean }) {
               <div className="mt-7">
                 {tab === "families" && <AdminFamilies />}
                 {tab === "learners" && <AdminLearners />}
+                {tab === "feedback" && <AdminFeedback />}
                 {tab === "features" && <AdminFeatures settings={settings} setSettings={setSettings} />}
                 {tab === "system" && <AdminSystem />}
                 {tab === "settings" && <AdminSettings settings={settings} setSettings={setSettings} />}

@@ -168,6 +168,14 @@ export function useTTS(): UseTTSResult {
         return;
       }
 
+      // Downloaded grade packs must keep read-aloud responsive without a
+      // network round trip. The device voice also avoids waiting for the API
+      // timeout when a connection drops between questions.
+      if (!navigator.onLine) {
+        speakInBrowser();
+        return;
+      }
+
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 4500);
       fetch("/api/tts", {

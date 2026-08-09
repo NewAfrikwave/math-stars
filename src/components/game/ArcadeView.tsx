@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Coins, Gamepad2, Loader2, Lock, RotateCcw, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Check, Coins, Gamepad2, Loader2, Lock, RotateCcw, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
 import { ARCADE_GAMES, pizzaSlicesEarned, type ArcadeGameKey, type PublicArcadeQuestion } from "@/lib/arcade";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { SpeakButton } from "@/components/game/SpeakButton";
+import { useSoundEffects } from "@/hooks/use-sound-effects";
+import { useTTS } from "@/hooks/use-tts";
+import { arcadeFeedbackSpeech, arcadeQuestionSpeech, arcadeRoundSpeech } from "@/lib/arcade-voice";
 import { profileFetch, useGameStore } from "@/store/useGameStore";
 
 interface ArcadeRunState {
@@ -41,6 +45,10 @@ export function ArcadeView() {
   const setView = useGameStore((state) => state.setView);
   const setReward = useGameStore((state) => state.setReward);
   const studentName = useGameStore((state) => state.studentName);
+  const level = useGameStore((state) => state.level);
+  const soundOn = useGameStore((state) => state.soundOn);
+  const setSoundOn = useGameStore((state) => state.setSoundOn);
+  const siteSettings = useGameStore((state) => state.siteSettings);
   const [overview, setOverview] = useState<ArcadeOverview | null>(null);
   const [run, setRun] = useState<ArcadeRunState | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
@@ -49,6 +57,8 @@ export function ArcadeView() {
   const [error, setError] = useState<string | null>(null);
   const feedbackActionRef = useRef<HTMLButtonElement>(null);
   const feedbackReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const { speak, speakImmediately, stop } = useTTS();
+  const { playCorrect, playWrong } = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -72,6 +82,42 @@ export function ArcadeView() {
 
   const activeGame = useMemo(() => ARCADE_GAMES.find((game) => game.key === run?.gameKey), [run?.gameKey]);
   const companion = overview?.companions.find((item) => item.id === overview.selectedCompanion) ?? overview?.companions[0];
+  const questionSpeech = useMemo(() => run?.question ? arcadeQuestionSpeech(run.question) : "", [run?.question]);
+
+  useEffect(() => {
+    if (!soundOn || !run?.question || feedback) return;
+    const timer = window.setTimeout(() => {
+      if (navigator.onLine) speak(questionSpeech, { speed: level === "preschool" ? 0.82 : 0.92 });
+      else speakImmediately(questionSpeech, { speed: level === "preschool" ? 0.82 : 0.92 });
+    }, 450);
+    return () => {
+      window.clearTimeout(timer);
+      stop();
+    };
+  }, [feedback, level, questionSpeech, run?.question, soundOn, speak, speakImmediately, stop]);
+
+  useEffect(() => {
+    if (!feedback || !soundOn || !run) return;
+    if (feedback.correct) playCorrect();
+    else playWrong();
+    speakImmediately(arcadeFeedbackSpeech({
+      correct: feedback.correct,
+      explanation: feedback.explanation,
+      youngerLearner: level === "preschool" || level === "grade1",
+      questionIndex: run.nextIndex,
+      correctCount: run.correctCount,
+      studentName,
+    }), { speed: level === "preschool" ? 0.84 : 0.94 });
+  }, [feedback, level, playCorrect, playWrong, run, soundOn, speakImmediately, studentName]);
+
+  useEffect(() => {
+    if (!soundOn || run?.status !== "completed") return;
+    const timer = window.setTimeout(() => speakImmediately(
+      arcadeRoundSpeech(studentName, run.correctCount, run.total, run.coinsEarned),
+      { speed: level === "preschool" ? 0.86 : 0.96 },
+    ), 250);
+    return () => window.clearTimeout(timer);
+  }, [level, run?.correctCount, run?.coinsEarned, run?.status, run?.total, soundOn, speakImmediately, studentName]);
 
   const startGame = async (gameKey: ArcadeGameKey, restart = false) => {
     setBusy(true);
@@ -205,7 +251,19 @@ export function ArcadeView() {
         <div className="relative mx-auto max-w-3xl">
           <div className="flex items-center justify-between gap-3">
             <button onClick={() => setRun(null)} className="flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-display font-black backdrop-blur"><ArrowLeft className="h-5 w-5" /> Arcade</button>
-            <div className="rounded-full bg-black/25 px-4 py-2 font-display font-black backdrop-blur">{companion?.emoji} {companion?.name}</div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { if (soundOn) stop(); setSoundOn(!soundOn); }}
+                className="flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-3 font-display text-sm font-black backdrop-blur"
+                aria-label={soundOn ? "Turn Arcade voice off" : "Turn Arcade voice on"}
+                aria-pressed={soundOn}
+              >
+                {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                <span className="hidden sm:inline">Voice {soundOn ? "on" : "off"}</span>
+              </button>
+              <div className="rounded-full bg-black/25 px-4 py-2 font-display font-black backdrop-blur">{companion?.emoji} {companion?.name}</div>
+            </div>
           </div>
           <div className="mt-4 rounded-[30px] border-4 border-white/50 bg-[#171238]/88 p-5 shadow-2xl backdrop-blur sm:p-7">
             <div className="flex items-center justify-between gap-3">
@@ -221,6 +279,22 @@ export function ArcadeView() {
                 {run.question.visual && <div className="mb-4 text-center text-4xl tracking-[0.25em]" aria-hidden="true">{run.question.visual}</div>}
                 <h1 data-arcade-focus-target tabIndex={-1} className="text-center font-display text-2xl font-black leading-tight outline-none sm:text-4xl">{run.question.prompt}</h1>
                 {run.question.helper && <p className="mt-2 text-center text-sm font-bold text-violet-200">{run.question.helper}</p>}
+                <div className="mt-4 flex justify-center">
+                  {soundOn ? (
+                    <SpeakButton
+                      text={questionSpeech}
+                      label="Hear question"
+                      size="lg"
+                      variant="solid"
+                      speed={level === "preschool" ? 0.82 : 0.92}
+                      className="border-2 border-white/30 bg-emerald-600 px-5 shadow-lg hover:bg-emerald-500"
+                    />
+                  ) : (
+                    <button type="button" onClick={() => setSoundOn(true)} className="inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-white/30 bg-white/10 px-5 font-display font-black">
+                      <VolumeX className="h-5 w-5" /> Turn voice on
+                    </button>
+                  )}
+                </div>
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   {run.question.choices.map((choice, index) => (
                     <motion.button key={`${run.question?.id}-${choice}`} whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }} onClick={(event) => answer(index, event.currentTarget)} disabled={busy || Boolean(feedback)} className="min-h-20 rounded-2xl border-4 border-white/30 bg-white px-4 font-display text-3xl font-black text-[#30205d] shadow-[0_6px_0_rgba(30,18,72,0.55)] disabled:opacity-60">{choice}</motion.button>

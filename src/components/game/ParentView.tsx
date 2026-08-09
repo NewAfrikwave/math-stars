@@ -20,6 +20,7 @@ import { hasOfflineParentReport, sealOfflineParentReport, unlockOfflineParentRep
 import { clearOfflineDeviceData, loadSnapshot, saveSnapshot } from "@/lib/offline/database";
 import { cn } from "@/lib/utils";
 import { domainsForLevel, REWARD_PRESETS, type RewardMission, type RewardTargetType } from "@/lib/rewards";
+import { ParentFeedbackCard } from "@/components/game/ParentFeedbackCard";
 
 interface ProfileSummaryData {
   id: string;
@@ -653,6 +654,12 @@ export function ParentView() {
       </p>
 
       {error && <p className="mt-4 text-center text-sm font-semibold text-rose-600">{error}</p>}
+
+      <ParentFeedbackCard
+        parentPin={pinInput}
+        learnerLevel={profiles.find((profile) => profile.id === selectedProfileId)?.level ?? null}
+        familyAccount={familyAccount}
+      />
 
       <Card className="mt-6 p-4">
         <h2 className="font-display font-bold">Family data & privacy</h2>
