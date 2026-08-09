@@ -47,11 +47,18 @@ export function chooseNextMission(
     const rightProgress = progress[right.lesson.id];
     const scoreDifference = (leftProgress?.bestScore ?? 0) - (rightProgress?.bestScore ?? 0);
     if (scoreDifference !== 0) return scoreDifference;
-    const leftCompleted = leftProgress?.completedAt ? Date.parse(leftProgress.completedAt) : 0;
-    const rightCompleted = rightProgress?.completedAt ? Date.parse(rightProgress.completedAt) : 0;
-    if (leftCompleted !== rightCompleted) return leftCompleted - rightCompleted;
+    const leftPracticed = practiceTime(leftProgress);
+    const rightPracticed = practiceTime(rightProgress);
+    if (leftPracticed !== rightPracticed) return leftPracticed - rightPracticed;
     return (leftProgress?.attempts ?? 0) - (rightProgress?.attempts ?? 0);
   })[0] ?? { lesson: curriculum[0].lessons[0], domain: curriculum[0] };
 
   return { ...review, returning: false, gradeComplete: true };
+}
+
+function practiceTime(progress: LessonProgressState | undefined) {
+  const timestamp = progress?.lastPlayedAt ?? progress?.completedAt;
+  if (!timestamp) return 0;
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed) ? parsed : 0;
 }

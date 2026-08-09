@@ -419,6 +419,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       attempts: prev.attempts + 1,
       lastScore: score,
       completedAt: wasCompleted ? prev.completedAt : passed ? new Date().toISOString() : null,
+      lastPlayedAt: new Date().toISOString(),
     };
     const progress = { ...state.progress, [lessonId]: newProgress };
     recomputeStatuses(progress);

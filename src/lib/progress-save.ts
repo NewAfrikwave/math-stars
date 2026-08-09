@@ -107,7 +107,8 @@ export async function saveProgressAttempt(input: SaveInput) {
         update: {
           status: nextStatus, stars: newStars, bestScore: newBest, attempts: { increment: 1 },
           lastScore: input.score, lastDifficulty: input.difficulty ?? existing?.lastDifficulty ?? null,
-          completedAt: wasCompleted ? existing?.completedAt : passed ? now : null, lastPlayedAt: now,
+          completedAt: wasCompleted ? existing?.completedAt : passed ? now : null,
+          lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, now]),
         },
       });
 

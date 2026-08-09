@@ -112,6 +112,24 @@ describe("launch data integrity", () => {
     expect(source).toContain("onClick={loadOverview}");
   });
 
+  test("the public landing page presents all six Arcade games", () => {
+    const source = readFileSync(new URL("../src/components/PublicLanding.tsx", import.meta.url), "utf8");
+    for (const title of ["Rocket Builder", "Treasure Hunt", "Math Race", "Bubble Pop", "Shape Safari", "Pizza Party"]) {
+      expect(source).toContain(`title: "${title}"`);
+    }
+    expect(source).toContain("six grade-aware games");
+    expect(source).not.toContain("three exciting worlds");
+  });
+
+  test("lesson progress carries its actual practice time to Star Practice", () => {
+    const studentSource = readFileSync(new URL("../src/lib/student.ts", import.meta.url), "utf8");
+    const storeSource = readFileSync(new URL("../src/store/useGameStore.ts", import.meta.url), "utf8");
+    const progressSource = readFileSync(new URL("../src/lib/progress-save.ts", import.meta.url), "utf8");
+    expect(studentSource).toContain("lastPlayedAt: r.lastPlayedAt ? r.lastPlayedAt.toISOString() : null");
+    expect(storeSource).toContain("lastPlayedAt: new Date().toISOString()");
+    expect(progressSource).toContain("lastPlayedAt: latestCompletionDate([existing?.lastPlayedAt, now])");
+  });
+
   test("duplicate arcade answers reconcile without being graded as wrong", () => {
     const viewSource = readFileSync(new URL("../src/components/game/ArcadeView.tsx", import.meta.url), "utf8");
     const answerRouteSource = readFileSync(new URL("../src/app/api/arcade/answer/route.ts", import.meta.url), "utf8");

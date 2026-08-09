@@ -63,6 +63,15 @@ describe("Math Stars Anywhere", () => {
     ]);
   });
 
+  test("preserves the latest lesson practice time when offline and server progress merge", () => {
+    const local = progress("completed", 3, 90, 2);
+    local.lastPlayedAt = "2026-08-08T14:00:00.000Z";
+    const remote = progress("completed", 3, 90, 2);
+    remote.lastPlayedAt = "2026-08-08T12:00:00.000Z";
+
+    expect(mergeProgressMaps({ lesson: local }, { lesson: remote }).lesson.lastPlayedAt).toBe(local.lastPlayedAt);
+  });
+
   test("waits before retrying failed events and caps backoff at five minutes", () => {
     const event = { ...toStoredEvent(lessonEvent("retry", "learner", "2026-08-01T12:00:00.000Z")), status: "failed" as const, attempts: 3, nextAttemptAt: 10_000 };
     expect(nextSyncBatch([event], 9_999)).toHaveLength(0);

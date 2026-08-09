@@ -71,11 +71,11 @@ describe("dashboard resume mission", () => {
 
   test("uses the least-recently-practiced lesson when completed scores tie", () => {
     const selected = chooseNextMission(curriculum, {
-      "available-first": { ...progress("available-first", "completed"), bestScore: 90, completedAt: "2026-08-01T12:00:00.000Z" },
-      "continue-this": { ...progress("continue-this", "completed"), bestScore: 90, completedAt: "2026-08-08T12:00:00.000Z" },
+      "available-first": { ...progress("available-first", "completed"), bestScore: 90, completedAt: "2026-08-01T12:00:00.000Z", lastPlayedAt: "2026-08-08T12:00:00.000Z" },
+      "continue-this": { ...progress("continue-this", "completed"), bestScore: 90, completedAt: "2026-08-08T12:00:00.000Z", lastPlayedAt: "2026-08-03T12:00:00.000Z" },
     });
 
     expect(selected.gradeComplete).toBe(true);
-    expect(selected.lesson.id).toBe("available-first");
+    expect(selected.lesson.id).toBe("continue-this");
   });
 });

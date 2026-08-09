@@ -340,9 +340,27 @@ function shapeSafariQuestion(level: Exclude<Level, "preschool">, index: number, 
     return choiceQuestion(`shape-safari-${index}`, `A ${shape.name} has how many sides?`, shape.sides, rng, "Trace and count each side once.", `${shape.visual}  🦁`);
   }
 
-  const width = randomInt(2, level === "grade2" ? 8 : 12, rng);
-  const height = randomInt(2, level === "grade2" ? 8 : 12, rng);
-  if (level === "grade2" || index % 2 === 0) {
+  if (level === "grade2") {
+    const shapes = [
+      { name: "pentagon", sides: 5, visual: "⬠" },
+      { name: "hexagon", sides: 6, visual: "⬡" },
+      { name: "quadrilateral", sides: 4, visual: "▱" },
+    ];
+    if (index % 3 === 0) {
+      const shape = shapes[Math.floor(index / 3) % shapes.length];
+      return choiceQuestion(`shape-safari-${index}`, `How many sides does this ${shape.name} have?`, shape.sides, rng, "Trace the shape and count each side once.", `${shape.visual}  🦁`);
+    }
+    const rows = randomInt(2, 5, rng);
+    const columns = randomInt(2, 5, rng);
+    if (index % 3 === 1) {
+      return choiceQuestion(`shape-safari-${index}`, `An array has ${rows} rows with ${columns} shapes in each row. How many shapes are there?`, rows * columns, rng, "Count equal rows or add the same number again.", `▦  ${rows} rows × ${columns}`);
+    }
+    return choiceQuestion(`shape-safari-${index}`, `A rectangle is split into ${rows} rows and ${columns} columns. How many equal parts does it have?`, rows * columns, rng, "Each row has the same number of equal parts.", `▦  ${rows} × ${columns}`);
+  }
+
+  const width = randomInt(2, 12, rng);
+  const height = randomInt(2, 12, rng);
+  if (index % 2 === 0) {
     return choiceQuestion(`shape-safari-${index}`, `A rectangle is ${width} units long and ${height} units wide. What is its perimeter?`, 2 * (width + height), rng, "Add all four sides.", `▭  ${width} × ${height}`);
   }
   if (level === "grade3") {
