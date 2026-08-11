@@ -121,6 +121,15 @@ describe("launch data integrity", () => {
     expect(source).not.toContain("three exciting worlds");
   });
 
+  test("public and learner footers disclose the initiative operator and contribution status", () => {
+    const publicLanding = readFileSync(new URL("../src/components/PublicLanding.tsx", import.meta.url), "utf8");
+    const learnerApp = readFileSync(new URL("../src/app/page.tsx", import.meta.url), "utf8");
+    for (const source of [publicLanding, learnerApp]) {
+      expect(source).toContain("Math Stars is a free educational initiative operated by Norzo Market LLC.");
+      expect(source).toContain("Contributions are not tax-deductible.");
+    }
+  });
+
   test("lesson progress carries its actual practice time to Star Practice", () => {
     const studentSource = readFileSync(new URL("../src/lib/student.ts", import.meta.url), "utf8");
     const storeSource = readFileSync(new URL("../src/store/useGameStore.ts", import.meta.url), "utf8");
