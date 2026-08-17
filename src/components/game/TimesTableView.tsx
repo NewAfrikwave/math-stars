@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   Lightbulb,
   RotateCcw,
   Sparkles,
+  Square,
   Star,
   Volume2,
   X,
@@ -20,6 +21,7 @@ import { useGameStore } from "@/store/useGameStore";
 import { Confetti } from "@/components/game/Confetti";
 import { StickerBurst } from "@/components/game/StickerBurst";
 import { AnimatedNumber, FloatingSparkles, springy } from "@/components/game/MotionKit";
+import { useTTS } from "@/hooks/use-tts";
 
 const TABLES = Array.from({ length: 11 }, (_, index) => index + 2);
 const FACTORS = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -40,14 +42,19 @@ export function TimesTableView() {
   const [feedback, setFeedback] = useState<"correct" | "retry" | null>(null);
   const [score, setScore] = useState(0);
   const [questions, setQuestions] = useState(0);
+  const { speakImmediately, speaking, stop } = useTTS();
 
   const products = useMemo(() => FACTORS.map((factorValue) => selected * factorValue), [selected]);
+  const tableSpeech = useMemo(
+    () => FACTORS.map((factorValue) => `${selected} times ${factorValue} is ${selected * factorValue}`).join(". "),
+    [selected],
+  );
 
-  const speakTable = () => {
-    if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const words = FACTORS.map((n) => `${selected} times ${n} is ${selected * n}`).join(". ");
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(words));
+  useEffect(() => () => stop(), [stop]);
+
+  const toggleTableSpeech = () => {
+    if (speaking) stop();
+    else speakImmediately(tableSpeech, { speed: 0.86 });
   };
 
   const submitAnswer = (event: FormEvent) => {
@@ -68,10 +75,16 @@ export function TimesTableView() {
   };
 
   const selectTable = (table: number) => {
+    stop();
     setSelected(table);
     setFactor(makeQuestion(table));
     setAnswer("");
     setFeedback(null);
+  };
+
+  const openPractice = () => {
+    stop();
+    setPracticeOpen(true);
   };
 
   return (
@@ -84,7 +97,7 @@ export function TimesTableView() {
 
       <header className="relative z-20 border-b border-[#ad9455]/50 bg-[#142d1d]/95 text-[#fff7d5] shadow-lg">
         <div className="mx-auto flex min-h-[78px] max-w-[1280px] items-center justify-between gap-3 px-4 sm:px-7">
-          <button onClick={() => setView({ name: "home" })} className="flex min-h-11 items-center gap-2 rounded-full px-3 font-display font-black hover:bg-[#2b462e] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457]"><ArrowLeft className="h-5 w-5" />Back home</button>
+          <button onClick={() => { stop(); setView({ name: "home" }); }} className="flex min-h-11 items-center gap-2 rounded-full px-3 font-display font-black hover:bg-[#2b462e] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#f2c457]"><ArrowLeft className="h-5 w-5" />Back home</button>
           <div className="text-center"><p className="font-display text-xl font-black sm:text-2xl">Times Table Lab</p><p className="hidden text-xs font-bold text-[#e1ca84] sm:block">Every table from 2× through 12×</p></div>
           <motion.div key={score} initial={{ scale: 0.82 }} animate={{ scale: 1 }} transition={springy} className="flex items-center gap-2 rounded-full border border-[#b49a58]/50 bg-[#2b462e] px-4 py-2 font-display font-black"><Star className="h-5 w-5 fill-[#f8c53d] text-[#f8c53d]" /><AnimatedNumber value={score} /></motion.div>
         </div>
@@ -95,8 +108,11 @@ export function TimesTableView() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div><p className="text-sm font-black uppercase tracking-[0.14em] text-[#9a302c]">Welcome to the lab, {studentName}</p><h1 className="mt-1 font-display text-3xl font-black text-[#24482d] sm:text-4xl">Choose a table to explore</h1><p className="mt-1 max-w-2xl font-semibold text-[#6c573a]">Spot patterns, hear every fact out loud, then test your speed in a quick practice round.</p></div>
             <div className="flex gap-2">
-              <button onClick={speakTable} className="inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-[#31573a] bg-[#fff7df] px-4 font-display font-black text-[#31573a] hover:bg-[#ebddba]"><Volume2 className="h-5 w-5" />Read aloud</button>
-              <button onClick={() => setPracticeOpen(true)} className="inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-[#7a2328] bg-[#aa2f34] px-5 font-display font-black text-white shadow-[0_4px_0_#6d2023] active:translate-y-1 active:shadow-none"><Sparkles className="h-5 w-5" />Practice</button>
+              <button onClick={toggleTableSpeech} aria-label={speaking ? "Stop reading the times table" : `Read the ${selected} times table aloud`} aria-pressed={speaking} className="inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-[#31573a] bg-[#fff7df] px-4 font-display font-black text-[#31573a] hover:bg-[#ebddba]">
+                {speaking ? <Square className="h-5 w-5 fill-current" /> : <Volume2 className="h-5 w-5" />}
+                {speaking ? "Stop reading" : "Read aloud"}
+              </button>
+              <button onClick={openPractice} className="inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-[#7a2328] bg-[#aa2f34] px-5 font-display font-black text-white shadow-[0_4px_0_#6d2023] active:translate-y-1 active:shadow-none"><Sparkles className="h-5 w-5" />Practice</button>
             </div>
           </div>
 
@@ -108,7 +124,7 @@ export function TimesTableView() {
             <div className="overflow-hidden rounded-[24px] border-2 border-[#bd9855] bg-[#fff8e5] shadow-inner">
               <div className="grid grid-cols-2 gap-px bg-[#d8be88] sm:grid-cols-3 lg:grid-cols-4">
                 {FACTORS.map((factorValue, index) => (
-                  <motion.button key={factorValue} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.025 }} onClick={() => { setFactor(factorValue); setPracticeOpen(true); setAnswer(""); setFeedback(null); }} className="group min-h-[88px] bg-[#fff8e5] p-3 text-center transition-colors hover:bg-[#f1e0b7] focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#315f3a] sm:min-h-[105px]">
+                  <motion.button key={factorValue} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.025 }} onClick={() => { stop(); setFactor(factorValue); setPracticeOpen(true); setAnswer(""); setFeedback(null); }} className="group min-h-[88px] bg-[#fff8e5] p-3 text-center transition-colors hover:bg-[#f1e0b7] focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#315f3a] sm:min-h-[105px]">
                     <span className="block text-xs font-black uppercase tracking-wide text-[#9a302c]">Fact {index + 1}</span>
                     <span className="mt-1 block font-display text-2xl font-black text-[#2d4e31] sm:text-3xl">{selected} × {factorValue}</span>
                     <span className="block font-display text-xl font-black text-[#9a302c]">= {products[index]}</span>
@@ -127,7 +143,7 @@ export function TimesTableView() {
                 <BookOpenCheck className="h-7 w-7 text-[#5e487e]" />
                 <h2 className="mt-2 font-display text-xl font-black text-[#4c386c]">Try it your way</h2>
                 <p className="mt-2 text-sm font-semibold leading-relaxed text-[#5d5270]">Tap any fact to practice it, or press Practice for a surprise question from the {selected}× table.</p>
-                <button onClick={() => setPracticeOpen(true)} className="mt-4 flex w-full min-h-12 items-center justify-center gap-2 rounded-full bg-[#69518c] px-4 font-display font-black text-white">Start {selected}× practice<ChevronRight className="h-5 w-5" /></button>
+                <button onClick={openPractice} className="mt-4 flex w-full min-h-12 items-center justify-center gap-2 rounded-full bg-[#69518c] px-4 font-display font-black text-white">Start {selected}× practice<ChevronRight className="h-5 w-5" /></button>
               </div>
             </aside>
           </div>
