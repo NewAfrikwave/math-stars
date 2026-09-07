@@ -10,6 +10,7 @@ import { useSoundEffects } from "@/hooks/use-sound-effects";
 import { useTTS } from "@/hooks/use-tts";
 import { arcadeFeedbackSpeech, arcadeQuestionSpeech, arcadeRoundSpeech } from "@/lib/arcade-voice";
 import { profileFetch, useGameStore } from "@/store/useGameStore";
+import { PizzaKitchen } from "@/components/game/PizzaKitchen";
 
 interface ArcadeRunState {
   attemptId: string;
@@ -57,6 +58,7 @@ export function ArcadeView() {
   const [error, setError] = useState<string | null>(null);
   const feedbackActionRef = useRef<HTMLButtonElement>(null);
   const feedbackReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const answerLock = useRef(false);
   const { speak, speakImmediately, stop } = useTTS();
   const { playCorrect, playWrong } = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
 
@@ -150,8 +152,9 @@ export function ArcadeView() {
     setBusy(false);
   };
 
-  const answer = async (choiceIndex: number, trigger: HTMLButtonElement) => {
-    if (!run || !run.question || busy || feedback) return;
+  const answer = async (choiceIndex: number | undefined, trigger: HTMLButtonElement, pizzaPlacements?: number[]) => {
+    if (!run || !run.question || busy || feedback || answerLock.current) return;
+    answerLock.current = true;
     feedbackReturnFocusRef.current = trigger;
     setBusy(true);
     setError(null);
@@ -159,7 +162,7 @@ export function ArcadeView() {
       const response = await profileFetch("/api/arcade/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId: run.attemptId, questionIndex: run.nextIndex, choiceIndex }),
+        body: JSON.stringify({ attemptId: run.attemptId, questionIndex: run.nextIndex, choiceIndex, ...(pizzaPlacements ? { pizzaPlacements } : {}) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Your answer was not saved");
@@ -182,6 +185,7 @@ export function ArcadeView() {
     } catch (answerError) {
       setError(answerError instanceof Error ? answerError.message : "Your answer was not saved");
     } finally {
+      answerLock.current = false;
       setBusy(false);
     }
   };
@@ -253,7 +257,7 @@ export function ArcadeView() {
     return (
       <div className={`relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br ${activeGame.color} px-3 py-5 text-white sm:px-6`}>
         <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:28px_28px]" />
-        <div className="relative mx-auto max-w-3xl">
+        <div className={`relative mx-auto ${run.question?.pizza ? "max-w-6xl" : "max-w-3xl"}`}>
           <div className="flex items-center justify-between gap-3">
             <button onClick={() => setRun(null)} className="flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-display font-black backdrop-blur"><ArrowLeft className="h-5 w-5" /> Arcade</button>
             <div className="flex items-center gap-2">
@@ -270,15 +274,16 @@ export function ArcadeView() {
               <div className="rounded-full bg-black/25 px-4 py-2 font-display font-black backdrop-blur">{companion?.emoji} {companion?.name}</div>
             </div>
           </div>
-          <div className="mt-4 rounded-[30px] border-4 border-white/50 bg-[#171238]/88 p-5 shadow-2xl backdrop-blur sm:p-7">
+          <div className={`mt-4 rounded-[30px] border-4 border-white/50 bg-[#171238]/88 shadow-2xl backdrop-blur ${run.question?.pizza ? "p-2 sm:p-5" : "p-5 sm:p-7"}`}>
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-sm font-black uppercase tracking-[0.16em] text-amber-200">{activeGame.title}</p><p className="font-display text-2xl font-black">Question {run.nextIndex + 1} of {run.total}</p></div>
               <button onClick={() => startGame(run.gameKey, true)} disabled={busy} title="Restart round" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10"><RotateCcw className="h-5 w-5" /></button>
             </div>
             <div className="mt-4 h-4 overflow-hidden rounded-full border-2 border-white/30 bg-black/25"><motion.div animate={{ width: `${progress}%` }} className="h-full rounded-full bg-amber-300" /></div>
 
-            <GameStage gameKey={run.gameKey} completed={run.nextIndex} total={run.total} companionEmoji={companion?.emoji ?? "🦊"} />
+            {!run.question?.pizza && <GameStage gameKey={run.gameKey} completed={run.nextIndex} total={run.total} companionEmoji={companion?.emoji ?? "🦊"} />}
 
+            {run.question?.pizza ? <PizzaKitchen key={`${run.attemptId}:${run.nextIndex}`} challenge={run.question.pizza} busy={busy} soundOn={soundOn} feedback={feedback} finalQuestion={feedback?.nextRun.status === "completed"} onSubmit={(placements, trigger) => void answer(undefined, trigger, placements)} onContinue={() => void continueAfterFeedback()} /> : <>
             <AnimatePresence mode="wait">
               {run.question && <motion.div key={run.question.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} className="mt-5">
                 {run.question.visual && <div className="mb-4 text-center text-4xl tracking-[0.25em]" aria-hidden="true">{run.question.visual}</div>}
@@ -307,12 +312,13 @@ export function ArcadeView() {
                 </div>
               </motion.div>}
             </AnimatePresence>
+            </>}
             {error && <p className="mt-4 rounded-xl bg-rose-950/70 p-3 text-center font-bold" role="alert">{error}</p>}
             {busy && <p className="mt-4 flex items-center justify-center gap-2 font-bold"><Loader2 className="h-5 w-5 animate-spin" /> Saving your place…</p>}
           </div>
         </div>
 
-        <Dialog open={Boolean(feedback)}>
+        <Dialog open={Boolean(feedback) && !run.question?.pizza}>
           {feedback && (
             <DialogContent
               showCloseButton={false}

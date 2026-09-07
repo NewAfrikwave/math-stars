@@ -1,5 +1,6 @@
 import { celebrationName, correctAnswerPraise } from "@/lib/celebrations";
 import type { PublicArcadeQuestion } from "@/lib/arcade";
+import { pizzaInstruction, pizzaPrompt } from "@/lib/pizza-party";
 
 const RETRY_ENCOURAGEMENT = [
   "Good try. Take another look and keep going.",
@@ -8,7 +9,8 @@ const RETRY_ENCOURAGEMENT = [
   "That one was tricky. You can do the next challenge.",
 ] as const;
 
-export function arcadeQuestionSpeech(question: Pick<PublicArcadeQuestion, "prompt" | "helper" | "choices">) {
+export function arcadeQuestionSpeech(question: Pick<PublicArcadeQuestion, "prompt" | "helper" | "choices" | "pizza">) {
+  if (question.pizza) return `${pizzaPrompt(question.pizza)} ${pizzaInstruction(question.pizza)}`;
   const choices = question.choices.map(String).filter(Boolean);
   const choiceText = choices.length > 1
     ? `Your choices are ${choices.slice(0, -1).join(", ")}, or ${choices.at(-1)}.`

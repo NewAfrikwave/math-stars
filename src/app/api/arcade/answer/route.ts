@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getStudentForRequest } from "@/lib/student";
-import { ARCADE_GAMES, arcadeReward, parseArcadeAnswers, parseArcadeQuestions, publicQuestion } from "@/lib/arcade";
+import { ARCADE_GAMES, arcadeReward, evaluateArcadeAnswer, parseArcadeAnswers, parseArcadeQuestions, publicQuestion } from "@/lib/arcade";
+import { pizzaExplanation } from "@/lib/pizza-party";
 import { getCurrentRewardMission } from "@/lib/reward-server";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
@@ -46,12 +47,11 @@ function reconciledPayload(run: ReconciledRun, questions: NonNullable<ReturnType
 export async function POST(req: Request) {
   const limit = rateLimit(clientKey(req, "arcade-answer"), 240, 15 * 60 * 1000);
   if (!limit.allowed) return NextResponse.json({ error: "Too many answers" }, { status: 429 });
-  const body = await req.json().catch(() => null) as { attemptId?: unknown; questionIndex?: unknown; choiceIndex?: unknown } | null;
-  if (!body || typeof body.attemptId !== "string" || !Number.isInteger(body.questionIndex) || !Number.isInteger(body.choiceIndex)) {
+  const body = await req.json().catch(() => null) as { attemptId?: unknown; questionIndex?: unknown; choiceIndex?: unknown; pizzaPlacements?: unknown } | null;
+  if (!body || typeof body.attemptId !== "string" || !Number.isInteger(body.questionIndex) || (!Number.isInteger(body.choiceIndex) && !Array.isArray(body.pizzaPlacements))) {
     return NextResponse.json({ error: "A valid answer is required" }, { status: 400 });
   }
   const questionIndex = Number(body.questionIndex);
-  const choiceIndex = Number(body.choiceIndex);
   const student = await getStudentForRequest(req);
   const current = await db.arcadeRun.findFirst({ where: { attemptId: body.attemptId, studentId: student.id } });
   if (!current) return NextResponse.json({ error: "Arcade round not found" }, { status: 404 });
@@ -69,12 +69,14 @@ export async function POST(req: Request) {
   }
   if (questionIndex !== current.nextIndex) return NextResponse.json({ error: "Answer the current question first" }, { status: 409 });
   const question = questions[questionIndex];
-  if (choiceIndex < 0 || choiceIndex >= question.choices.length) return NextResponse.json({ error: "Choose one answer" }, { status: 400 });
-
-  const correct = choiceIndex === question.answerIndex;
+  const evaluated = evaluateArcadeAnswer(question, body);
+  if (!evaluated) return NextResponse.json({ error: "Choose one answer or arrange the pizza slices" }, { status: 400 });
+  const { correct } = evaluated;
+  const explanation = question.pizza ? pizzaExplanation(question.pizza, correct)
+    : correct ? "Great move! Your place is saved." : `Good try. The answer was ${question.choices[question.answerIndex]}.`;
   const nextIndex = questionIndex + 1;
   const correctCount = current.correctCount + (correct ? 1 : 0);
-  const answers = [...parseArcadeAnswers(current.answersJson), { index: questionIndex, choiceIndex, correct }];
+  const answers = [...parseArcadeAnswers(current.answersJson), { index: questionIndex, ...evaluated }];
 
   if (nextIndex < current.total) {
     const updated = await db.arcadeRun.updateMany({
@@ -95,7 +97,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({
       correct,
-      explanation: correct ? "Great move! Your place is saved." : `Good try. The answer was ${question.choices[question.answerIndex]}.`,
+      explanation,
       run: { attemptId: current.attemptId, gameKey: current.gameKey, status: "active", nextIndex, correctCount, total: current.total, question: publicQuestion(questions[nextIndex]) },
     });
   }
@@ -154,7 +156,7 @@ export async function POST(req: Request) {
   const completed = { ...current, nextIndex, correctCount, coinsEarned: result.reward.totalCoins, dailyBonus: result.reward.dailyBonus };
   return NextResponse.json({
     correct,
-    explanation: correct ? "Perfect finish! Your coins are safely saved." : `Round complete. The answer was ${question.choices[question.answerIndex]}.`,
+    explanation,
     run: completedPayload(completed),
     coins: result.coins,
     reward: await getCurrentRewardMission(student.id),
