@@ -1,4 +1,5 @@
-import { ARCADE_COMPANIONS, ARCADE_GAME_KEYS, ARCADE_GAMES, arcadeReward, createArcadeQuestions, isArcadeGameKey, publicQuestion, type ArcadeAnswerRecord, type ArcadeGameKey } from "@/lib/arcade";
+import { ARCADE_COMPANIONS, ARCADE_GAME_KEYS, ARCADE_GAMES, arcadeReward, createArcadeQuestions, evaluateArcadeAnswer, isArcadeGameKey, publicQuestion, type ArcadeAnswerRecord, type ArcadeGameKey } from "@/lib/arcade";
+import { pizzaExplanation } from "@/lib/pizza-party";
 import { deleteOfflineArcadeRun, deleteOfflineCheckpoint, enqueueOfflineEvent, loadOfflineArcadeRun, loadSnapshot, saveOfflineArcadeRun, saveOfflineCheckpoint, saveSnapshot } from "@/lib/offline/database";
 import { requestBackgroundSync } from "@/lib/offline/sync-client";
 import type { Level } from "@/lib/types";
@@ -178,14 +179,15 @@ async function offlineArcadeAnswer(body: Record<string, unknown>, context: Offli
     const candidate = await loadOfflineArcadeRun(context.profileId!, gameKey);
     if (candidate?.attemptId === body.attemptId) { run = candidate; break; }
   }
-  if (!run || run.status !== "active") return jsonResponse({ error: "Offline arcade round not found" }, 404);
-  const questionIndex = Math.floor(Number(body.questionIndex));
-  const choiceIndex = Math.floor(Number(body.choiceIndex));
+  if (!run || run.status !== "active") return jsonResponse({ error: "This round started online. Your answer is still here — reconnect, then submit it again." }, 409);
+  const questionIndex = Number(body.questionIndex);
+  if (!Number.isInteger(questionIndex)) return jsonResponse({ error: "Choose a question" }, 400);
   if (questionIndex !== run.nextIndex) return jsonResponse({ error: "Answer the current question first" }, 409);
   const question = run.questions[questionIndex];
-  if (!question || choiceIndex < 0 || choiceIndex >= question.choices.length) return jsonResponse({ error: "Choose an answer" }, 400);
-  const correct = choiceIndex === question.answerIndex;
-  const answer = { index: questionIndex, choiceIndex, correct };
+  const evaluated = question ? evaluateArcadeAnswer(question, body) : null;
+  if (!evaluated) return jsonResponse({ error: "Choose an answer or arrange the pizza slices" }, 400);
+  const { correct } = evaluated;
+  const answer = { index: questionIndex, ...evaluated };
   const nextIndex = questionIndex + 1;
   const correctCount = run.correctCount + (correct ? 1 : 0);
   const completed = nextIndex >= run.questions.length;
@@ -218,7 +220,7 @@ async function offlineArcadeAnswer(body: Record<string, unknown>, context: Offli
   return jsonResponse({
     offline: true,
     correct,
-    explanation: correct ? "Great move! Saved on this device." : `Good try. The answer was ${question.choices[question.answerIndex]}.`,
+    explanation: question.pizza ? pizzaExplanation(question.pizza, correct) : correct ? "Great move! Saved on this device." : `Good try. The answer was ${question.choices[question.answerIndex]}.`,
     run: publicArcadeRun(run),
     ...(completed ? { coins: coinBalance } : {}),
   });

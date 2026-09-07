@@ -145,7 +145,7 @@ describe("launch data integrity", () => {
 
   test("the arcade feedback dialog traps focus and restores a useful target", () => {
     const source = readFileSync(new URL("../src/components/game/ArcadeView.tsx", import.meta.url), "utf8");
-    expect(source).toContain("<Dialog open={Boolean(feedback)}>");
+    expect(source).toContain("<Dialog open={Boolean(feedback) && !run.question?.pizza}>");
     expect(source).toContain("onOpenAutoFocus");
     expect(source).toContain("onCloseAutoFocus");
     expect(source).toContain("returnTarget?.isConnected");

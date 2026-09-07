@@ -1,4 +1,5 @@
 import type { Level } from "@/lib/types";
+import { checkPizzaPlacements, makePizzaChallenge, pizzaInstruction, pizzaPrompt, pizzaTarget, validPizzaChallenge, validPizzaPlacements, type PizzaChallenge } from "@/lib/pizza-party";
 
 export const ARCADE_GAME_KEYS = [
   "star-sprint",
@@ -17,6 +18,7 @@ export interface ArcadeQuestion {
   answerIndex: number;
   helper?: string;
   visual?: string;
+  pizza?: PizzaChallenge;
 }
 
 export interface PublicArcadeQuestion {
@@ -25,12 +27,14 @@ export interface PublicArcadeQuestion {
   choices: string[];
   helper?: string;
   visual?: string;
+  pizza?: PizzaChallenge;
 }
 
 export interface ArcadeAnswerRecord {
   index: number;
   choiceIndex: number;
   correct: boolean;
+  pizzaPlacements?: number[];
 }
 
 export interface ArcadeCompanion {
@@ -106,7 +110,7 @@ export const ARCADE_GAMES = [
     key: "pizza-party" as const,
     title: "Pizza Party",
     emoji: "🍕",
-    description: "Share every pizza fairly and build fraction confidence.",
+    description: "Pick up 3D slices, serve your friends, and solve pizza orders.",
     color: "from-red-700 via-orange-500 to-amber-300",
   },
 ] as const;
@@ -129,6 +133,17 @@ export function arcadeLevel(value: string): Level {
 export function publicQuestion(question: ArcadeQuestion): PublicArcadeQuestion {
   const { answerIndex: _answerIndex, ...safe } = question;
   return safe;
+}
+
+/** Used by the online endpoint, offline play, and offline reconciliation. Never trust a client score. */
+export function evaluateArcadeAnswer(question: ArcadeQuestion, input: { choiceIndex?: unknown; pizzaPlacements?: unknown }) {
+  if (input.pizzaPlacements !== undefined) {
+    if (!question.pizza || !validPizzaChallenge(question.pizza) || !validPizzaPlacements(question.pizza, input.pizzaPlacements)) return null;
+    const correct = checkPizzaPlacements(question.pizza, input.pizzaPlacements);
+    return { choiceIndex: correct ? question.answerIndex : -1, correct, pizzaPlacements: [...input.pizzaPlacements] };
+  }
+  if (!Number.isInteger(input.choiceIndex) || Number(input.choiceIndex) < 0 || Number(input.choiceIndex) >= question.choices.length) return null;
+  return { choiceIndex: Number(input.choiceIndex), correct: input.choiceIndex === question.answerIndex };
 }
 
 export function companionForCoins(companionId: string, coins: number) {
@@ -190,6 +205,7 @@ export function parseArcadeQuestions(value: string): ArcadeQuestion[] | null {
       !question || typeof question.id !== "string" || typeof question.prompt !== "string"
       || !Array.isArray(question.choices) || question.choices.length < 2 || question.choices.length > 6
       || !Number.isInteger(question.answerIndex) || question.answerIndex < 0 || question.answerIndex >= question.choices.length
+      || (question.pizza !== undefined && !validPizzaChallenge(question.pizza))
     )) return null;
     return questions;
   } catch {
@@ -218,6 +234,11 @@ export function createArcadeQuestions(gameKey: ArcadeGameKey, level: Level, coun
 }
 
 function createQuestion(gameKey: ArcadeGameKey, level: Level, index: number, rng: Rng): ArcadeQuestion {
+  if (gameKey === "pizza-party") {
+    const pizza = makePizzaChallenge(level, index, rng);
+    // Keep answer choices for older installed clients and previously saved rounds.
+    return { ...choiceQuestion(`${gameKey}-${index}`, `${pizzaPrompt(pizza)} How many slices ${pizza.mode === "share" ? "per friend" : "on the plate"}?`, pizzaTarget(pizza), rng, pizzaInstruction(pizza)), pizza };
+  }
   if (level === "preschool") return preschoolQuestion(gameKey, index, rng);
   const ranges = level === "grade1"
     ? { max: 20, multiplier: 5 }
@@ -229,7 +250,6 @@ function createQuestion(gameKey: ArcadeGameKey, level: Level, index: number, rng
 
   if (gameKey === "bubble-pop") return bubblePopQuestion(level, index, rng);
   if (gameKey === "shape-safari") return shapeSafariQuestion(level, index, rng);
-  if (gameKey === "pizza-party") return pizzaPartyQuestion(level, index, rng);
 
   if (gameKey === "treasure-match") {
     const step = randomInt(2, level === "grade1" ? 5 : 12, rng);
@@ -370,44 +390,6 @@ function shapeSafariQuestion(level: Exclude<Level, "preschool">, index: number, 
   return choiceQuestion(`shape-safari-${index}`, `A rectangle has area ${area} square units and width ${width}. What is its length?`, height, rng, "Area ÷ width gives the missing length.", `▦  ? × ${width} = ${area}`);
 }
 
-function pizzaPartyQuestion(level: Exclude<Level, "preschool">, index: number, rng: Rng) {
-  if (level === "grade1") {
-    const slices = randomInt(2, 6, rng) * 2;
-    return choiceQuestion(`pizza-party-${index}`, `What is half of ${slices} pizza slices?`, slices / 2, rng, "Split the slices into 2 equal groups.", "🍕  ½  🍕");
-  }
-  if (level === "grade2") {
-    const groups = index % 2 === 0 ? 2 : 4;
-    const each = randomInt(1, 4, rng);
-    const slices = groups * each;
-    return choiceQuestion(`pizza-party-${index}`, `${slices} slices are shared equally by ${groups} friends. How many does each friend get?`, each, rng, "Make equal groups with no slices left over.", `🍕 ÷ ${groups}`);
-  }
-  if (level === "grade3") {
-    const denominator = index % 2 === 0 ? 6 : 8;
-    return stringChoiceQuestion(
-      `pizza-party-${index}`,
-      `Which fraction is equal to one half of this ${denominator}-slice pizza?`,
-      `${denominator / 2}/${denominator}`,
-      [`1/${denominator}`, `2/${denominator}`, `${denominator - 1}/${denominator}`],
-      rng,
-      "Half means 2 equal groups.",
-      "🍕 ½",
-    );
-  }
-  const denominator = index % 2 === 0 ? 8 : 12;
-  const first = randomInt(1, Math.floor(denominator / 3), rng);
-  const second = randomInt(1, Math.floor(denominator / 3), rng);
-  const numerator = first + second;
-  return stringChoiceQuestion(
-    `pizza-party-${index}`,
-    `Mia ate ${first}/${denominator} of a pizza and Jo ate ${second}/${denominator}. How much did they eat altogether?`,
-    `${numerator}/${denominator}`,
-    [`${Math.max(1, numerator - 1)}/${denominator}`, `${Math.min(denominator, numerator + 1)}/${denominator}`, `${numerator}/${denominator * 2}`],
-    rng,
-    "The denominators match, so add the numerators.",
-    "🍕 + 🍕",
-  );
-}
-
 function choiceQuestion(id: string, prompt: string, answer: number, rng: Rng, helper?: string, visual?: string): ArcadeQuestion {
   const values = new Set<number>([answer]);
   const spread = Math.max(3, Math.ceil(Math.abs(answer) * 0.2));
@@ -423,11 +405,6 @@ function choiceQuestion(id: string, prompt: string, answer: number, rng: Rng, he
   }
   const choices = shuffle([...values].map(String), rng);
   return { id, prompt, choices, answerIndex: choices.indexOf(String(answer)), helper, visual };
-}
-
-function stringChoiceQuestion(id: string, prompt: string, answer: string, distractors: string[], rng: Rng, helper?: string, visual?: string): ArcadeQuestion {
-  const choices = shuffle([...new Set([answer, ...distractors])].slice(0, 4), rng);
-  return { id, prompt, choices, answerIndex: choices.indexOf(answer), helper, visual };
 }
 
 function randomInt(min: number, max: number, rng: Rng) {

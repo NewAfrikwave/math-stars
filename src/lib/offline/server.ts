@@ -5,7 +5,7 @@ import { PRESCHOOL_CURRICULUM } from "@/lib/preschool";
 import { GRADE1_CURRICULUM } from "@/lib/grade1";
 import { GRADE2_CURRICULUM } from "@/lib/grade2";
 import { GRADE4_CURRICULUM } from "@/lib/grade4";
-import { ARCADE_GAMES, arcadeReward, isArcadeGameKey, parseArcadeQuestions } from "@/lib/arcade";
+import { ARCADE_GAMES, arcadeReward, evaluateArcadeAnswer, isArcadeGameKey, parseArcadeQuestions } from "@/lib/arcade";
 import { consecutiveLearningStreak, saveProgressAttempt } from "@/lib/progress-save";
 import { dateKeyAtOffset, middayForClientDate, offlineLessonDates, safeOffset } from "@/lib/offline/dates";
 import type { OfflineEvent } from "@/lib/offline/types";
@@ -103,11 +103,11 @@ async function syncArcade(
   if (answers.length !== questions.length || answers.some((answer, index) => answer.index !== index)) {
     throw new OfflineSyncError(400, "Arcade round is incomplete");
   }
-  const normalizedAnswers = answers.map((answer, index) => ({
-    index,
-    choiceIndex: answer.choiceIndex,
-    correct: answer.choiceIndex === questions[index].answerIndex,
-  }));
+  const normalizedAnswers = answers.map((answer, index) => {
+    const evaluated = evaluateArcadeAnswer(questions[index], answer);
+    if (!evaluated) throw new OfflineSyncError(400, "Arcade answer is invalid");
+    return { index, ...evaluated };
+  });
   const correctCount = normalizedAnswers.filter((answer) => answer.correct).length;
   const dateKey = dateKeyAtOffset(occurredAt, event.payload.timezoneOffsetMinutes);
   const offset = safeOffset(event.payload.timezoneOffsetMinutes);
