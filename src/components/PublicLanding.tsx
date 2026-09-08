@@ -397,13 +397,16 @@ export function PublicLanding() {
       </section>
 
       <footer className="border-t border-[#d2bf96] bg-[#f4e8cd] px-5 py-9 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 text-center sm:flex-row sm:flex-wrap sm:text-left">
           <Image src="/brand/math-stars-logo.png" alt="Math Stars" width={1400} height={360} unoptimized className="h-11 w-auto" />
           <div className="text-xs font-semibold text-[#72634f]">
             <p>Learn. Practice. Shine. Preschool through 4th Grade.</p>
             <p className="mt-1">Developed by <a href="https://www.norzolabs.com/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#4b654f] underline decoration-[#4b654f]/40 underline-offset-2 transition hover:text-[#2f4936]">norzolabs.com</a></p>
           </div>
           <nav className="flex flex-wrap justify-center gap-5 text-xs font-bold text-[#654f3b]" aria-label="Footer"><a href="#adventure">Adventure</a><a href="#arcade">Games</a><a href="#parents">For Parents</a><a href="/support">Support</a><a href="/transparency">Transparency</a><a href="/privacy">Privacy</a></nav>
+          <p className="max-w-4xl text-center text-xs font-medium leading-5 text-[#72634f] sm:basis-full sm:mx-auto">
+            Math Stars is a free educational initiative operated by Norzo Market LLC. Contributions support hosting, educational content, accessibility, and continued development. Contributions are not tax-deductible.
+          </p>
         </div>
       </footer>
     </div>
