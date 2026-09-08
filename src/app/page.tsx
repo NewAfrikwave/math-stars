@@ -235,14 +235,14 @@ export default function Page() {
       <OfflineCoordinator />
       {/* Header */}
       {!immersiveView && <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-2 px-4">
+        <div className="mx-auto flex min-h-16 w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
           <button
             onClick={() => setView({ name: "home" })}
-            className="flex items-center gap-2 transition-transform hover:scale-[1.02]"
+            className="flex min-w-0 max-w-full items-center gap-2 transition-transform hover:scale-[1.02]"
           >
             <Mascot size={36} />
-            <div className="text-left">
-              <p className="font-display text-lg font-bold leading-none">{studentName}</p>
+            <div className="min-w-0 text-left">
+              <p className="truncate font-display text-lg font-bold leading-none">{studentName}</p>
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {level === "preschool" ? "Preschool"
                 : level === "grade1" ? "1st Grade"
@@ -253,7 +253,7 @@ export default function Page() {
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <HeaderChip
               icon={<Star className="h-4 w-4 fill-amber-400 text-amber-400" />}
               value={totalStars}
@@ -282,7 +282,7 @@ export default function Page() {
               className="flex h-9 items-center gap-1 rounded-full bg-muted px-3 text-xs font-bold transition-colors hover:bg-muted/70"
               aria-label="Switch learner"
             >
-              <Repeat className="h-3.5 w-3.5" /> Switch
+              <Repeat className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Switch</span>
             </button>
             <button
               onClick={() => setSoundOn(!soundOn)}
@@ -339,7 +339,7 @@ export default function Page() {
               one star at a time.
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <FooterButton
               active={false}
               onClick={() => setView({ name: "home" })}

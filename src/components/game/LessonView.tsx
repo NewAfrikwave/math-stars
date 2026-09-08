@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SpeakButton } from "@/components/game/SpeakButton";
+import { EqualGroupsLesson } from "@/components/game/EqualGroupsLesson";
 import { ProblemVisualRenderer } from "@/components/visuals/ProblemVisualRenderer";
 import type { Difficulty, TeachBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function LessonView({ lessonId }: { lessonId: string }) {
   const setView = useGameStore((state) => state.setView);
   const progress = useGameStore((state) => state.progress);
   const level = useGameStore((state) => state.level);
+  const currentProfileId = useGameStore((state) => state.currentProfileId);
   const siteSettings = useGameStore((state) => state.siteSettings);
   const [difficulty, setDifficulty] = useState<Difficulty | undefined>();
 
@@ -71,6 +73,9 @@ export function LessonView({ lessonId }: { lessonId: string }) {
           )}
         </div>
 
+        {lessonId === "mult-concept" && level === "grade3" && siteSettings?.manipulativesEnabled !== false && (
+          <EqualGroupsLesson key={currentProfileId} onPractice={() => setView({ name: "practice", lessonId, difficulty })} />
+        )}
         <motion.section initial={{ opacity: 0, y: 18, scale: 0.99 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={springy} className="overflow-hidden rounded-[30px] border border-[#eadfce] bg-white shadow-[0_18px_55px_rgba(83,61,35,0.09)] dark:bg-card">
           <div className="relative overflow-hidden border-b border-[#eadfce] bg-[#f5f0e6] px-6 py-6 sm:px-8">
             <FloatingSparkles className="opacity-40" />
