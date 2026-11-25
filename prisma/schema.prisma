@@ -61,6 +61,7 @@ model Student {
   arcadeRuns ArcadeRun[]
   rewardGoals RewardGoal[]
   offlineSyncReceipts OfflineSyncReceipt[]
+  explorerEntries ExplorerEntry[]
 
   @@index([familyId])
 }
@@ -331,4 +332,17 @@ model ParentFeedback {
   @@index([scopeKey, createdAt])
   @@index([status, createdAt])
   @@index([category, createdAt])
+}
+
+
+// One value per learner and learning step, day, earned sticker or display spot.
+model ExplorerEntry {
+  studentId String
+  key       String
+  value     String
+  at        DateTime
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, key])
+  @@index([studentId, at])
 }

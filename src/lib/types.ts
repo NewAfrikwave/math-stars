@@ -216,6 +216,7 @@ export type GameView =
   | { name: "home" }
   | { name: "times-tables" }
   | { name: "school-practice" }
+  | { name: "explorer"; start?: import("./explorer").Trail; room?: boolean }
   | { name: "arcade" }
   | { name: "domain"; domainId: string }
   | { name: "lesson"; lessonId: string }
@@ -232,3 +233,4 @@ export type GameView =
   | { name: "donations" }
   | { name: "offline" }
   | { name: "admin" };
+

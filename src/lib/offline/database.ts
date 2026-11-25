@@ -208,3 +208,13 @@ export async function clearOfflineDeviceData() {
   localStorage.removeItem("mathstars-profile");
   localStorage.removeItem("mathstars-device-id");
 }
+
+
+// Independent keys keep simultaneous practice in two tabs from dropping a pending update.
+export async function listSnapshotsWithPrefix<T>(prefix:string) {
+  if(!available()) return [];
+  return request<OfflineSnapshot<T>[]>(STORES.snapshots,"readonly",store=>store.getAll(IDBKeyRange.bound(prefix,prefix+"\uffff")));
+}
+export async function removeSnapshot(key:string) {
+  await request(STORES.snapshots,"readwrite",store=>store.delete(key));
+}
