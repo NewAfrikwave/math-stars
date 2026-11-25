@@ -47,3 +47,8 @@ button.sign {cursor:pointer; min-height:34px;}
 @media(prefers-reduced-motion:reduce){.traveler,.camera{transition:none;}.spin{animation:none;}}
 .coach {padding:12px 16px;background:#fff1ce;border-left:4px solid #d59729;border-radius:10px;}
 .coach p {margin:4px 0;}
+
+/* Painted faces and the ground can sit in front of the signs as the camera
+   rotates. Only controls should receive taps inside the model. */
+.framing,.camera,.group,.brick,.brick i,.traveler,.spin {pointer-events:none}
+button.sign {pointer-events:auto;touch-action:manipulation}
