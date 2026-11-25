@@ -95,7 +95,7 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
 
   return (
     <main id="main-content" className="min-h-screen overflow-hidden bg-[#fffaf0] text-[#351d10]">
-      <header className="relative z-20 border-b border-rose-100/70 bg-[#fffaf0]/95 backdrop-blur">
+      <header className="relative z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
           <a href="/" className="flex items-center" aria-label="Math Stars home">
             <Image
@@ -109,14 +109,14 @@ export function AccessGate({ authenticated, staleSession = false, children }: { 
             />
           </a>
 
-          {!signInPage && <nav className="hidden items-center gap-9 text-sm font-bold lg:flex" aria-label="Landing page">
-            <a href="#adventure" className="transition-colors hover:text-rose-600">Adventure</a>
-            <a href="#arcade" className="transition-colors hover:text-rose-600">Games</a>
-            <a href="#parents" className="transition-colors hover:text-rose-600">For Parents</a>
-            <a href="/privacy" className="transition-colors hover:text-rose-600">Privacy</a>
+          {!signInPage && <nav className="hidden items-center gap-9 text-sm font-bold text-slate-700 lg:flex" aria-label="Landing page">
+            <a href="#journey" className="transition-colors hover:text-emerald-800">Try a game</a>
+            <a href="#arcade" className="transition-colors hover:text-emerald-800">Games</a>
+            <a href="#parents" className="transition-colors hover:text-emerald-800">For Parents</a>
+            <a href="/privacy" className="transition-colors hover:text-emerald-800">Privacy</a>
           </nav>}
 
-          <a href={signInPage ? "/" : "/signin"} className="inline-flex h-11 items-center gap-2 rounded-full border-2 border-rose-500 px-5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-50">
+          <a href={signInPage ? "/" : "/signin"} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#193956] px-5 text-sm font-bold text-white transition-colors hover:bg-[#255165]">
             <LockKeyhole className="h-4 w-4" aria-hidden="true" />
             <span>{signInPage ? "Back home" : "Family sign in"}</span>
           </a>
