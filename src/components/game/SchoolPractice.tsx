@@ -5,6 +5,8 @@ import { ArrowLeft, BookOpen, Check, ChevronRight } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { loadSnapshot, saveSnapshot } from "@/lib/offline/database";
 import { Adventure, activityFor, stickers } from "./workshop/Adventure";
+import { record } from "./explorer/journal";
+import { dayKey } from "@/lib/explorer";
 import { SpeakButton } from "./SpeakButton";
 import { lessons, type SchoolLesson } from "@/lib/school-practice";
 
@@ -46,6 +48,7 @@ function LearningPath({ profile }: { profile: string }) {
     saveSnapshot(`school-practice:${profile}:${id}`, true).catch(() => setSaveError(true));
   }
   function collect(id: string) {
+    void record(profile,[["stamp/school-"+id,"earned"]]);
     setAlbum(previous=>previous.includes(id)?previous:[...previous,id]);
     saveSnapshot(`school-sticker:${profile}:${id}`,true).catch(()=>setSaveError(true));
   }
@@ -134,6 +137,12 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
   const [missed, setMissed] = useState<number[]>([]);
   const [feeling, setFeeling] = useState("");
   const [round, setRound] = useState(0);
+  const profile=useGameStore(s=>s.currentProfileId);
+  const go=useGameStore(s=>s.setView);
+  const track=(kind:"hint"|"helped"|"solo")=>{
+    if(profile) void record(profile,[["skill/"+dayKey()+"/"+lesson.id+"."+step+"/"+kind,"seen"]]);
+  };
+  function showHint() {if(!hint) track("hint");setHint(true);}
   const q = lesson.checks[step];
   const writing = lesson.writing;
   const speaking = useGameStore(state => state.soundOn);
@@ -153,9 +162,10 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
       ? value.trim() === q.answer
       : /^\d+$/.test(value.trim()) && Number(value) === Number(q.answer);
     setCorrect(right);
+    if(right) track(step===0 || hint ? "helped":"solo");
     if (!right) {
       setMissed(previous => previous.includes(step) ? previous : [...previous, step]);
-      setHint(true);
+      showHint();
     }
     setFeedback(right ? q.why : "Try again. " + q.hint);
   }
@@ -180,6 +190,9 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
       <div className="flex flex-wrap gap-2"><button className={primary} onClick={onBack}>Choose a lesson</button>
         <button className={button} onClick={() => { setStep(-1); setFinished(false); setFeeling(""); setMissed([]); setDraft(""); setReview(false); setRound(round + 1); }}>Practice again</button></div>
     </> : step < 0 ? <>
+      {["subtract","groups","reef","blend-1","blend-2","blend-3"].includes(lesson.id) && <button className={button} onClick={()=>go({name:"explorer",start:lesson.id==="subtract"?"trade":lesson.id==="groups"?"groups":lesson.id==="reef"?"read":"sounds"})}>
+        {lesson.id==="subtract"?"Practice the trade step by step":lesson.id==="groups"?"Point to the factors":lesson.id==="reef"?"Find evidence in a story":"Listen and blend sounds"}
+      </button>}
       {worldsEnabled && <Adventure key={round} lesson={lesson} onPractice={next} onStamp={onStamp}/>}
       <h2 className="text-xl font-semibold">Work through an example</h2>{example}
       {!worldsEnabled && lesson.id === "subtract" && <PlaceValueTrade />}
@@ -188,7 +201,7 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
       <div><button className={primary} onClick={next}>Try it with help</button></div>
     </> : q ? <div key={step} className="space-y-4">
       <p className="font-semibold text-muted-foreground">{step === 0 ? "Guided practice" : "Your turn"} · {step + 1} of {lesson.checks.length}</p>
-      {(step === 0 || lesson.subject === "Reading" || lesson.model && lesson.subject === "Science") ? example : <details><summary className="cursor-pointer font-semibold">See the example</summary>{example}</details>}
+      {(step === 0 || lesson.subject === "Reading" || lesson.model && lesson.subject === "Science") ? example : <details onToggle={e=>{if(e.currentTarget.open && !correct) showHint();}}><summary className="cursor-pointer font-semibold">See the example</summary>{example}</details>}
       <h2 className="text-xl font-bold">{q.prompt}</h2>
       {speaking && <SpeakButton text={[q.prompt, ...(q.alternatives.length ? orderedChoices() : [])].join(". ")} label="Hear question" />}
       {step === 0 && <p className="rounded-xl bg-muted p-3">{q.hint}</p>}
@@ -198,7 +211,7 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
         <input aria-label="Your numerical answer" className="w-32 rounded-xl border bg-background p-3" inputMode="numeric" value={entry} disabled={correct} onChange={e => setEntry(e.target.value)} />
         <button className={primary} disabled={correct || !entry.trim()}>Check answer</button>
       </form>}
-      {step > 0 && !correct && <button className={button} onClick={() => setHint(true)}>Show a hint</button>}
+      {step > 0 && !correct && <button className={button} onClick={showHint}>Show a hint</button>}
       <p role="status" className="font-semibold">{feedback || (hint ? q.hint : "")}</p>
       {correct && <button className={primary} onClick={next}>Continue</button>}
     </div> : writing && <>
@@ -219,3 +232,4 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
     return options;
   }
 }
+

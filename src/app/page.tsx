@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore, profileFetch } from "@/store/useGameStore";
 import { SchoolPractice } from "@/components/game/SchoolPractice";
+import { Explorer } from "@/components/game/explorer/Explorer";
 import { HomeView } from "@/components/game/HomeView";
 import { DomainView } from "@/components/game/DomainView";
 import { LessonView } from "@/components/game/LessonView";
@@ -383,6 +384,8 @@ function renderView(
       return <LandingView />;
     case "home":
       return <HomeView />;
+    case "explorer":
+      return <Explorer start={view.start} room={view.room}/>;
     case "school-practice":
       return <SchoolPractice />;
     case "times-tables":
@@ -473,3 +476,4 @@ function FooterButton({
     </button>
   );
 }
+

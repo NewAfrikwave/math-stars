@@ -50,8 +50,8 @@ function Person({color}:{color:string}) {
   return <><Brick w={22} h={31} d={17} color={color} round/><Brick y={30} w={21} h={21} d={19} color="#bb805c" round/><Brick y={46} w={22} h={7} d={20} color="#47303c"/></>;
 }
 const waterWorlds = new Set<World>(["reef","river","docks"]);
-interface Props {world:World; model:Model; onPick?:(i:number)=>void; cargo?:string; active:boolean; spinKey:number; description:string}
-export function ToyWorld({world,model:m,onPick,cargo,active,spinKey,description}:Props) {
+interface Props {pointMode?:"baskets"|"apples"; touched?:number[]; world:World; model:Model; onPick?:(i:number)=>void; cargo?:string; active:boolean; spinKey:number; description:string}
+export function ToyWorld({pointMode,touched=[],world,model:m,onPick,cargo,active,spinKey,description}:Props) {
   const [yaw,setYaw]=useState(-12);
   const [simple,setSimple]=useState(false);
   const [drag,setDrag]=useState<{x:number;y:number}|null>(null);
@@ -91,8 +91,8 @@ export function ToyWorld({world,model:m,onPick,cargo,active,spinKey,description}
       objects=<><Tree x={-189} z={-63}/><Tree x={179} z={-65}/>{seq(m.rows??3).map((_,i)=>{
         const n=m.counts?.[i]??m.each??0;
         return <Group key={i} x={(i-((m.rows??3)-1)/2)*94}><Brick w={81} h={9} d={74} color="#c49050"/><Brick y={8} z={34} w={82} h={8} d={5} color="#ac7144"/>
-          {seq(n).map(j=><Group key={j} x={j%3*21-21} y={9} z={Math.floor(j/3)*22-12}><Brick w={16} h={16} d={16} color="#e65849" round/><Brick y={15} w={3} h={4} d={3} color="#735638"/></Group>)}
-          <Sign x={0} y={-3} z={55} onClick={m.counts?pick(i):undefined}>{n} apples</Sign></Group>})}</>;break;
+          {seq(n).map(j=><Group key={j} x={j%3*21-21} y={9} z={Math.floor(j/3)*22-12}><Brick w={16} h={16} d={16} color="#e65849" round/><Brick y={15} w={3} h={4} d={3} color="#735638"/>{pointMode==="apples" && <Sign x={0} y={27} z={0} onClick={pick(j)}>{touched.includes(j)?"✓":j+1}</Sign>}</Group>)}
+          <Sign x={0} y={-3} z={55} onClick={m.counts || pointMode==="baskets"?pick(i):undefined}>{pointMode==="baskets"?(touched.includes(i)?"✓ Basket ":"Basket ")+(i+1):n+" apples"}</Sign></Group>})}</>;break;
     case "cart":
       objects=<><Brick w={416} h={5} d={72} color="#646383"/>{seq(6).map(i=><Group key={i} x={-161+i*62}><Brick y={5} w={4} h={1} d={69} color="#f4eac9"/><Sign x={0} y={1} z={54}>{i}</Sign></Group>)}
         <div className={styles.traveler} style={{transform:at(-161+Math.max(0,pos)*62,10,0)}}>
@@ -134,3 +134,4 @@ export function ToyWorld({world,model:m,onPick,cargo,active,spinKey,description}
       }}>{cargo} ⤴</button>}
   </div>;
 }
+

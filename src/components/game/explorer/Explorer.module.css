@@ -1,0 +1,14 @@
+.page{max-width:56rem;margin:0 auto;padding:1rem;color:#24324c}
+.page h1,.page h2,.page h3,.recap h2,.recap h3{font-family:var(--font-fredoka),ui-rounded,system-ui;font-weight:750;line-height:1.15}
+.page h1{font-size:clamp(1.9rem,5vw,3.2rem)}.page h2,.recap h2{font-size:1.5rem}.page h3,.recap h3{font-size:1.15rem}
+.banner,.card,.recap{border-radius:1.5rem;padding:clamp(1rem,3vw,1.8rem);margin-block:1rem;background:#fff;color:#24324c;border:1px solid #cbd9e3}
+.banner{background:#193f4a;color:white;position:relative;overflow:hidden;background-image:radial-gradient(ellipse at 95% 110%,#397a7e,transparent 65%)}.banner p,.card p,.recap p{margin-block:.55rem}.tag{font-size:.9rem;font-weight:700;color:#aeebdc}
+.grid,.choices,.rack{display:flex;gap:.7rem;flex-wrap:wrap;margin-block:.85rem}.stop,.choice,.main,.back,.token,.place{border-radius:1rem;border:2px solid #b4cdd0;padding:.7rem 1rem;font:inherit;font-weight:700;min-height:44px;background:white;color:#193f4a;cursor:pointer}
+.stop{flex:1 1 12rem;text-align:left}.stop span,.stop small{display:block}.stop span{font-size:1.75rem}.stop small{font-weight:500}
+.main,.choice[aria-pressed=true],.token[aria-pressed=true]{background:#136354;color:white;border-color:#136354}.back{border-color:transparent;background:#f1f5f4}
+.page button:focus-visible,.recap button:focus-visible{outline:4px solid #db8300;outline-offset:2px}.page button:disabled{opacity:.65;cursor:default}.note{font-size:.9rem;color:#4b5969}
+.passage{background:#f4f9fb;border-left:5px solid #4898a1;border-radius:.7rem;padding:.85rem 1rem;line-height:1.7}.proof{display:grid;gap:.4rem}.proof .choice{text-align:left}
+.feedback{background:#fff4cf;padding:.8rem;border-radius:.8rem}.input{border:2px solid #91acbb;border-radius:.7rem;padding:.7rem;width:7rem;color:#182e45;background:#fff}
+.scene{perspective:780px;padding:1.4rem .8rem 2.25rem;background:linear-gradient(145deg,#cdece9,#ede2ca);border-radius:1.5rem;overflow:hidden}.room{position:relative;transform-style:preserve-3d;transform:rotateX(6deg) rotateY(var(--turn,0deg));transition:transform .35s;max-width:36rem;margin:auto;border:9px solid #51746e;border-radius:1rem;background:repeating-linear-gradient(90deg,#eaf2d7 0 21px,#e3edd0 22px 24px);box-shadow:8px 9px 0 #315855;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;padding:1rem}
+.place{background:linear-gradient(#fffaf0,#e6cb9e);border:0;border-bottom:8px solid #975f3a;transform:translateZ(13px);box-shadow:0 8px 0 -2px #b88456;text-align:center}.place span{display:block;font-size:2.3rem;line-height:1.2;filter:drop-shadow(2px 4px 2px #745d4350)}.token{font-size:1rem}.recap ul{padding-left:1.2rem;list-style:disc;margin:.5rem 0}.recap section{margin-top:1rem}
+@media(prefers-reduced-motion:reduce){.room{transition:none}}

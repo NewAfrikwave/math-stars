@@ -20,6 +20,7 @@ import { hasOfflineParentReport, sealOfflineParentReport, unlockOfflineParentRep
 import { clearOfflineDeviceData, loadSnapshot, saveSnapshot } from "@/lib/offline/database";
 import { cn } from "@/lib/utils";
 import { domainsForLevel, REWARD_PRESETS, type RewardMission, type RewardTargetType } from "@/lib/rewards";
+import { FamilyRecap } from "./explorer/FamilyRecap";
 import { ParentFeedbackCard } from "@/components/game/ParentFeedbackCard";
 
 interface ProfileSummaryData {
@@ -528,6 +529,7 @@ export function ParentView() {
         </div>
       )}
 
+      {selectedProfileId && <FamilyRecap key={selectedProfileId} profile={selectedProfileId} name={profiles.find(p=>p.id===selectedProfileId)?.name??"Your learner"}/>}
       {selectedProfileId && (() => {
         const selected = profiles.find((profile) => profile.id === selectedProfileId);
         const domains = domainsForLevel(selected?.level ?? "grade3");
@@ -728,3 +730,4 @@ export function ParentView() {
     </div>
   );
 }
+
