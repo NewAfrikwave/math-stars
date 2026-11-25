@@ -38,7 +38,7 @@ function Hub({profile,level,start,room}:{profile:string;level:string;start?:Trai
       <>
         <header className={s.banner}><span className={s.tag}>Today’s discovery path</span><h1>Three little adventures</h1>
           <p>Start with a warm-up, stretch a skill, then explore a story or experiment.</p></header>
-        {finished && <section className={s.card} role="status"><h2>{trails[finished][1]} You earned the {trails[finished][0]} sticker!</h2>
+        {finished && <section className={s.card} role="status"><h2>{trails[finished][1]} Sticker earned: {trails[finished][0]}!</h2>
           <button className={s.main} onClick={()=>setRoom(true)}>Put it in my room</button></section>}
         <div className={s.grid}>{path.map((t,i)=><button className={s.stop} key={t} onClick={()=>go(t)}><span aria-hidden="true">{trails[t][1]}</span><small>{controls[i]}</small>{trails[t][0]}<small>{entries["finish/"+day+"/"+t]?"✓ Finished · play again":"Start or continue"}</small></button>)}</div>
         <section className={s.card}><h2>Choose your own adventure</h2><div className={s.choices}>
@@ -110,7 +110,7 @@ function Challenge({stage,seed,previousHelp,practiceAgain,assist,solved,next,las
       {sound && <span onClickCapture={()=>{if(!ok)help();}}><SpeakButton text={stage.passage.join(" ")} label="Read it with me"/></span>}</div>}
     {stage.scene && (models?<ToyWorld world={stage.scene.world} model={ok&&stage.scene.after?stage.scene.after:stage.scene.model} active={!ok} spinKey={ok?1:0}
       pointMode={stage.point} touched={points} description={ok?stage.success:stage.scene.description}
-      onPick={stage.point?point:stage.scene.world==="blocks"?i=>answer(["Hundreds","Tens","Ones"][i]):stage.scene.world==="river"&&choices.length?i=>answer(choices[i]):undefined}/>:<p className={s.passage}>{ok?stage.success:stage.scene.description}</p>)}
+      onPick={stage.point?point:stage.scene.world==="blocks"&&choices.length?i=>answer(["Hundreds","Tens","Ones"][i]):stage.scene.world==="river"&&choices.length?i=>answer(choices[i]):undefined}/>:<p className={s.passage}>{ok?stage.success:stage.scene.description}</p>)}
     {stage.point?<div className={s.choices}>{Array.from({length:stage.points!},(_,i)=><button className={s.choice} key={i} disabled={ok} aria-pressed={points.includes(i)} onClick={()=>point(i)}>{stage.point==="baskets"?"Basket":"Apple"} {i+1} {points.includes(i)?"✓":""}</button>)}</div>:
       choices.length?<div className={stage.evidence?s.proof:s.choices}>{ordered.map(item=><button className={s.choice} key={item} disabled={ok} onClick={()=>answer(item)}>{item}</button>)}</div>:
       <form className={s.choices} onSubmit={e=>{e.preventDefault();if(entry.trim())answer(entry);}}><input aria-label="My answer" className={s.input} inputMode="numeric" autoComplete="off" value={entry} disabled={ok} onChange={e=>setEntry(e.target.value)}/><button className={s.main} disabled={ok || !entry.trim()}>Check</button></form>}
