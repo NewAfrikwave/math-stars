@@ -215,6 +215,7 @@ export type GameView =
   | { name: "landing" }
   | { name: "home" }
   | { name: "times-tables" }
+  | { name: "school-practice" }
   | { name: "arcade" }
   | { name: "domain"; domainId: string }
   | { name: "lesson"; lessonId: string }

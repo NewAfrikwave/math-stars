@@ -228,6 +228,13 @@ export function HomeView() {
               <ProgressTrail value={overall.percent} className="h-full rounded-full bg-[#3f6a3c]" />
             </div>
           </div>
+          {level === "grade3" && (
+            <button onClick={() => setView({ name: "school-practice" })} className="mt-5 flex w-full items-center gap-3 rounded-2xl bg-[#284a2e] p-4 text-left text-[#fff1c8] focus-visible:outline-4">
+              <BookOpen aria-hidden="true" />
+              <span className="flex-1"><strong className="block font-display text-xl">School Practice</strong><span className="text-sm">Explore math, reading and science</span></span>
+              <ChevronRight aria-hidden="true" />
+            </button>
+          )}
           <div className="mt-6 space-y-3">
             {curriculum.slice(0, 5).map((domain, index) => {
               const Icon = journeyIcons[index];
