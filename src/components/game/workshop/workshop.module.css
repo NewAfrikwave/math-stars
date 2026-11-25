@@ -1,0 +1,49 @@
+.game { color:#25304e; background:#fffaf1; border:2px solid #e8d9ba; border-radius:24px; overflow:hidden; box-shadow:0 7px 0 #e2d8c0; }
+.heading,.body { padding:16px clamp(12px,3vw,24px); }
+.heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.heading h2 { font-size:clamp(21px,3vw,29px);font-weight:800;line-height:1.15; }
+.progress { display:flex; gap:4px; margin-top:8px; }
+.progress i { width:20px; height:5px; border-radius:5px; background:#dcd3bd; }
+.progress i[data-done=true] {background:#138669;}
+.viewport { position:relative; isolation:isolate; overflow:hidden; min-height:215px;height:clamp(215px,43vw,330px);background:radial-gradient(ellipse at 15% 28%,#fffeeb 0 5%,transparent 5.5%),linear-gradient(#b0dfed,#f1f4d4 76%,#b4dcad); }
+.viewport[data-biome=reef],.viewport[data-biome=docks] {background:radial-gradient(ellipse at 24% 0%,#c4ffec,transparent 50%),linear-gradient(#76e0d9,#49a9ce 90%);}
+.viewport[data-biome=cart],.viewport[data-biome=spinner] {background:radial-gradient(circle at 11% 26%,#fff0ae 0 4%,transparent 4.5%),linear-gradient(#b7afdf,#e5dcf1 74%,#c5bcd4);}
+.viewport[data-biome=blocks] {background:linear-gradient(145deg,#ffedce,#d5ede7);}
+.framing { position:absolute;left:50%;top:60%; perspective:1200px; width:0;height:0; }
+.camera,.group,.brick,.traveler,.spin {position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;}
+.camera {transition:transform .35s ease;}
+.traveler {transition:transform .65s cubic-bezier(.19,.87,.36,1);}
+.brick i { display:block;position:absolute; top:0;left:0;background-color:var(--paint); backface-visibility:hidden; border:1px solid #20384a18;box-sizing:border-box; }
+.brick[data-round=true] i {border-radius:4px;}
+.brick[data-grid=true] .front {background-image:linear-gradient(to right,#164c513d 1px,transparent 1px),linear-gradient(to bottom,#164c513d 1px,transparent 1px);background-size:6px 6px;}
+.front,.back {width:var(--w);height:var(--h);}
+.left,.right {width:var(--d);height:var(--h);}
+.top,.bottom {width:var(--w);height:var(--d);}
+.front {transform:translate(-50%,-50%) translateZ(calc(var(--d) / 2));}
+.back {transform:translate(-50%,-50%) rotateY(180deg) translateZ(calc(var(--d) / 2));filter:brightness(.82);}
+.left {transform:translate(-50%,-50%) rotateY(-90deg) translateZ(calc(var(--w) / 2));filter:brightness(.78);}
+.right {transform:translate(-50%,-50%) rotateY(90deg) translateZ(calc(var(--w) / 2));filter:brightness(.87);}
+.top {transform:translate(-50%,-50%) rotateX(90deg) translateZ(calc(var(--h) / 2));filter:brightness(1.12);}
+.bottom {transform:translate(-50%,-50%) rotateX(-90deg) translateZ(calc(var(--h) / 2));filter:brightness(.74);}
+.sign { position:absolute;transform:translate(-50%,-50%);font:800 15px/1.1 system-ui;white-space:nowrap;color:#26334a;background:#fff6d9;border:2px solid #97764f;border-radius:7px;padding:5px 7px;box-shadow:0 3px 0 #856340; }
+button.sign {cursor:pointer; min-height:34px;}
+.cameraControls {position:absolute;top:9px;right:10px;z-index:3;display:flex;gap:4px;}
+.cameraControls button {background:#fffcf1;color:#354154;border-radius:14px;padding:7px 10px;font-size:13px;font-weight:750;border:1px solid #47556938;}
+.cargo {position:absolute;bottom:6px;left:calc(50% - 56px);min-width:112px;border-radius:10px;padding:8px 13px;color:#402a18;background:#ffce77;border:2px solid #8c5936;cursor:grab;touch-action:none;z-index:4;font-weight:800;}
+.transcript {position:absolute;inset:30% 6% auto;text-align:center;background:white;border-radius:16px;padding:20px;color:#25304e;}
+.spin {animation:turn 3s linear both;}
+@keyframes turn {from {transform:rotateY(0);}to {transform:rotateY(var(--angle));}}
+.body {display:grid;gap:13px;}
+.prompt {font-size:clamp(17px,2.5vw,20px);font-weight:750;}
+.actions {display:flex;flex-wrap:wrap;gap:8px;}
+.action,.next,.quiet {border-radius:14px;padding:10px 14px;min-height:44px;font-weight:750;}
+.action {background:white;color:#273854;border:2px solid #d1d6df;box-shadow:0 3px 0 #ced6da;}
+.action:active,.next:active {transform:translateY(2px);}
+.action:disabled {opacity:.65;}
+.next {background:#195f51;color:#fff;border:1px solid #145247;}
+.quiet {color:#4b5266;background:#f1eadc;}
+.feedback {font-size:16px;font-weight:650;padding:10px 14px;border-radius:12px;background:#e7f2e7;color:#274d3c;}
+.game button:focus-visible {outline:3px solid #5d42aa;outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){.traveler,.camera{transition:none;}.spin{animation:none;}}
+.coach {padding:12px 16px;background:#fff1ce;border-left:4px solid #d59729;border-radius:10px;}
+.coach p {margin:4px 0;}

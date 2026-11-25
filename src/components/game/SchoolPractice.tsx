@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, BookOpen, Check, ChevronRight } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { loadSnapshot, saveSnapshot } from "@/lib/offline/database";
+import { Adventure, activityFor, stickers } from "./workshop/Adventure";
 import { SpeakButton } from "./SpeakButton";
 import { lessons, type SchoolLesson } from "@/lib/school-practice";
 
@@ -21,11 +22,16 @@ function LearningPath({ profile }: { profile: string }) {
   const home = useGameStore(state => state.setView);
   const [subject, setSubject] = useState<SchoolLesson["subject"]>("Math");
   const [active, setActive] = useState<SchoolLesson | null>(null);
+  const [album,setAlbum] = useState<string[]>([]);
+  const worldsEnabled = useGameStore(state => state.siteSettings?.manipulativesEnabled !== false);
   const [done, setDone] = useState<string[]>([]);
   const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
     let current = true;
+    Promise.all(lessons.map(async lesson => await loadSnapshot<boolean>(`school-sticker:${profile}:${lesson.id}`) ? lesson.id : "" ))
+      .then(ids => { if(current) setAlbum(previous => [...new Set([...previous,...ids.filter(Boolean)])]); })
+      .catch(() => { if(current) setSaveError(true); });
     Promise.all(lessons.map(async lesson => {
       const finished = await loadSnapshot<boolean>(`school-practice:${profile}:${lesson.id}`);
       return finished === true ? lesson.id : "";
@@ -39,26 +45,43 @@ function LearningPath({ profile }: { profile: string }) {
     setDone(previous => previous.includes(id) ? previous : [...previous, id]);
     saveSnapshot(`school-practice:${profile}:${id}`, true).catch(() => setSaveError(true));
   }
+  function collect(id: string) {
+    setAlbum(previous=>previous.includes(id)?previous:[...previous,id]);
+    saveSnapshot(`school-sticker:${profile}:${id}`,true).catch(()=>setSaveError(true));
+  }
   const visible = lessons.filter(lesson => lesson.subject === subject);
+  const nextLesson = visible.find(lesson => !done.includes(lesson.id));
   return (
     <section className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <button className={button} onClick={() => active ? setActive(null) : home({ name: "home" })}>
         <ArrowLeft className="mr-2 inline size-4" />{active ? "School Practice" : "Home"}
       </button>
       {saveError && <p role="status">Device storage is unavailable. You can keep practicing this visit.</p>}
-      {active ? <Lesson key={active.id} lesson={active} onFinish={() => finish(active.id)} onBack={() => setActive(null)} /> : <>
+      {active ? <Lesson key={active.id} lesson={active} onFinish={() => finish(active.id)} onStamp={() => collect(active.id)} onBack={() => setActive(null)} /> : <>
         <header className={panel}>
           <BookOpen className="mb-3 text-emerald-700" />
           <h1 className="font-display text-3xl font-bold">School Practice</h1>
-          <p className="mt-2">Pick a short lesson. Work through an example, then try it yourself.</p>
+          <p className="mt-2">Choose an adventure, then try what you learned on your own.</p>
         </header>
+        {worldsEnabled && <details className="rounded-2xl border bg-amber-50 p-4 text-amber-950">
+          <summary className="cursor-pointer font-bold">My sticker book · {album.length} / {lessons.length}</summary>
+          {album.length ? <ul className="mt-3 flex flex-wrap gap-2">{lessons.filter(l=>album.includes(l.id)).map(l=>{
+            const activity=activityFor(l.id);
+            return <li key={l.id} className="rounded-xl bg-white px-3 py-2 text-sm">{activity && stickers[activity.world]} {l.id.startsWith("blend-")?l.title:activity?.title}</li>;
+          })}</ul> : <p className="mt-2">Finish the challenges in an adventure to collect its sticker.</p>}
+        </details>}
         <div aria-label="Choose a subject" role="group" className="flex flex-wrap gap-2">
           {subjects.map(item => <button key={item} aria-pressed={item === subject} className={item === subject ? primary : button} onClick={() => setSubject(item)}>{item}</button>)}
         </div>
         <h2 className="text-lg font-semibold">{subject} · {visible.filter(item => done.includes(item.id)).length} of {visible.length} finished on this device</h2>
-        <ol className="space-y-2">{visible.map(lesson => <li key={lesson.id}>
-          <button className="flex w-full items-center gap-3 rounded-xl border bg-card p-4 text-left font-semibold hover:border-emerald-700" onClick={() => setActive(lesson)}>
-            <span className="flex-1">{lesson.title}</span>
+        {nextLesson && worldsEnabled && <button onClick={()=>setActive(nextLesson)} className="w-full rounded-2xl bg-emerald-800 p-4 text-left font-bold text-white">
+          Continue my {subject.toLowerCase()} path <ChevronRight className="inline size-5"/>
+          <span className="mt-1 block text-sm font-normal">{nextLesson.title}</span>
+        </button>}
+        <ol className="grid gap-3 sm:grid-cols-2">{visible.map(lesson => <li key={lesson.id}>
+          <button className="flex h-full w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left font-semibold shadow-sm hover:border-emerald-700" onClick={() => setActive(lesson)}>
+            {worldsEnabled && activityFor(lesson.id) && <span aria-hidden="true" className="text-3xl">{stickers[activityFor(lesson.id)!.world]}</span>}
+            <span className="flex-1">{worldsEnabled && activityFor(lesson.id) ? <><strong className="block">{activityFor(lesson.id)!.title}</strong><small>{lesson.title}</small></> : lesson.title}</span>
             {done.includes(lesson.id) && <span className="text-sm"><Check className="inline size-4" /> Finished</span>}
             <ChevronRight className="size-5" />
           </button>
@@ -98,7 +121,8 @@ function AdditionHops() {
   </div>;
 }
 
-function Lesson({ lesson, onFinish, onBack }: { lesson: SchoolLesson; onFinish: () => void; onBack: () => void }) {
+function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; onFinish: () => void; onBack: () => void; onStamp: () => void }) {
+  const worldsEnabled = useGameStore(s=>s.siteSettings?.manipulativesEnabled !== false);
   const [step, setStep] = useState(-1);
   const [entry, setEntry] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -156,9 +180,10 @@ function Lesson({ lesson, onFinish, onBack }: { lesson: SchoolLesson; onFinish: 
       <div className="flex flex-wrap gap-2"><button className={primary} onClick={onBack}>Choose a lesson</button>
         <button className={button} onClick={() => { setStep(-1); setFinished(false); setFeeling(""); setMissed([]); setDraft(""); setReview(false); setRound(round + 1); }}>Practice again</button></div>
     </> : step < 0 ? <>
+      {worldsEnabled && <Adventure key={round} lesson={lesson} onPractice={next} onStamp={onStamp}/>}
       <h2 className="text-xl font-semibold">Work through an example</h2>{example}
-      {lesson.id === "subtract" && <PlaceValueTrade />}
-      {lesson.id === "addition" && <AdditionHops />}
+      {!worldsEnabled && lesson.id === "subtract" && <PlaceValueTrade />}
+      {!worldsEnabled && lesson.id === "addition" && <AdditionHops />}
       {speaking && <SpeakButton text={[lesson.example, ...(lesson.model?.labels.map((label, i) => label + ", " + lesson.model?.values[i]) ?? [])].join(". ")} label="Hear example" />}
       <div><button className={primary} onClick={next}>Try it with help</button></div>
     </> : q ? <div key={step} className="space-y-4">
