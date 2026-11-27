@@ -20,3 +20,6 @@
 .pip canvas {width:76px;height:76px;flex:none}.pip p {font-size:1.05rem}
 .bundle {height:37px;gap:0;line-height:1}.beads {display:grid;grid-template-columns:repeat(5,4px);gap:1px;margin-bottom:3px}
 .beads i {width:4px;height:4px;background:#7b4531;border-radius:50%}
+
+.sign {min-height:150px;background:#376d72 linear-gradient(90deg,#173d3d 0%,transparent 75%)}
+.sign {background-image:linear-gradient(90deg,#17433ee8,transparent 70%),var(--market-art);background-size:cover;background-position:center 55%}

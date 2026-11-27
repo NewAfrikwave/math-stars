@@ -1,0 +1,20 @@
+.open,.lesson button{font:inherit;font-weight:750;cursor:pointer;min-height:44px;border-radius:14px;padding:.48rem .82rem;background:#fffdf6;border:2px solid #87b2aa;color:#174741}
+.open{display:inline-flex;align-items:center;gap:.6em;margin:.3rem 0 .7rem;background:#0c675b;color:white;border:2px solid #136755;box-shadow:0 3px 0 #074738}
+.open span{display:grid;place-items:center;border-radius:50%;background:#ffde84;color:#3e402a;width:29px;height:29px}
+.lesson {border:2px solid #30796e;border-radius:23px;overflow:hidden;margin:.55rem 0 1rem;background:#fff9ec;box-shadow:0 4px 0 #b2ccc0}
+.lesson header,.lesson footer{display:flex;align-items:center;gap:.45rem;padding:.5rem .85rem}
+.lesson header{background:#18564e;color:white;justify-content:space-between}.lesson header button{background:#265e56;border:1px solid #75a79b;color:white;font-size:1.45rem;min-width:44px}
+.lesson h3{font-size:1.25rem;margin:0}.harbor{display:flex;align-items:flex-end;gap:.4rem;padding:clamp(.45rem,2vw,1.5rem);background:#bfe4da var(--market-art) center 57%/cover}
+.pip{width:20%;max-width:140px;align-self:flex-end}.pip canvas{width:100%;height:auto;display:block;filter:drop-shadow(2px 5px 2px #344e424d)}
+.board,.paper{flex:1;min-width:0;border:3px solid #a26846;border-radius:16px;background-color:#fff5db;box-shadow:0 4px #704d35}
+.board{position:relative;height:260px;background:linear-gradient(90deg,#d7eee0 0 49%,#98734e 49% 51%,#ffe4b9 51%);overflow:hidden}
+.matLabel,.basketLabel{position:absolute;top:.6rem;font-size:clamp(.8rem,2vw,1.05rem);font-weight:800;color:#354436}.matLabel{left:5%}.basketLabel{left:55%}
+.piece,.lesson button.piece{display:grid;place-items:center;position:absolute;width:12%;min-width:0;height:17%;min-height:0;padding:0;border:0;background:none}
+.lesson button.piece{outline:3px dashed #06655d;outline-offset:-2px;background:#fff9;border-radius:9px}
+.shell{display:block;width:min(90%,36px);height:26px;border-radius:50% 50% 33% 33%;background:repeating-conic-gradient(from -60deg at 50% 100%,#ed9981 0deg 8deg,#ffe4c9 12deg 23deg);box-shadow:inset 0 -4px 2px #b66f59,0 3px 2px #9a684b55}
+.ten{display:grid;place-items:center;width:min(95%,45px);height:30px;border-radius:9px;background:linear-gradient(90deg,#f2a681,#ffdab1 35%,#d7a760 36% 57%,#ffc19a 58%);color:#583a28;box-shadow:0 4px #ac7250;font-weight:900}
+.paper{padding:.8rem;min-height:170px;display:grid;gap:.4rem;align-content:center;text-align:center}.paper p{margin:0;padding:.35rem}.paper p[data-marked=true]{background:#ffdf79;color:#403626;border-radius:5px}
+.word,.objects{display:flex;gap:.7rem;justify-content:center}.word span{font:800 2.1rem ui-rounded,system-ui;background:#e7f1d6;color:#264c45;border-radius:12px;padding:.1rem .65rem}.word[data-blend=true]{gap:2px}.picture,.objects button{font-size:2rem}
+.caption{padding:.45rem .95rem 0;color:#2b403e;font-size:1.08rem}.lesson footer{flex-wrap:wrap}.lesson button.next{margin-left:auto;background:#136957;color:white;border-color:#136957}
+@media(max-width:600px){.harbor{flex-direction:column;align-items:stretch}.pip{height:62px;width:70px;align-self:flex-start}.board,.paper{flex:none}.board{height:230px}}
+@media(prefers-reduced-motion:no-preference){.piece{transition:top .65s ease,left .65s ease;animation:appear .38s ease-out}.word{transition:gap .6s}.lesson button.piece{animation:pulse 1.4s ease-in-out infinite alternate}@keyframes appear{from{transform:scale(.55);opacity:.4}}@keyframes pulse{to{box-shadow:0 0 0 3px #efb65b}}}
