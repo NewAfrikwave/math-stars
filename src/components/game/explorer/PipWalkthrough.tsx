@@ -4,12 +4,11 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTTS } from "@/hooks/use-tts";
 import { AnimalPortrait } from "./AnimalPortrait";
 import { starter } from "@/lib/explorer-character";
-import type { PostStep } from "@/lib/trading-post";
+import type { PostGuide } from "@/lib/trading-post";
 import w from "./PipWalkthrough.module.css";
 
-type Mode = "count" | "trade" | "blend" | "note";
 const notes = ["The wind blew my hat into the bay.", "Please bring me a new hat."];
-const guides: Record<Mode,string[]> = {
+const guides: Record<PostGuide,string[]> = {
   count: ["Here are four shells on my mat. Watch me give one to the basket.", "One shell moved. Three are still on my mat. Four take away one is three.", "Your turn. Tap one shell on the mat to send it to my basket.", "You moved one shell. Three are left. Now try your own order."],
   trade: ["I have twenty-one shells. I need to give away thirteen. Each bundle holds ten shells.", "I open one bundle. Ten loose shells come out. I still have twenty-one.", "One bundle goes to the basket. That is ten.", "Three loose shells go with it. Ten plus three is thirteen. Eight stay on my mat.", "Your turn. Tap a bundle to open it into ten loose shells.", "You made ten ones! The amount is still twenty-one. Try that move in your order."],
   blend: ["Watch how these three letters make a word. Tap Hear the sounds to listen.", "Slide your finger from s to u to n. Blend the sounds together: sun.", "Your turn. Tap the picture that goes with sun.", "Yes, the sun! Now blend the sounds in Pip’s delivery word."],
@@ -53,23 +52,52 @@ function Board({early, frame, onPick}:{early:boolean;frame:number;onPick:()=>voi
   </div>;
 }
 
-export function PipWalkthrough({early,step,sound,onToggle}:{early:boolean;step:PostStep;sound:boolean;onToggle:(open:boolean)=>void}) {
-  const mode:Mode = step==="counter" || step==="order" ? early?"count":"trade" : early?"blend":"note";
+type WalkthroughProps = {
+  mode: PostGuide;
+  sound: boolean;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  onHelp: () => void;
+};
+
+export function PipWalkthrough({mode, sound, open, onToggle, onHelp}: WalkthroughProps) {
+  const opener = useRef<HTMLButtonElement>(null);
+  if (!open) return <button className={w.open} ref={opener} onClick={() => {
+    onHelp();
+    onToggle(true);
+  }}><span aria-hidden="true">▶</span> Show me, Pip</button>;
+  return <Example mode={mode} sound={sound} onHelp={onHelp} onClose={() => {
+    onToggle(false);
+    requestAnimationFrame(() => opener.current?.focus());
+  }}/>;
+}
+
+function Example({mode, sound, onHelp, onClose}: Pick<WalkthroughProps, "mode" | "sound" | "onHelp"> & {onClose: () => void}) {
   const lines=guides[mode];
-  const [frame,setFrame]=useState<number|null>(null);
+  const [frame,setFrame]=useState(0);
   const [retry,setRetry]=useState("");
-  const [playing,setPlaying]=useState(false);
-  const opener=useRef<HTMLButtonElement>(null);
+  const [playing,setPlaying]=useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const audio=useRef<HTMLAudioElement>(null);
   const title=useRef<HTMLHeadingElement>(null);
   const tts=useTTS();
   const stopRef=useRef(tts.stop);
   const hasVoice=useRef(false);
-  useEffect(()=>()=>{if(hasVoice.current)stopRef.current();},[]);
+  const intro = useRef({ sound, line: lines[0], speak: tts.speakImmediately });
+  useEffect(() => {
+    if (intro.current.sound) {
+      hasVoice.current = true;
+      intro.current.speak(intro.current.line, {speed:.84});
+    }
+    return () => { if (hasVoice.current) stopRef.current(); };
+  }, []);
+  const helpRef = useRef(onHelp);
+  useEffect(() => { helpRef.current = onHelp; }, [onHelp]);
+  // Skipping the opening invitation still lets the learner solve independently.
+  useEffect(() => { if (frame === 1) helpRef.current(); }, [frame]);
   useEffect(()=>{if(frame===0)title.current?.focus();},[frame]);
   const speakRef=useRef(tts.speakImmediately);
   useEffect(()=>{
-    if(!playing || frame===null || frame>=lines.length-2 || tts.speaking || tts.loading)return;
+    if(!playing || frame>=lines.length-2 || tts.speaking || tts.loading)return;
     const timer=window.setTimeout(()=>{
       const next=frame+1;
       setFrame(next);
@@ -87,22 +115,20 @@ export function PipWalkthrough({early,step,sound,onToggle}:{early:boolean;step:P
   }
   function close(){
     audio.current?.pause();if(hasVoice.current)tts.stop();
-    hasVoice.current=false;setFrame(null);setPlaying(false);onToggle(false);requestAnimationFrame(()=>opener.current?.focus());
+    hasVoice.current=false;onClose();
   }
-  const first=frame===null;
   const practice=frame===lines.length-2;
   const last=frame===lines.length-1;
   function tryAnswer(right:boolean){
-    if(frame===null || !practice)return;
+    if(!practice)return;
     if(right)move(frame+1);
     else{const line=mode==="blend"?"Look for the sun in the daytime sky.":"Look for the sentence asking for something.";setRetry(line);say(line);}
   }
-  if(first)return <button className={w.open} ref={opener} onClick={()=>{onToggle(true);setPlaying(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);move(0);}}><span aria-hidden="true">▶</span> Show me, Pip</button>;
   return <section className={w.lesson} aria-label="Worked example with Pip">
-    <header><h3 ref={title} tabIndex={-1}>{practice?"Try it with Pip":last?"You did it!":"Watch Pip"}</h3><button onClick={close} aria-label="Close example">×</button></header>
+    <header><h3 ref={title} tabIndex={-1}>{practice?"Try it with Pip":last?"You did it!":"Watch Pip"}</h3><button onClick={close}>I’m ready <span aria-hidden="true">→</span></button></header>
     <div className={w.harbor}>
       <div className={w.pip}><AnimalPortrait look={{...starter,kind:"owl"}} turn={12}/></div>
-      {(mode==="count" || mode==="trade") ? <Board early={early} frame={frame} onPick={()=>tryAnswer(true)}/> :
+      {(mode==="count" || mode==="trade") ? <Board early={mode==="count"} frame={frame} onPick={()=>tryAnswer(true)}/> :
         mode==="blend"?<div className={w.paper}>
           <div className={w.word} data-blend={frame>=1} aria-label="s, u, n">{["s","u","n"].map(letter=><span key={letter}>{letter}</span>)}</div>
           {practice?<div className={w.objects}>{["🌙","☀️"].map((symbol,i)=><button key={symbol} aria-label={i?"Sun":"Moon"} onClick={()=>tryAnswer(i===1)}>{symbol}</button>)}</div>:

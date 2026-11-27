@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, type CSSProperties } from "react";
-import { postLesson, postPrefix, type PostStep } from "@/lib/trading-post";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { needsPostGuide, postGuide, postLesson, postPrefix, type PostStep } from "@/lib/trading-post";
 import type { Journal, Skill } from "@/lib/explorer";
 import { useGameStore } from "@/store/useGameStore";
 import { SpeakButton } from "../SpeakButton";
@@ -75,11 +75,17 @@ export function TradingPost({profile, day, level, entries, onRoom}: Props) {
   const [value,setValue] = useState("");
   const [feedback,setFeedback] = useState("");
   const [helped,setHelped] = useState(false);
-  const [guiding,setGuiding] = useState(false);
+  const step: PostStep = lesson.steps[index];
+  const guide = postGuide(lesson.early, step);
+  const [guiding,setGuiding] = useState(() => needsPostGuide(entries, guide));
+  useEffect(() => {
+    if (guiding && !entries["post-guide/" + guide]) {
+      void record(profile, [["post-guide/" + guide, "seen"]]);
+    }
+  }, [guiding, entries, guide, profile]);
   const [closed,setClosed] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
   const sound = useGameStore(st => st.soundOn);
-  const step: PostStep = lesson.steps[index];
   const skill: Skill = step==="counter" ? lesson.early?"counting":"exchange" : step==="order" ? lesson.early?"taking":"transfer" : step==="evidence"?"evidence":lesson.early?"decoding":"idea";
   const correct = step==="order" ? String(lesson.fresh-lesson.freshGive) : step==="evidence" ? note[1] : lesson.early ? "Map" : route;
   const clue = step==="order" ? (lesson.early ? "Start at " + lesson.fresh + " and count back " + lesson.freshGive + " steps." : "Open one ten into ten ones. Take away seven ones, then one ten.") :
@@ -103,6 +109,7 @@ export function TradingPost({profile, day, level, entries, onRoom}: Props) {
   }
   function next() {
     if (index===lesson.steps.length-1) { setClosed(true); return; }
+    setGuiding(needsPostGuide(entries, postGuide(lesson.early, lesson.steps[index+1])));
     setIndex(index+1); setDone(false); setHelped(false); setFeedback(""); setValue("");
   }
   const question = step==="order" ? "You have " + lesson.fresh + " shells. Give Pip " + lesson.freshGive + ". How many will you have left?" :
@@ -111,9 +118,8 @@ export function TradingPost({profile, day, level, entries, onRoom}: Props) {
     <header className={p.sign}><div><span>Shell market</span><h1>Pip’s Trading Post</h1></div><div className={p.avatar} data-cheer={done || closed} role="group" aria-label="Your explorer"><HomeCharacter profile={profile}/></div></header>
     {closed ? <section className={s.card}><h2>Delivery complete!</h2><p><AnswerCheer>You earned Pip’s shell sticker.</AnswerCheer></p><button className={s.main} onClick={onRoom}>Put it in my room</button></section> :
       <section className={s.card} key={step}><h2>{titles[step]}</h2>
-        {!done && <PipWalkthrough early={lesson.early} step={step} sound={sound} onToggle={open=>{
-          setGuiding(open);
-          if(open && step!=="counter"){
+        {!done && <PipWalkthrough mode={guide} open={guiding} sound={sound} onToggle={setGuiding} onHelp={()=>{
+          if (step !== "counter" && !helped) {
             setHelped(true);
             void record(profile,[[prefix+step,"hint"],["skill/"+day+"/"+skill+"/hint","seen"]]);
           }

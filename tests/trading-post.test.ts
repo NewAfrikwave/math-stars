@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validEntry, mergeJournal } from "../src/lib/explorer";
-import { postLesson, postTakeaway } from "../src/lib/trading-post";
+import { needsPostGuide, postGuide, postLesson, postTakeaway } from "../src/lib/trading-post";
 
 test("each learner gets a new order after the guided shell trade", () => {
   for (const level of ["preschool","grade1","grade2","grade3","grade4"]) {
@@ -26,4 +26,18 @@ test("recap needs an observed trade and a finished order for the same day and gr
   assert.equal(postTakeaway(entries,"2026-11-26"),null);
   assert.ok(validEntry({key:"stamp/shell-post",value:"earned",at:3}));
   assert.ok(validEntry({key:"slot/0",value:"shell-post",at:4}));
+});
+
+test("each distinct Pip example gets one introduction per learner", () => {
+  const seen = {key:"post-guide/count", value:"seen", at:1};
+  assert.ok(validEntry(seen));
+  assert.equal(validEntry({...seen,value:"solo"}), false);
+  assert.equal(validEntry({...seen,key:"post-guide/unknown"}), false);
+  const firstChild = mergeJournal({}, [seen]);
+  assert.equal(needsPostGuide(firstChild, postGuide(true, "order")), false);
+  assert.equal(needsPostGuide(firstChild, postGuide(true, "reading")), true);
+  assert.equal(needsPostGuide({}, postGuide(true, "counter")), true);
+  const olderChild = mergeJournal({}, [{key:"post/2026-11-24/grade3/reading", value:"solo", at:1}]);
+  assert.equal(needsPostGuide(olderChild, postGuide(false, "evidence")), false);
+  assert.equal(needsPostGuide(olderChild, postGuide(false, "counter")), true);
 });
