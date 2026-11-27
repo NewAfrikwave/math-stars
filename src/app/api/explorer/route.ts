@@ -12,7 +12,7 @@ export async function GET(req:Request) {
   const student=await profile(req);
   if(!student) return NextResponse.json({error:"Profile unavailable"},{status:403});
   const rows=await db.explorerEntry.findMany({where:{studentId:student.id,OR:[
-    {at:{gte:new Date(Date.now()-32*86400000)}},{key:{startsWith:"stamp/"}},{key:{startsWith:"slot/"}},{key:{startsWith:"book/"}},{key:{startsWith:"bookhelp/"}},{key:{startsWith:"character/"}}
+    {at:{gte:new Date(Date.now()-32*86400000)}},{key:{startsWith:"stamp/"}},{key:{startsWith:"slot/"}},{key:{startsWith:"book/"}},{key:{startsWith:"bookhelp/"}},{key:{startsWith:"character/"}},{key:{startsWith:"post-guide/"}}
   ]},select:{key:true,value:true,at:true}});
   return NextResponse.json({entries:rows.map(e=>({...e,at:e.at.getTime()}))},{headers:{"Cache-Control":"private, no-store"}});
 }

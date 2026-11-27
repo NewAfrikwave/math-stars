@@ -15,6 +15,25 @@ export function postLesson(level: string) {
   };
 }
 
+export const postGuides = ["count", "trade", "blend", "note"] as const;
+export type PostGuide = (typeof postGuides)[number];
+
+export function postGuide(early: boolean, step: PostStep): PostGuide {
+  if (step === "counter" || step === "order") return early ? "count" : "trade";
+  return early ? "blend" : "note";
+}
+
+export function needsPostGuide(entries: Journal, guide: PostGuide) {
+  if (entries["post-guide/" + guide]) return false;
+  // Children with saved Trading Post work may have visited before introductions existed.
+  return !Object.values(entries).some(({key}) => {
+    const [area, , level, step] = key.split("/");
+    if (area !== "post" || !levels.includes(level)) return false;
+    const lesson = postLesson(level);
+    return lesson.steps.some(s => s === step && postGuide(lesson.early, s) === guide);
+  });
+}
+
 export const postPrefix = (day: string, level: string) => "post/" + day + "/" + level + "/";
 
 export function validPostEntry(level: string, step: string, value: string) {

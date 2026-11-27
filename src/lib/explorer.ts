@@ -1,6 +1,6 @@
 import { bookSets, pages, type Page } from "./decodable-books";
 import { validCharacterPart } from "./explorer-character";
-import { validPostEntry } from "./trading-post";
+import { postGuides, validPostEntry } from "./trading-post";
 import { lessons } from "./school-practice";
 
 export const trails = {
@@ -55,6 +55,7 @@ export function validEntry(raw:unknown): raw is Entry {
   const e = raw as Entry;
   if(typeof e.key!=="string" || e.key.length>100 || typeof e.value!=="string" || !Number.isSafeInteger(e.at) || e.at<=0 || e.at>Date.now()+86400000) return false;
   const p=e.key.split("/");
+  if(p[0]==="post-guide") return p.length===2 && postGuides.some(guide=>guide===p[1]) && e.value==="seen";
   if(p[0]==="character") return p.length===2 && validCharacterPart(p[1], e.value);
   if(p[0]==="stamp") return p.length===2 && knownStamp(p[1]) && e.value==="earned";
   if(p[0]==="slot") return p.length===2 && /^[0-3]$/.test(p[1]) && (e.value==="empty" || knownStamp(e.value));
