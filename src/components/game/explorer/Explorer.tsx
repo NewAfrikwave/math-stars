@@ -9,6 +9,7 @@ import { ToyWorld } from "../workshop/ToyWorld";
 import { activityFor,stickers } from "../workshop/Adventure";
 import { SpeakButton } from "../SpeakButton";
 import { record,useJournal } from "./journal";
+import { CharacterStudio } from "./CharacterStudio";
 import { Bookshelf } from "./Bookshelf";
 import { bookSets, setFinished } from "@/lib/decodable-books";
 import { stages,type Stage } from "./activities";
@@ -142,7 +143,8 @@ function Room({profile,entries,onFind}:{profile:string;entries:Journal;onFind:()
   const owned=Object.keys(entries).filter(k=>k.startsWith("stamp/")).map(k=>k.slice(6)).sort();
   for(const set of bookSets) if(setFinished(set,key=>!!entries[key])) owned.push("bookset-"+set.id);
   const places=["Window shelf","Reading nook","Work table","Treasure shelf"];
-  return <><header className={s.banner}><span className={s.tag}>My collection</span><h1>Explorer room</h1><p>Choose a sticker, then touch a shelf to display it.</p></header>
+  return <><header className={s.banner}><span className={s.tag}>My collection</span><h1>Explorer room</h1><p>Create your explorer and give your stickers a home.</p></header>
+    <CharacterStudio profile={profile} entries={entries}/>
     <div className={s.scene}><div className={s.room} style={{"--turn":turn+"deg"} as CSSProperties}>{places.map((label,i)=>{
       const current=entries["slot/"+i]?.value;const item=current&&current!=="empty"?stamp(current):null;
       return <button key={label} className={s.place} aria-label={label+", "+(item?.[0]??"empty")} onClick={()=>{
