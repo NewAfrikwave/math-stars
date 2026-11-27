@@ -83,7 +83,7 @@ export function HomeView() {
         <h2>Choose an adventure</h2>
         <div className={styles.hubCards}>
           <WorldCard title="My discovery path" art="/journey-daily-mission-v2.webp" note="Three short stops picked for you" action={() => setView({name:"explorer"})}/>
-          <WorldCard title="Reading & phonics" art="/journey-activity.webp" note="Blend sounds and find story clues" action={() => setView({name:"explorer",start:level==="preschool"||level==="grade1"?"sounds":"read"})}/>
+          <WorldCard title="Reading & phonics" art="/journey-activity.webp" note="Read little books, blend sounds and find story clues" action={() => setView({name:"explorer",books:true})}/>
           <WorldCard title="My explorer room" art="/explorer-study-bg.webp" note="Decorate with the stickers you earn" action={() => setView({name:"explorer",room:true})}/>
           {level === "grade3" && <WorldCard title="School Practice" art="/journey-activity.webp" note="Explore math, reading and science" action={() => setView({ name: "school-practice" })}/>}
           <WorldCard title="Math Arcade" art="/arcade-rocket-builder-v2.webp" note="Build rockets and hunt for treasure" action={() => setView({ name: "arcade" })}/>

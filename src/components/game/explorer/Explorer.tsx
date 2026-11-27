@@ -7,29 +7,33 @@ import { ToyWorld } from "../workshop/ToyWorld";
 import { activityFor,stickers } from "../workshop/Adventure";
 import { SpeakButton } from "../SpeakButton";
 import { record,useJournal } from "./journal";
+import { Bookshelf } from "./Bookshelf";
+import { bookSets, setFinished } from "@/lib/decodable-books";
 import { stages,type Stage } from "./activities";
 import s from "./Explorer.module.css";
 
-export function Explorer({start,room=false}:{start?:Trail;room?:boolean}) {
+export function Explorer({start,room=false,books=false}:{start?:Trail;room?:boolean;books?:boolean}) {
   const profile=useGameStore(st=>st.currentProfileId);
   const level=useGameStore(st=>st.level)??"grade3";
-  return profile?<Hub key={profile} profile={profile} level={level} start={start} room={room}/>:null;
+  return profile?<Hub key={profile} profile={profile} level={level} start={start} room={room} books={books}/>:null;
 }
-function Hub({profile,level,start,room}:{profile:string;level:string;start?:Trail;room:boolean}) {
+function Hub({profile,level,start,room,books}:{profile:string;level:string;start?:Trail;room:boolean;books:boolean}) {
   const home=useGameStore(st=>st.setView);
   const {entries,ready,status,refresh}=useJournal(profile);
   const [trail,setTrail]=useState<Trail|undefined>(start);
   const [inRoom,setRoom]=useState(room);
+  const [inBooks,setBooks]=useState(books);
   const [day,setDay]=useState(()=>dayKey());
   useEffect(()=>{const timer=setInterval(()=>setDay(dayKey()),30000);return ()=>clearInterval(timer);},[]);
   const path=dailyPath(level,entries,day);
   const [finished,setFinished]=useState<Trail|null>(null);
   const go=(t:Trail)=>{setTrail(t);setFinished(null);};
-  const back=()=>{if(trail || inRoom || finished){setTrail(undefined);setRoom(false);setFinished(null);}else home({name:"home"});};
+  const back=()=>{if(trail || inRoom || finished || inBooks){setBooks(false);setTrail(undefined);setRoom(false);setFinished(null);}else home({name:"home"});};
   const controls=["Warm up","Stretch a skill","Read and discover"];
   return <main className={s.page}>
-    <button className={s.back} onClick={back}>{trail||inRoom||finished?"Back to my path":"Back to home"}</button>
+    <button className={s.back} onClick={back}>{trail||inRoom||finished||inBooks?"Back to my path":"Back to home"}</button>
     {!ready?<section className={s.card} role="status">Opening your explorer notebook…</section>:
+      inBooks?<Bookshelf profile={profile} entries={entries} openActivity={t=>{setBooks(false);go(t);}}/>:
       inRoom?<Room profile={profile} entries={entries} onFind={()=>setRoom(false)}/>:
       trail?<TrailGame key={day+trail} day={day} level={level} trail={trail} profile={profile} entries={entries} finish={()=>{
         void record(profile,[["finish/"+day+"/"+trail,"done"],["stamp/"+trail,"earned"]]);
@@ -43,6 +47,7 @@ function Hub({profile,level,start,room}:{profile:string;level:string;start?:Trai
         <div className={s.grid}>{path.map((t,i)=><button className={s.stop} key={t} onClick={()=>go(t)}><span aria-hidden="true">{trails[t][1]}</span><small>{controls[i]}</small>{trails[t][0]}<small>{entries["finish/"+day+"/"+t]?"✓ Finished · play again":"Start or continue"}</small></button>)}</div>
         <section className={s.card}><h2>Choose your own adventure</h2><div className={s.choices}>
           {(Object.keys(trails) as Trail[]).filter(t=>level!=="preschool"&&level!=="grade1" || !["trade","round","groups"].includes(t)).map(t=><button className={s.choice} key={t} onClick={()=>go(t)}>{trails[t][1]} {trails[t][0]}</button>)}
+          <button className={s.choice} onClick={()=>setBooks(true)}>Open my bookshelf</button>
           <button className={s.main} onClick={()=>setRoom(true)}>Visit my explorer room</button></div></section>
       </>}
     {status==="waiting" && <p className={s.note} role="status">Family sync is pending. <button onClick={()=>void refresh()}>Try sync again</button></p>}
@@ -121,6 +126,8 @@ function Challenge({stage,seed,previousHelp,practiceAgain,assist,solved,next,las
   </section>;
 }
 function stamp(id:string):readonly [string,string] {
+  const set=bookSets.find(item=>id==="bookset-"+item.id);
+  if(set) return [set.name,set.icon];
   if(!id.startsWith("school-"))return trails[id as Trail]??["Explorer sticker","⭐"];
   const lesson=lessons.find(l=>l.id===id.slice(7));
   const activity=activityFor(id.slice(7));
@@ -131,6 +138,7 @@ function Room({profile,entries,onFind}:{profile:string;entries:Journal;onFind:()
   const [turn,setTurn]=useState(0);
   const [note,setNote]=useState("");
   const owned=Object.keys(entries).filter(k=>k.startsWith("stamp/")).map(k=>k.slice(6)).sort();
+  for(const set of bookSets) if(setFinished(set,key=>!!entries[key])) owned.push("bookset-"+set.id);
   const places=["Window shelf","Reading nook","Work table","Treasure shelf"];
   return <><header className={s.banner}><span className={s.tag}>My collection</span><h1>Explorer room</h1><p>Choose a sticker, then touch a shelf to display it.</p></header>
     <div className={s.scene}><div className={s.room} style={{"--turn":turn+"deg"} as CSSProperties}>{places.map((label,i)=>{

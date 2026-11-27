@@ -385,7 +385,7 @@ function renderView(
     case "home":
       return <HomeView />;
     case "explorer":
-      return <Explorer start={view.start} room={view.room}/>;
+      return <Explorer start={view.start} room={view.room} books={view.books}/>;
     case "school-practice":
       return <SchoolPractice />;
     case "times-tables":
