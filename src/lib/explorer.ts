@@ -48,7 +48,7 @@ export function skillInfo(id:string): readonly [string,string] | undefined {
   if(q && id === lessonId+"."+Number(step)) return [q.prompt, q.hint];
 }
 export function knownStamp(id:string) {
-  return id==="shell-post" || bookSets.some(set=>id==="bookset-"+set.id) || has(trails,id) || lessons.some(l=>id === "school-"+l.id);
+  return id==="reef" || id==="workshop" || id==="shell-post" || bookSets.some(set=>id==="bookset-"+set.id) || has(trails,id) || lessons.some(l=>id === "school-"+l.id);
 }
 export function validEntry(raw:unknown): raw is Entry {
   if(!raw || typeof raw !== "object") return false;
@@ -64,6 +64,8 @@ export function validEntry(raw:unknown): raw is Entry {
       && (p[0]==="book"?e.value==="done":["yes","no"].includes(e.value));
   }
   if(!dateKey.test(p[1])) return false;
+  if(p[0]==="mission") return p.length===5 && ["preschool","grade1","grade2","grade3","grade4"].includes(p[2])
+    && ["workshop","reef"].includes(p[3]) && ["guided","fresh"].includes(p[4]) && e.value==="done";
   if(p[0]==="post") return p.length===4 && validPostEntry(p[2],p[3],e.value);
   if(p[0]==="finish") return p.length===3 && has(trails,p[2]) && e.value==="done";
   if(p[0]==="aid") return p.length===4 && has(trails,p[2]) && /^[0-6]$/.test(p[3]) && ["yes","no"].includes(e.value);

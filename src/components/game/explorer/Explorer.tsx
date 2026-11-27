@@ -9,6 +9,8 @@ import { ToyWorld } from "../workshop/ToyWorld";
 import { activityFor,stickers } from "../workshop/Adventure";
 import { SpeakButton } from "../SpeakButton";
 import { record,useJournal } from "./journal";
+import { DiscoveryGame } from "./DiscoveryGame";
+import {discoveries,type Discovery} from "@/lib/discovery-games";
 import { TradingPost } from "./TradingPost";
 import { CharacterStudio } from "./CharacterStudio";
 import { Bookshelf } from "./Bookshelf";
@@ -25,6 +27,7 @@ function Hub({profile,level,start,room,books}:{profile:string;level:string;start
   const home=useGameStore(st=>st.setView);
   const {entries,ready,status,refresh}=useJournal(profile);
   const [trail,setTrail]=useState<Trail|undefined>(start);
+  const [mission,setMission]=useState<Discovery|null>(null);
   const [inPost,setPost]=useState(false);
   const [inRoom,setRoom]=useState(room);
   const [inBooks,setBooks]=useState(books);
@@ -33,11 +36,12 @@ function Hub({profile,level,start,room,books}:{profile:string;level:string;start
   const path=dailyPath(level,entries,day);
   const [finished,setFinished]=useState<Trail|null>(null);
   const go=(t:Trail)=>{setTrail(t);setFinished(null);};
-  const back=()=>{if(trail || inRoom || finished || inBooks || inPost){setPost(false);setBooks(false);setTrail(undefined);setRoom(false);setFinished(null);}else home({name:"home"});};
+  const back=()=>{if(mission || trail || inRoom || finished || inBooks || inPost){setMission(null);setPost(false);setBooks(false);setTrail(undefined);setRoom(false);setFinished(null);}else home({name:"home"});};
   const controls=["Warm up","Stretch a skill","Read and discover"];
   return <main className={s.page}>
-    <button className={s.back} onClick={back}>{trail||inRoom||finished||inBooks||inPost?"Back to my path":"Back to home"}</button>
+    <button className={s.back} onClick={back}>{mission||trail||inRoom||finished||inBooks||inPost?"Back to my path":"Back to home"}</button>
     {!ready?<section className={s.card} role="status">Opening your explorer notebook…</section>:
+      mission?<DiscoveryGame key={[profile,day,level,mission].join("/")} game={mission} profile={profile} day={day} level={level} entries={entries} onRoom={()=>{setMission(null);setRoom(true);}}/>:
       inPost?<TradingPost key={profile+day+level} profile={profile} day={day} level={level} entries={entries} onRoom={()=>{setPost(false);setRoom(true);}}/>:
       inBooks?<Bookshelf profile={profile} entries={entries} openActivity={t=>{setBooks(false);go(t);}}/>:
       inRoom?<Room profile={profile} entries={entries} onFind={()=>setRoom(false)} onTrade={()=>setPost(true)}/>:
@@ -53,6 +57,7 @@ function Hub({profile,level,start,room,books}:{profile:string;level:string;start
         <div className={s.grid}>{path.map((t,i)=><button className={s.stop} key={t} onClick={()=>go(t)}><span aria-hidden="true">{trails[t][1]}</span><small>{controls[i]}</small>{trails[t][0]}<small>{entries["finish/"+day+"/"+t]?"✓ Finished · play again":"Start or continue"}</small></button>)}</div>
         <section className={s.card}><h2>Choose your own adventure</h2><div className={s.choices}>
           {(Object.keys(trails) as Trail[]).filter(t=>level!=="preschool"&&level!=="grade1" || !["trade","round","groups"].includes(t)).map(t=><button className={s.choice} key={t} onClick={()=>go(t)}>{trails[t][1]} {trails[t][0]}</button>)}
+          {(Object.keys(discoveries) as Discovery[]).map(id=><button className={s.choice} key={id} onClick={()=>setMission(id)}>{discoveries[id].icon} {discoveries[id].title}</button>)}
           <button className={s.main} onClick={()=>setPost(true)}>🐚 Pip’s Trading Post</button>
           <button className={s.choice} onClick={()=>setBooks(true)}>Open my bookshelf</button>
           <button className={s.main} onClick={()=>setRoom(true)}>Visit my explorer room</button></div></section>
@@ -133,6 +138,7 @@ function Challenge({stage,seed,previousHelp,practiceAgain,assist,solved,next,las
   </section>;
 }
 function stamp(id:string):readonly [string,string] {
+  if(id==="reef" || id==="workshop") return [discoveries[id].sticker,discoveries[id].icon];
   if(id==="shell-post") return ["Pip’s shell sticker","🐚"];
   const set=bookSets.find(item=>id==="bookset-"+item.id);
   if(set) return [set.name,set.icon];
