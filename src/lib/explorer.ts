@@ -1,3 +1,4 @@
+import { bookSets, pages, type Page } from "./decodable-books";
 import { lessons } from "./school-practice";
 
 export const trails = {
@@ -36,13 +37,15 @@ export const dayKey = (d = new Date()) => [d.getFullYear(),String(d.getMonth()+1
 const dateKey = /^\d{4}-\d{2}-\d{2}$/;
 const has = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj,key);
 export function skillInfo(id:string): readonly [string,string] | undefined {
+  const set=bookSets.find(item=>id==="pattern-"+item.id);
+  if(set) return ["Build words with "+set.name.toLowerCase(),"Read "+set.example+" together. Find another word in the set with the same sound."];
   if(has(skills,id)) return skills[id as Skill];
   const [lessonId, step] = id.split(".");
   const q = lessons.find(l=>l.id === lessonId)?.checks[Number(step)];
   if(q && id === lessonId+"."+Number(step)) return [q.prompt, q.hint];
 }
 export function knownStamp(id:string) {
-  return has(trails,id) || lessons.some(l=>id === "school-"+l.id);
+  return bookSets.some(set=>id==="bookset-"+set.id) || has(trails,id) || lessons.some(l=>id === "school-"+l.id);
 }
 export function validEntry(raw:unknown): raw is Entry {
   if(!raw || typeof raw !== "object") return false;
@@ -51,6 +54,10 @@ export function validEntry(raw:unknown): raw is Entry {
   const p=e.key.split("/");
   if(p[0]==="stamp") return p.length===2 && knownStamp(p[1]) && e.value==="earned";
   if(p[0]==="slot") return p.length===2 && /^[0-3]$/.test(p[1]) && (e.value==="empty" || knownStamp(e.value));
+  if(p[0]==="book" || p[0]==="bookhelp") {
+    return p.length===3 && bookSets.some(set=>set.books.some(b=>b.id===p[1])) && pages.includes(p[2] as Page)
+      && (p[0]==="book"?e.value==="done":["yes","no"].includes(e.value));
+  }
   if(!dateKey.test(p[1])) return false;
   if(p[0]==="finish") return p.length===3 && has(trails,p[2]) && e.value==="done";
   if(p[0]==="aid") return p.length===4 && has(trails,p[2]) && /^[0-6]$/.test(p[3]) && ["yes","no"].includes(e.value);
