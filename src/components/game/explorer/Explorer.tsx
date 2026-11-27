@@ -9,6 +9,7 @@ import { ToyWorld } from "../workshop/ToyWorld";
 import { activityFor,stickers } from "../workshop/Adventure";
 import { SpeakButton } from "../SpeakButton";
 import { record,useJournal } from "./journal";
+import { TradingPost } from "./TradingPost";
 import { CharacterStudio } from "./CharacterStudio";
 import { Bookshelf } from "./Bookshelf";
 import { bookSets, setFinished } from "@/lib/decodable-books";
@@ -24,6 +25,7 @@ function Hub({profile,level,start,room,books}:{profile:string;level:string;start
   const home=useGameStore(st=>st.setView);
   const {entries,ready,status,refresh}=useJournal(profile);
   const [trail,setTrail]=useState<Trail|undefined>(start);
+  const [inPost,setPost]=useState(false);
   const [inRoom,setRoom]=useState(room);
   const [inBooks,setBooks]=useState(books);
   const [day,setDay]=useState(()=>dayKey());
@@ -31,13 +33,14 @@ function Hub({profile,level,start,room,books}:{profile:string;level:string;start
   const path=dailyPath(level,entries,day);
   const [finished,setFinished]=useState<Trail|null>(null);
   const go=(t:Trail)=>{setTrail(t);setFinished(null);};
-  const back=()=>{if(trail || inRoom || finished || inBooks){setBooks(false);setTrail(undefined);setRoom(false);setFinished(null);}else home({name:"home"});};
+  const back=()=>{if(trail || inRoom || finished || inBooks || inPost){setPost(false);setBooks(false);setTrail(undefined);setRoom(false);setFinished(null);}else home({name:"home"});};
   const controls=["Warm up","Stretch a skill","Read and discover"];
   return <main className={s.page}>
-    <button className={s.back} onClick={back}>{trail||inRoom||finished||inBooks?"Back to my path":"Back to home"}</button>
+    <button className={s.back} onClick={back}>{trail||inRoom||finished||inBooks||inPost?"Back to my path":"Back to home"}</button>
     {!ready?<section className={s.card} role="status">Opening your explorer notebook…</section>:
+      inPost?<TradingPost key={profile+day+level} profile={profile} day={day} level={level} entries={entries} onRoom={()=>{setPost(false);setRoom(true);}}/>:
       inBooks?<Bookshelf profile={profile} entries={entries} openActivity={t=>{setBooks(false);go(t);}}/>:
-      inRoom?<Room profile={profile} entries={entries} onFind={()=>setRoom(false)}/>:
+      inRoom?<Room profile={profile} entries={entries} onFind={()=>setRoom(false)} onTrade={()=>setPost(true)}/>:
       trail?<TrailGame key={day+trail} day={day} level={level} trail={trail} profile={profile} entries={entries} finish={()=>{
         void record(profile,[["finish/"+day+"/"+trail,"done"],["stamp/"+trail,"earned"]]);
         setFinished(trail);setTrail(undefined);
@@ -50,6 +53,7 @@ function Hub({profile,level,start,room,books}:{profile:string;level:string;start
         <div className={s.grid}>{path.map((t,i)=><button className={s.stop} key={t} onClick={()=>go(t)}><span aria-hidden="true">{trails[t][1]}</span><small>{controls[i]}</small>{trails[t][0]}<small>{entries["finish/"+day+"/"+t]?"✓ Finished · play again":"Start or continue"}</small></button>)}</div>
         <section className={s.card}><h2>Choose your own adventure</h2><div className={s.choices}>
           {(Object.keys(trails) as Trail[]).filter(t=>level!=="preschool"&&level!=="grade1" || !["trade","round","groups"].includes(t)).map(t=><button className={s.choice} key={t} onClick={()=>go(t)}>{trails[t][1]} {trails[t][0]}</button>)}
+          <button className={s.main} onClick={()=>setPost(true)}>🐚 Pip’s Trading Post</button>
           <button className={s.choice} onClick={()=>setBooks(true)}>Open my bookshelf</button>
           <button className={s.main} onClick={()=>setRoom(true)}>Visit my explorer room</button></div></section>
       </>}
@@ -129,6 +133,7 @@ function Challenge({stage,seed,previousHelp,practiceAgain,assist,solved,next,las
   </section>;
 }
 function stamp(id:string):readonly [string,string] {
+  if(id==="shell-post") return ["Pip’s shell sticker","🐚"];
   const set=bookSets.find(item=>id==="bookset-"+item.id);
   if(set) return [set.name,set.icon];
   if(!id.startsWith("school-"))return trails[id as Trail]??["Explorer sticker","⭐"];
@@ -136,7 +141,7 @@ function stamp(id:string):readonly [string,string] {
   const activity=activityFor(id.slice(7));
   return [lesson?.title??"School sticker",activity?stickers[activity.world]:"⭐"];
 }
-function Room({profile,entries,onFind}:{profile:string;entries:Journal;onFind:()=>void}) {
+function Room({profile,entries,onFind,onTrade}:{profile:string;entries:Journal;onFind:()=>void;onTrade:()=>void}) {
   const [choice,setChoice]=useState("");
   const [turn,setTurn]=useState(0);
   const [note,setNote]=useState("");
@@ -145,6 +150,7 @@ function Room({profile,entries,onFind}:{profile:string;entries:Journal;onFind:()
   const places=["Window shelf","Reading nook","Work table","Treasure shelf"];
   return <><header className={s.banner}><span className={s.tag}>My collection</span><h1>Explorer room</h1><p>Create your explorer and give your stickers a home.</p></header>
     <CharacterStudio profile={profile} entries={entries}/>
+    <button className={s.main} onClick={onTrade}>Take my explorer to Pip’s Trading Post</button>
     <div className={s.scene}><div className={s.room} style={{"--turn":turn+"deg"} as CSSProperties}>{places.map((label,i)=>{
       const current=entries["slot/"+i]?.value;const item=current&&current!=="empty"?stamp(current):null;
       return <button key={label} className={s.place} aria-label={label+", "+(item?.[0]??"empty")} onClick={()=>{
