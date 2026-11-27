@@ -1,5 +1,7 @@
 "use client";
 
+import { AnswerCheer } from "@/components/game/AnswerCheer";
+
 import { useState } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
@@ -168,8 +170,9 @@ export function Adventure({lesson,onPractice,onStamp}:{lesson:SchoolLesson;onPra
         <button disabled={!history.length} className={styles.quiet} onClick={()=>{setAnswer(history[history.length-1]);setHistory(history.slice(0,-1));setFeedback("");}}>Undo</button></div>}
       {!solved && (coach ? <div className={styles.coach}><strong>Pip’s clue</strong><p>{guide()}</p>{sound && <SpeakButton text={guide()} label="Hear clue"/>}</div>
         : <button className={styles.quiet} onClick={()=>setCoach(true)}>{misses>=2?"Let Pip walk me through it":"Ask Pip for a clue"}</button>)}
-      {feedback&&<p role="status" className={styles.feedback}>{feedback}</p>}
+      {feedback&&<p role="status" className={styles.feedback}>{solved ? <AnswerCheer turn={round}>{feedback}</AnswerCheer> : feedback}</p>}
       {solved&&<button className={styles.next} onClick={advance}>{round+1===total?"Collect my sticker":"Next challenge"}</button>}
     </>}</div>
   </section>;
 }
+

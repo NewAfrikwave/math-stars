@@ -1,5 +1,7 @@
 "use client";
-import { useEffect,useRef,useState,type CSSProperties } from "react";
+
+import { AnswerCheer } from "@/components/game/AnswerCheer";
+import { useEffect,useRef,useState,type CSSProperties,type ReactNode } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { dailyPath,dayKey,trails,type Trail,type Journal } from "@/lib/explorer";
 import { lessons } from "@/lib/school-practice";
@@ -88,7 +90,7 @@ function Challenge({stage,seed,previousHelp,practiceAgain,assist,solved,next,las
   const [entry,setEntry]=useState("");
   const [points,setPoints]=useState<number[]>([]);
   const [scaffold,setScaffold]=useState(false);
-  const [message,setMessage]=useState("");
+  const [message,setMessage]=useState<ReactNode>("");
   const audio=useRef<HTMLAudioElement>(null);
   const choices=stage.choices??[];
   const offset=(seed+1)%Math.max(1,choices.length);
@@ -121,8 +123,8 @@ function Challenge({stage,seed,previousHelp,practiceAgain,assist,solved,next,las
       <form className={s.choices} onSubmit={e=>{e.preventDefault();if(entry.trim())answer(entry);}}><input aria-label="My answer" className={s.input} inputMode="numeric" autoComplete="off" value={entry} disabled={ok} onChange={e=>setEntry(e.target.value)}/><button className={s.main} disabled={ok || !entry.trim()}>Check</button></form>}
     {!ok && !hint && <button className={s.back} onClick={help}>Give me a clue</button>}
     {hint&&!ok&&<div className={s.feedback}><p>{stage.clue}</p>{stage.scaffold&&!scaffold&&<><strong>{stage.scaffold.prompt}</strong><div className={s.choices}>
-      {stage.scaffold.choices.map(c=><button className={s.choice} key={c} onClick={()=>{const right=c===stage.scaffold!.answer;setScaffold(right);setMessage(right?"Yes. Use that step to try the original question.":"Count again with Pip’s clue.");}}>{c}</button>)}</div></>}</div>}
-    <p role="status">{message}</p>{ok && <button className={s.main} onClick={next}>{practiceAgain?"Try a fresh example":last?"Collect my sticker":"Next step"}</button>}
+      {stage.scaffold.choices.map(c=><button className={s.choice} key={c} onClick={()=>{const right=c===stage.scaffold!.answer;setScaffold(right);setMessage(right?<AnswerCheer turn={seed}>Use that step to try the original question.</AnswerCheer>:"Count again with Pip’s clue.");}}>{c}</button>)}</div></>}</div>}
+    <p role="status">{ok ? <AnswerCheer turn={seed}>{message}</AnswerCheer> : message}</p>{ok && <button className={s.main} onClick={next}>{practiceAgain?"Try a fresh example":last?"Collect my sticker":"Next step"}</button>}
   </section>;
 }
 function stamp(id:string):readonly [string,string] {

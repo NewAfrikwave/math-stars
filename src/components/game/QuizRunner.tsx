@@ -85,6 +85,7 @@ export function QuizRunner({
   const resumedFinish = useRef(false);
   const [praiseText, setPraiseText] = useState("");
   const siteSettings = useGameStore((s) => s.siteSettings);
+  const level = useGameStore((s) => s.level);
   const studentName = useGameStore((s) => s.studentName);
   const sfx = useSoundEffects(soundOn && siteSettings?.soundEffectsEnabled !== false);
   const { speak, speakImmediately, stop } = useTTS();
@@ -170,6 +171,12 @@ export function QuizRunner({
     }
   };
 
+  useEffect(() => {
+    if (!celebrate) return;
+    const timer = window.setTimeout(() => setCelebrate(false), 2800);
+    return () => window.clearTimeout(timer);
+  }, [celebrate]);
+
   const handleSubmit = async (override?: unknown) => {
     if (submitted || resumeReadyToFinish) return;
     const answer = resolveSubmittedAnswer(problem, currentAnswer, override);
@@ -177,7 +184,7 @@ export function QuizRunner({
     const ok = checkAnswer(problem, answer);
     setSubmitted(true);
     if (ok) {
-      const praise = correctAnswerPraise(preschool, index, correctCountRef.current, studentName);
+      const praise = correctAnswerPraise(preschool || level === "grade1", index, correctCountRef.current, studentName);
       correctCountRef.current += 1;
       setCorrectCount(correctCountRef.current);
       setPraiseText(praise);
@@ -186,7 +193,7 @@ export function QuizRunner({
       if (soundOn) {
         speakImmediately(praise, { speed: preschool ? 0.86 : 0.96 });
       }
-      window.setTimeout(() => setCelebrate(false), 2800);
+
     } else {
       setPraiseText("");
       sfx.playWrong();
@@ -208,6 +215,7 @@ export function QuizRunner({
       }
       return;
     }
+    setCelebrate(false);
     setIndex((value) => value + 1);
     setCurrentAnswer(null);
     setSubmitted(false);

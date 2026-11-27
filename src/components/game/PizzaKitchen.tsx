@@ -1,5 +1,7 @@
 "use client";
 
+import { AnswerCheer } from "@/components/game/AnswerCheer";
+
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { Check, ChefHat, Hand, RotateCcw, Undo2, UtensilsCrossed } from "lucide-react";
@@ -109,7 +111,7 @@ export function PizzaKitchen({ challenge, busy, soundOn, feedback, finalQuestion
       <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
 
       {feedback ? <div className={`rounded-2xl border-2 p-4 ${feedback.correct ? "border-emerald-500 bg-emerald-50" : "border-amber-500 bg-amber-50"}`}>
-        <h2 className="font-display text-2xl font-black">{feedback.correct ? "Order ready, chef!" : "Let’s learn from this order"}</h2>
+        <h2 className="font-display text-2xl font-black">{feedback.correct ? <AnswerCheer turn={challenge.slices}>Order ready, chef!</AnswerCheer> : "Let’s learn from this order"}</h2>
         <p className="mt-2 font-semibold">{feedback.explanation}</p>
         <button ref={nextButton} type="button" onClick={onContinue} className="mt-3 min-h-12 rounded-full bg-[#315c45] px-6 font-display font-black text-white focus-visible:outline-4 focus-visible:outline-[#9c4934]">{finalQuestion ? "See my coins" : "Next order"}</button>
       </div> : <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e7d4ae] pt-4">

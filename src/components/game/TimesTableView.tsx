@@ -57,17 +57,23 @@ export function TimesTableView() {
     else speakImmediately(tableSpeech, { speed: 0.86 });
   };
 
+  useEffect(() => {
+    if (feedback !== "correct" || !practiceOpen) return;
+    const timer = window.setTimeout(() => {
+      setFactor(value => makeQuestion(selected, value));
+      setAnswer("");
+      setFeedback(null);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [feedback, practiceOpen, selected]);
+
   const submitAnswer = (event: FormEvent) => {
     event.preventDefault();
+    if (feedback === "correct" || !answer.trim()) return;
     if (Number(answer) === selected * factor) {
       setFeedback("correct");
       setScore((value) => value + 1);
       setQuestions((value) => value + 1);
-      window.setTimeout(() => {
-        setFactor((value) => makeQuestion(selected, value));
-        setAnswer("");
-        setFeedback(null);
-      }, 850);
     } else {
       setFeedback("retry");
       setQuestions((value) => value + 1);
@@ -154,13 +160,13 @@ export function TimesTableView() {
         {practiceOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-[#160b04]/70 p-4" role="dialog" aria-modal="true" aria-labelledby="practice-title">
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="relative w-full max-w-lg rounded-[30px] border-[5px] border-[#6d4824] bg-[#fff0c9] p-6 text-center shadow-2xl sm:p-8">
-              <button onClick={() => setPracticeOpen(false)} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#ead4a3] hover:bg-[#dec48c]" aria-label="Close practice"><X /></button>
+              <button onClick={() => { setPracticeOpen(false); setFeedback(null); setAnswer(""); }} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#ead4a3] hover:bg-[#dec48c]" aria-label="Close practice"><X /></button>
               <p className="text-sm font-black uppercase tracking-[0.14em] text-[#8f2c2d]">Quick practice</p>
               <h2 id="practice-title" className="mt-2 font-display text-4xl font-black text-[#254b2f]">What is {selected} × {factor}?</h2>
               <form onSubmit={submitAnswer} className="mt-6">
                 <label htmlFor="table-answer" className="sr-only">Your answer</label>
-                <input id="table-answer" autoFocus inputMode="numeric" type="number" value={answer} onChange={(event) => { setAnswer(event.target.value); setFeedback(null); }} className="h-20 w-full rounded-2xl border-4 border-[#c59b54] bg-white text-center font-display text-4xl font-black text-[#31573a] outline-none focus:border-[#31573a]" placeholder="?" />
-                <button type="submit" disabled={!answer} className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[#aa2f34] px-5 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] disabled:opacity-50">Check my answer<Check className="h-5 w-5" /></button>
+                <input id="table-answer" readOnly={feedback === "correct"} autoFocus inputMode="numeric" type="number" value={answer} onChange={(event) => { setAnswer(event.target.value); setFeedback(null); }} className="h-20 w-full rounded-2xl border-4 border-[#c59b54] bg-white text-center font-display text-4xl font-black text-[#31573a] outline-none focus:border-[#31573a]" placeholder="?" />
+                <button type="submit" disabled={!answer || feedback === "correct"} className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[#aa2f34] px-5 font-display text-lg font-black text-white shadow-[0_5px_0_#6d2023] disabled:opacity-50">Check my answer<Check className="h-5 w-5" /></button>
               </form>
               <AnimatePresence mode="wait">
                 {feedback === "correct" && <motion.div key="correct" initial={{ opacity: 0, scale: 0.7, rotate: -3 }} animate={{ opacity: 1, scale: [0.7, 1.08, 1], rotate: 0 }} transition={springy} className="mt-5 rounded-2xl bg-[#dcebd1] p-4 font-display text-xl font-black text-[#2e6234]"><Check className="mr-2 inline h-6 w-6" />Brilliant! {selected} × {factor} = {selected * factor}</motion.div>}
