@@ -11,6 +11,7 @@ import { GRADE4_CURRICULUM } from "@/lib/grade4";
 import { chooseNextMission } from "@/lib/next-mission";
 import { clearOfflineDeviceData } from "@/lib/offline/database";
 import { useGameStore, useOverallProgress } from "@/store/useGameStore";
+import { HomeCharacter } from "./explorer/CharacterStudio";
 import styles from "../HomeWorld.module.css";
 
 const curricula = { preschool: PRESCHOOL_CURRICULUM, grade1: GRADE1_CURRICULUM, grade2: GRADE2_CURRICULUM, grade3: CURRICULUM, grade4: GRADE4_CURRICULUM };
@@ -20,6 +21,7 @@ export function HomeView() {
   const setView = useGameStore(s => s.setView);
   const level = useGameStore(s => s.level) ?? "grade3";
   const name = useGameStore(s => s.studentName);
+  const profile = useGameStore(s => s.currentProfileId);
   const stars = useGameStore(s => s.totalStars);
   const streak = useGameStore(s => s.streak);
   const reward = useGameStore(s => s.reward);
@@ -84,7 +86,10 @@ export function HomeView() {
         <div className={styles.hubCards}>
           <WorldCard title="My discovery path" art="/journey-daily-mission-v2.webp" note="Three short stops picked for you" action={() => setView({name:"explorer"})}/>
           <WorldCard title="Reading & phonics" art="/journey-activity.webp" note="Read little books, blend sounds and find story clues" action={() => setView({name:"explorer",books:true})}/>
-          <WorldCard title="My explorer room" art="/explorer-study-bg.webp" note="Decorate with the stickers you earn" action={() => setView({name:"explorer",room:true})}/>
+          <button className={styles.gameCard} onClick={() => setView({name:"explorer",room:true})}>
+            {profile && <HomeCharacter key={profile} profile={profile}/>}
+            <div><div><h3>My character &amp; room</h3><p>Dress your explorer and display your rewards</p></div><ChevronRight size={18}/></div>
+          </button>
           {level === "grade3" && <WorldCard title="School Practice" art="/journey-activity.webp" note="Explore math, reading and science" action={() => setView({ name: "school-practice" })}/>}
           <WorldCard title="Math Arcade" art="/arcade-rocket-builder-v2.webp" note="Build rockets and hunt for treasure" action={() => setView({ name: "arcade" })}/>
           <WorldCard title="Times Table Lab" art="/equal-groups-baskets.webp" note="Explore the tables from 2 to 12" action={() => setView({ name: "times-tables" })}/>
