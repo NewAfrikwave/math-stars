@@ -1,5 +1,7 @@
 "use client";
 
+import { AnswerCheer } from "@/components/game/AnswerCheer";
+
 import { useState } from "react";
 import { bookKey, bookSets, nextUnread, pages, setFinished, storyHelpers, type BookSet, type LittleBook, type Page } from "@/lib/decodable-books";
 import { dayKey, type Journal } from "@/lib/explorer";
@@ -125,7 +127,7 @@ function Reader({profile,set,book,entries,close,advance}:{
     {page ? <>
       {!correct && <button className={styles.back} onClick={()=>{help();setHint(true);}}>Give me a clue</button>}
       {hint && !correct && <p className={styles.feedback}>{page==="word"?"Look for the next part: "+book.tiles[built.length]:page==="meaning"?"Reread this part: "+book.lines[book.proof]:"Which line tells what happened, where it happened, or why?"}</p>}
-      <p role="status">{feedback}</p>
+      <p role="status">{correct ? <AnswerCheer turn={seed + step}>{feedback}</AnswerCheer> : feedback}</p>
       {correct && <button className={styles.main} onClick={next}>{page==="evidence"?"Finish my book":"Turn the page"}</button>}
     </>:<>
       <h2>Book finished!</h2>

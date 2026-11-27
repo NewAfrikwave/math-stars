@@ -1,5 +1,7 @@
 "use client";
 
+import { AnswerCheer } from "@/components/game/AnswerCheer";
+
 import { useEffect, useState } from "react";
 import { ArrowLeft, BookOpen, Check, ChevronRight } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
@@ -181,6 +183,7 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
     <h1 className="font-display text-2xl font-bold">{lesson.title}</h1>
     {finished ? <>
       <h2 className="text-xl font-semibold">Lesson finished!</h2>
+      {writing && <p role="status"><AnswerCheer>You reviewed your writing.</AnswerCheer></p>}
       <p>{missed.length ? "You worked through the tricky parts. Try another round when you are ready." : "You answered every practice question on your first try."}</p>
       <fieldset className="space-y-2"><legend className="font-semibold">How did that feel?</legend>
         <div className="flex flex-wrap gap-2">{["Still tricky", "Getting there", "I feel ready"].map(item =>
@@ -212,7 +215,7 @@ function Lesson({ lesson, onFinish, onBack, onStamp }: { lesson: SchoolLesson; o
         <button className={primary} disabled={correct || !entry.trim()}>Check answer</button>
       </form>}
       {step > 0 && !correct && <button className={button} onClick={showHint}>Show a hint</button>}
-      <p role="status" className="font-semibold">{feedback || (hint ? q.hint : "")}</p>
+      <p role="status" className="font-semibold">{correct ? <AnswerCheer turn={step + lesson.id.length}>{feedback}</AnswerCheer> : feedback || (hint ? q.hint : "")}</p>
       {correct && <button className={primary} onClick={next}>Continue</button>}
     </div> : writing && <>
       {example}

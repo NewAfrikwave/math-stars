@@ -1,5 +1,7 @@
 "use client";
 
+import { AnswerCheer } from "@/components/game/AnswerCheer";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Coins, Gamepad2, Loader2, Lock, RotateCcw, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
@@ -338,7 +340,7 @@ export function ArcadeView() {
               onPointerDownOutside={(event) => event.preventDefault()}
             >
               <div className="text-6xl" aria-hidden="true">{feedback.correct ? "🌟" : "💪"}</div>
-              <DialogTitle className="mt-2 font-display text-3xl font-black">{feedback.correct ? "You got it!" : "Good try!"}</DialogTitle>
+              <DialogTitle className="mt-2 font-display text-3xl font-black">{feedback.correct ? <AnswerCheer turn={run.nextIndex}/> : "Good try!"}</DialogTitle>
               <DialogDescription className="mt-2 font-bold text-white/85">{feedback.explanation}</DialogDescription>
               <button ref={feedbackActionRef} onClick={continueAfterFeedback} className="mt-2 min-h-14 w-full rounded-2xl bg-amber-300 font-display text-lg font-black text-[#321b5e] shadow-[0_5px_0_#a56713] active:translate-y-1 active:shadow-none">
                 {feedback.nextRun.status === "completed" ? "See my coins" : "Next challenge"}
