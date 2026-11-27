@@ -36,3 +36,13 @@ test("saved looks are profile-local and stale updates cannot undo more recent ch
   assert.equal(readCharacter(read, 0).gear, "glasses");
   assert.deepEqual(readCharacter({}, 0), starter);
 });
+
+test("an existing explorer can switch species and restore their human outfit", () => {
+  const human = mergeJournal({}, [entry("character/hairstyle", "braids"), entry("character/outfit", "dress")]);
+  assert.equal(readCharacter(human, 0).kind, "human");
+  const owl = mergeJournal(human, [entry("character/kind", "owl"), entry("character/gear", "bow")]);
+  assert.equal(readCharacter(owl, 0).gear, "bow");
+  const restored = readCharacter(mergeJournal(owl, [entry("character/kind", "human", 2)]), 0);
+  assert.equal(restored.hairstyle, "braids");
+  assert.equal(restored.outfit, "dress");
+});

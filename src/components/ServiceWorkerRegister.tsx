@@ -40,7 +40,7 @@ function deviceKey() {
 export function ServiceWorkerRegister({ authenticated }: { authenticated: boolean }) {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {
         /* offline not available — fine */
       });
     }

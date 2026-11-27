@@ -1,5 +1,6 @@
 "use client";
 
+import { useAppUpdates } from "@/hooks/use-app-updates";
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore, profileFetch } from "@/store/useGameStore";
@@ -88,6 +89,7 @@ export default function Page() {
   const level = useGameStore((s) => s.level);
   const setLevel = useGameStore((s) => s.setLevel);
   const hydrated = useGameStore((s) => s.hydrated);
+  useAppUpdates(hydrated && (view.name === "home" || view.name === "landing"));
   const hydrate = useGameStore((s) => s.hydrate);
   const totalStars = useGameStore((s) => s.totalStars);
   const earnedAchievements = useGameStore((s) => s.earnedAchievements);

@@ -79,16 +79,18 @@ self.addEventListener("sync", (event) => {
 });
 
 async function navigationResponse(request) {
-  const cached = await caches.match(request);
   try {
-    const response = await fetchWithTimeout(request, 4500);
+    const response = await fetchWithTimeout(request, 12000);
     if (response.ok) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      await cache.put(request, response.clone());
+      try {
+        const cache = await caches.open(RUNTIME_CACHE);
+        await cache.put(request, response.clone());
+      } catch { /* Full storage must not hide a fresh online document. */ }
     }
     return response;
   } catch {
-    return cached || await caches.match("/") || await caches.match("/offline") || Response.error();
+    const cached = await caches.match(request, { cacheName: RUNTIME_CACHE });
+    return cached || await caches.match(request) || await caches.match("/") || await caches.match("/offline") || Response.error();
   }
 }
 
@@ -172,5 +174,6 @@ async function notifyClients(message) {
 function fetchWithTimeout(request, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(request, { signal: controller.signal }).finally(() => clearTimeout(timer));
+  return fetch(request, { signal: controller.signal, cache: "no-store" }).finally(() => clearTimeout(timer));
 }
+
