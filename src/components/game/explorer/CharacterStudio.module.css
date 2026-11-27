@@ -51,3 +51,24 @@
 .crown {top:5%;left:26%;width:48%;height:20%;background:linear-gradient(120deg,#fff2a2,#f2b843 65%,#ce851d);clip-path:polygon(0 12%,25% 49%,50% 0,75% 49%,100% 12%,91% 91%,9% 91%)}
 @media(max-width:620px){.studio {grid-template-columns:1fr}.spotlight {min-height:158px}.spotlight .doll {width:125px;height:141px}}
 @media(prefers-reduced-motion:no-preference){.spotlight .doll:hover {transform:rotate(-3deg)}.doll {transition:transform .2s ease}}
+.longHair {display:none!important;background:var(--hair)}
+.doll[data-cut=waves] .longHair,.doll[data-cut=bob] .longHair,.doll[data-cut=pony] .longHair {display:block!important;top:18%;left:14%;width:72%;height:69%;border-radius:46% 46% 28% 28%;box-shadow:inset -5px -3px 8px #0003}
+.doll[data-cut=bob] .longHair {top:17%;height:52%;border-radius:48% 48% 20% 20%}
+.doll[data-cut=pony] .longHair {left:56%;top:8%;width:32%;height:57%;border-radius:65% 40% 40% 65%;transform:rotate(-13deg)}
+.doll[data-cut=braids] .longHair {display:block!important;background:none;left:12%;top:41%;width:76%;height:44%;z-index:1}
+.doll[data-cut=braids] .longHair::before,.doll[data-cut=braids] .longHair::after {content:"";position:absolute;width:23%;height:100%;background:radial-gradient(ellipse at center,var(--hair) 64%,transparent 68%) center top / 100% 29% repeat-y;border-bottom:4px solid #d65788}
+.doll[data-cut=braids] .longHair::after {right:0}
+.bow {top:18%;left:56%;width:26%;height:14%;background:linear-gradient(90deg,#ed658c,#a93c67 50%,#ff92ab);clip-path:polygon(0 0,48% 33%,100% 0,100% 100%,52% 70%,0 100%);transform:rotate(15deg)}
+.headband {left:19%;width:62%;height:35%;top:16%;border-radius:55%;border-top:6px solid #ec779d}
+.spotlight {position:relative}
+.animal {height:202px;width:202px;max-width:100%;object-fit:contain}
+.thumbnail .animal {height:110px;width:110px}
+.turns {display:flex;justify-content:center;gap:8px;margin-top:-8px;padding-bottom:10px}
+.turns button {border-radius:50%;color:#1d3c4d;background:#fffbdf;border:1px solid #679e92;width:44px;height:44px;font-size:24px;cursor:pointer}
+
+.doll[data-outfit=dress] .coat {top:72%;height:29%;border-radius:36% 36% 18% 18%;clip-path:polygon(29% 0,71% 0,79% 22%,70% 45%,97% 100%,3% 100%,30% 45%,21% 22%)}
+.doll[data-outfit=dress] .seam {top:85%;left:32%;width:36%;height:3%;background:#ffd06a}
+.dressStar {color:#fff2ae;left:45%;top:73%;font-size:.84em}
+.doll[data-outfit=overalls] .seam {left:32%;top:82%;width:36%;height:15%;background:#365773;border-radius:0 0 25% 25%;border-bottom:2px solid #7ea5b4}
+.doll[data-outfit=overalls] .seam::before,.doll[data-outfit=overalls] .seam::after {content:"";position:absolute;bottom:96%;height:54%;width:18%;background:#365773;border-bottom:2px solid #f7c46a}
+.doll[data-outfit=overalls] .seam::after {right:0}

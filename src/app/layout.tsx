@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { AccessGate } from "@/components/AccessGate";
+import { appRelease } from "@/lib/app-release";
 import { cookies } from "next/headers";
 import { readSessionValue, SESSION_COOKIE } from "@/lib/auth";
 import { activeSessionFromValue } from "@/lib/session-access";
@@ -99,7 +100,7 @@ export default async function RootLayout({
   const authenticated = !!(await activeSessionFromValue(sessionValue));
   const staleSession = !!signedSession && !authenticated;
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-mathstars-release={(await appRelease()) ?? undefined} suppressHydrationWarning>
       <body
         className="antialiased bg-background text-foreground"
       >
