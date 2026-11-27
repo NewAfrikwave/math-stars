@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { postLesson, postPrefix, type PostStep } from "@/lib/trading-post";
 import type { Journal, Skill } from "@/lib/explorer";
 import { useGameStore } from "@/store/useGameStore";
@@ -8,6 +8,7 @@ import { SpeakButton } from "../SpeakButton";
 import { AnswerCheer } from "../AnswerCheer";
 import { starter } from "@/lib/explorer-character";
 import { AnimalPortrait } from "./AnimalPortrait";
+import { PipWalkthrough } from "./PipWalkthrough";
 import { HomeCharacter } from "./CharacterStudio";
 import { record } from "./journal";
 import s from "./Explorer.module.css";
@@ -74,6 +75,7 @@ export function TradingPost({profile, day, level, entries, onRoom}: Props) {
   const [value,setValue] = useState("");
   const [feedback,setFeedback] = useState("");
   const [helped,setHelped] = useState(false);
+  const [guiding,setGuiding] = useState(false);
   const [closed,setClosed] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
   const sound = useGameStore(st => st.soundOn);
@@ -105,10 +107,18 @@ export function TradingPost({profile, day, level, entries, onRoom}: Props) {
   }
   const question = step==="order" ? "You have " + lesson.fresh + " shells. Give Pip " + lesson.freshGive + ". How many will you have left?" :
     step==="evidence" ? "Tap the sentence that helped you choose the hill path." : lesson.early ? "Blend the sounds. What should Pip pack?" : "Which way should Pip deliver the shells?";
-  return <article className={p.post}>
+  return <article className={p.post} style={{"--market-art":"url(/explorer/shell-market.webp)"} as CSSProperties}>
     <header className={p.sign}><div><span>Shell market</span><h1>Pip’s Trading Post</h1></div><div className={p.avatar} data-cheer={done || closed} role="group" aria-label="Your explorer"><HomeCharacter profile={profile}/></div></header>
     {closed ? <section className={s.card}><h2>Delivery complete!</h2><p><AnswerCheer>You earned Pip’s shell sticker.</AnswerCheer></p><button className={s.main} onClick={onRoom}>Put it in my room</button></section> :
       <section className={s.card} key={step}><h2>{titles[step]}</h2>
+        {!done && <PipWalkthrough early={lesson.early} step={step} sound={sound} onToggle={open=>{
+          setGuiding(open);
+          if(open && step!=="counter"){
+            setHelped(true);
+            void record(profile,[[prefix+step,"hint"],["skill/"+day+"/"+skill+"/hint","seen"]]);
+          }
+        }}/>}
+        <div hidden={guiding}>
         {step==="counter" ? <Counter start={lesson.start} give={lesson.give} early={lesson.early} complete={()=>finish("")}/> :
           <><p>{question}</p>
             {step==="order" && <form className={s.choices} onSubmit={e=>{e.preventDefault();if(value.trim())finish(value);}}>
@@ -123,6 +133,7 @@ export function TradingPost({profile, day, level, entries, onRoom}: Props) {
           </>}
         <div role="status">{done?<AnswerCheer turn={index}>{feedback}</AnswerCheer>:feedback}</div>
         {done && <button className={s.main} onClick={next}>{index===lesson.steps.length-1?"Collect my shell sticker":"Continue"}</button>}
+        </div>
       </section>}
   </article>;
 }
