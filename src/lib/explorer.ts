@@ -1,9 +1,10 @@
 import { bookSets, pages, type Page } from "./decodable-books";
 import { validCharacterPart } from "./explorer-character";
+import { validPostEntry } from "./trading-post";
 import { lessons } from "./school-practice";
 
 export const trails = {
-  groups: ["Orchard detectives", "🍎"], trade: ["The trading post", "🧱"],
+  groups: ["Orchard detectives", "🍎"], trade: ["Block trading practice", "🧱"],
   round: ["River landings", "🦊"], count: ["Basket buddies", "🧺"],
   sum: ["Picnic partners", "🍐"], sounds: ["Sound studio", "🎵"],
   read: ["Story detectives", "📚"], field: ["Field notebook", "🔎"],
@@ -19,6 +20,7 @@ export const skills = {
   transfer: ["Regroup on a fresh subtraction problem", "Build 43 and take away 18. Ask what changed when a ten was traded."],
   nearest: ["Round to the nearest ten", "Mark the two neighboring tens and count the distance to each."],
   counting: ["Count objects one at a time", "Touch each object as you say its number."],
+  taking: ["Take away shells and find how many remain", "Count out five objects. Give two away and count what is left."],
   joining: ["Combine two groups", "Count the first group, then count on through the second group."],
   decoding: ["Blend sounds into a word", "Say each sound slowly, then slide them together and read the word."],
   meaning: ["Find meaning in a sentence", "Read the sentence together. Ask who did what."],
@@ -46,7 +48,7 @@ export function skillInfo(id:string): readonly [string,string] | undefined {
   if(q && id === lessonId+"."+Number(step)) return [q.prompt, q.hint];
 }
 export function knownStamp(id:string) {
-  return bookSets.some(set=>id==="bookset-"+set.id) || has(trails,id) || lessons.some(l=>id === "school-"+l.id);
+  return id==="shell-post" || bookSets.some(set=>id==="bookset-"+set.id) || has(trails,id) || lessons.some(l=>id === "school-"+l.id);
 }
 export function validEntry(raw:unknown): raw is Entry {
   if(!raw || typeof raw !== "object") return false;
@@ -61,6 +63,7 @@ export function validEntry(raw:unknown): raw is Entry {
       && (p[0]==="book"?e.value==="done":["yes","no"].includes(e.value));
   }
   if(!dateKey.test(p[1])) return false;
+  if(p[0]==="post") return p.length===4 && validPostEntry(p[2],p[3],e.value);
   if(p[0]==="finish") return p.length===3 && has(trails,p[2]) && e.value==="done";
   if(p[0]==="aid") return p.length===4 && has(trails,p[2]) && /^[0-6]$/.test(p[3]) && ["yes","no"].includes(e.value);
   if(p[0]==="step") return p.length===4 && has(trails,p[2]) && /^[0-6]$/.test(p[3]) && e.value==="done";

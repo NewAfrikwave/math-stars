@@ -1,0 +1,22 @@
+.post {color:#213c45}
+.sign {border-radius:24px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px clamp(14px,4vw,36px);background:linear-gradient(125deg,#155953,#246c73);border-top:14px solid #ecad55;box-shadow:0 5px 0 #9d6445;color:white}
+.sign span {font-weight:700}.sign h1 {margin:0}
+.avatar {overflow:hidden;display:block;width:104px;flex:none;border:4px solid #f5ca78;border-radius:28px;background:#adede0}
+.trays {display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin:14px 0}
+.mat,.basket {padding:12px;border-radius:20px;min-height:114px;border:2px solid #82beb4;background:#dbf3e8}
+.basket {border-color:#ce9d70;background:repeating-linear-gradient(0deg,#ffecd0 0 13px,#fae4c3 14px 16px)}
+.pieces {display:flex;gap:3px;flex-wrap:wrap}.pieces:not(:empty){margin-top:8px}
+.pieces button,.pieces>span {display:grid;place-items:center;min-width:44px;height:44px;border:0;background:transparent}
+.pieces button {cursor:pointer}.pieces button:disabled {opacity:1}
+.shell {width:32px;height:29px;border-radius:48% 48% 30% 30%;background:repeating-conic-gradient(from -58deg at 50% 100%,#f2a799 0deg 10deg,#ffe0c8 14deg 23deg);box-shadow:inset 0 -4px 3px #b65f5a,0 3px 1px #93734849;transform:rotate(-8deg)}
+.bundle {font-size:17px;font-weight:850;color:#653824;display:grid;place-items:center;width:42px;height:30px;border-radius:10px;background:linear-gradient(90deg,#fda07f,#ffe4af 39%,#e8bc76 41% 55%,#ffc19c 58%);box-shadow:0 3px 0 #ca7e59,0 6px 0 #965f49}
+.tiles {font-size:2rem;font-weight:bold;letter-spacing:.15em}
+@media(max-width:570px){.trays{grid-template-columns:1fr}.avatar{width:84px}.pieces{gap:1px}}
+@media(prefers-reduced-motion:no-preference){.avatar[data-cheer=true]{animation:hop .65s ease-out}.mat .pieces button:last-child .shell{animation:arrive .35s ease-out}.basket .pieces>span:last-child {animation:arrive .35s ease-out}}
+@keyframes hop{35%{transform:translateY(-9px) rotate(-5deg)}70%{transform:rotate(4deg)}}
+@keyframes arrive{from{transform:translateY(-8px) scale(.8)}}
+
+.pip {display:flex;align-items:center;gap:1rem;border-radius:18px;background:#fff2d7;margin:.75rem 0;padding:.45rem 1rem;color:#503b27}
+.pip canvas {width:76px;height:76px;flex:none}.pip p {font-size:1.05rem}
+.bundle {height:37px;gap:0;line-height:1}.beads {display:grid;grid-template-columns:repeat(5,4px);gap:1px;margin-bottom:3px}
+.beads i {width:4px;height:4px;background:#7b4531;border-radius:50%}
